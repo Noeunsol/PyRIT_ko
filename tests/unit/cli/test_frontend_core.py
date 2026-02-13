@@ -535,6 +535,7 @@ class TestParseRunArguments:
         assert result["scenario_name"] == "test_scenario"
         assert result["initializers"] is None
         assert result["scenario_strategies"] is None
+        assert result["target_lang"] == "en"
 
     def test_parse_run_arguments_with_initializers(self):
         """Test parsing with initializers."""
@@ -603,6 +604,11 @@ class TestParseRunArguments:
         assert result["scenario_strategies"] == ["s1", "s2"]
         assert result["max_concurrency"] == 10
 
+    def test_parse_run_arguments_with_target_lang(self):
+        """Test parsing with --target-lang."""
+        result = frontend_core.parse_run_arguments(args_string="test_scenario --target-lang ko")
+        assert result["target_lang"] == "ko"
+
     def test_parse_run_arguments_empty_raises(self):
         """Test parsing empty string raises ValueError."""
         with pytest.raises(ValueError, match="No scenario name provided"):
@@ -665,7 +671,9 @@ class TestRunScenarioAsync:
         assert result == mock_result
         # Verify scenario was instantiated with no arguments (runtime params go to initialize_async)
         mock_scenario_class.assert_called_once_with()
-        mock_scenario_instance.initialize_async.assert_called_once_with()
+        # target_lang default is "en", so locale is always injected into memory_labels
+        call_kwargs = mock_scenario_instance.initialize_async.call_args[1]
+        assert call_kwargs["memory_labels"]["locale"] == "en"
         mock_scenario_instance.run_async.assert_called_once()
         mock_printer.print_summary_async.assert_called_once_with(mock_result)
 
@@ -861,9 +869,52 @@ class TestArgHelp:
             "memory_labels",
             "database",
             "log_level",
+            "target_lang",
         ]
 
         for key in expected_keys:
             assert key in frontend_core.ARG_HELP
             assert isinstance(frontend_core.ARG_HELP[key], str)
             assert len(frontend_core.ARG_HELP[key]) > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("patch_central_database")
+class TestRunScenarioAsyncTargetLang:
+    """Tests for target_lang propagation in run_scenario_async."""
+
+    @patch("pyrit.setup.initialize_pyrit_async", new_callable=AsyncMock)
+    @patch("pyrit.scenario.printer.console_printer.ConsoleScenarioResultPrinter")
+    async def test_run_scenario_async_injects_locale_label(
+        self,
+        mock_printer_class: MagicMock,
+        mock_init_pyrit: AsyncMock,
+    ):
+        context = frontend_core.FrontendCore()
+        mock_scenario_registry = MagicMock()
+        mock_scenario_class = MagicMock()
+        mock_scenario_instance = MagicMock()
+        mock_result = MagicMock()
+        mock_printer = MagicMock()
+        mock_printer.print_summary_async = AsyncMock()
+
+        mock_scenario_instance.initialize_async = AsyncMock()
+        mock_scenario_instance.run_async = AsyncMock(return_value=mock_result)
+        mock_scenario_class.return_value = mock_scenario_instance
+        mock_scenario_registry.get_class.return_value = mock_scenario_class
+        mock_printer_class.return_value = mock_printer
+
+        context._scenario_registry = mock_scenario_registry
+        context._initializer_registry = MagicMock()
+        context._initialized = True
+
+        await frontend_core.run_scenario_async(
+            scenario_name="test_scenario",
+            context=context,
+            target_lang="ko",
+            memory_labels={"run_id": "123"},
+        )
+
+        call_kwargs = mock_scenario_instance.initialize_async.call_args[1]
+        assert call_kwargs["memory_labels"]["run_id"] == "123"
+        assert call_kwargs["memory_labels"]["locale"] == "ko"

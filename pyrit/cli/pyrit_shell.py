@@ -46,6 +46,7 @@ class PyRITShell(cmd.Cmd):
         --initialization-scripts <...>  Custom Python scripts to run before the scenario
         --env-files <path> ...          Environment files to load in order (overrides startup default)
         --strategies, -s <s1> ...       Strategy names to use
+        --target-lang <en|ko>           Target language (propagated to memory labels as locale)
         --max-concurrency <N>           Maximum concurrent operations
         --max-retries <N>               Maximum retry attempts
         --memory-labels <JSON>          JSON string of labels
@@ -184,6 +185,7 @@ class PyRITShell(cmd.Cmd):
                 f"  --initialization-scripts <...>  {frontend_core.ARG_HELP['initialization_scripts']} (alternative to --initializers)"
             )
             print(f"  --strategies, -s <s1> <s2> ...  {frontend_core.ARG_HELP['scenario_strategies']}")
+            print(f"  --target-lang <en|ko>           {frontend_core.ARG_HELP['target_lang']}")
             print(f"  --max-concurrency <N>           {frontend_core.ARG_HELP['max_concurrency']}")
             print(f"  --max-retries <N>               {frontend_core.ARG_HELP['max_retries']}")
             print(f"  --memory-labels <JSON>          {frontend_core.ARG_HELP['memory_labels']}")
@@ -247,6 +249,7 @@ class PyRITShell(cmd.Cmd):
                     scenario_name=args["scenario_name"],
                     context=run_context,
                     scenario_strategies=args["scenario_strategies"],
+                    target_lang=args["target_lang"],
                     max_concurrency=args["max_concurrency"],
                     max_retries=args["max_retries"],
                     memory_labels=args["memory_labels"],

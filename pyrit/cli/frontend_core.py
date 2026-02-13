@@ -20,6 +20,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
+import os
 
 try:
     import termcolor
@@ -53,6 +54,31 @@ logger = logging.getLogger(__name__)
 IN_MEMORY = "InMemory"
 SQLITE = "SQLite"
 AZURE_SQL = "AzureSQL"
+
+
+def _apply_openai_frontend_env_fallbacks() -> None:
+    """
+    CLI convenience: map common OpenAI env vars to the frontend defaults expected
+    by some scenario initializers.
+
+    This keeps existing behavior when DEFAULT_OPENAI_FRONTEND_* are explicitly set,
+    but reduces friction when users already configured OPENAI_CHAT_* (used by SimpleInitializer)
+    or the older OPENAI_CLI_* variables.
+    """
+    mapping = [
+        ("DEFAULT_OPENAI_FRONTEND_ENDPOINT", ["OPENAI_CHAT_ENDPOINT", "OPENAI_CLI_ENDPOINT"]),
+        ("DEFAULT_OPENAI_FRONTEND_KEY", ["OPENAI_CHAT_KEY", "OPENAI_CLI_KEY"]),
+        ("DEFAULT_OPENAI_FRONTEND_MODEL", ["OPENAI_CHAT_MODEL", "OPENAI_CLI_MODEL"]),
+    ]
+
+    for dest, sources in mapping:
+        if os.getenv(dest):
+            continue
+        for src in sources:
+            val = os.getenv(src)
+            if val:
+                os.environ[dest] = val
+                break
 
 
 class FrontendCore:
@@ -107,6 +133,8 @@ class FrontendCore:
 
         from pyrit.registry import InitializerRegistry, ScenarioRegistry
         from pyrit.setup import initialize_pyrit_async
+
+        _apply_openai_frontend_env_fallbacks()
 
         # Initialize PyRIT without initializers (they run per-scenario)
         await initialize_pyrit_async(
@@ -202,6 +230,7 @@ async def run_scenario_async(
     scenario_name: str,
     context: FrontendCore,
     scenario_strategies: Optional[list[str]] = None,
+    target_lang: str = "en",
     max_concurrency: Optional[int] = None,
     max_retries: Optional[int] = None,
     memory_labels: Optional[dict[str, str]] = None,
@@ -216,6 +245,7 @@ async def run_scenario_async(
         scenario_name: Name of the scenario to run.
         context: PyRIT context with loaded registries.
         scenario_strategies: Optional list of strategy names.
+        target_lang: Target language for the run (en|ko). Propagated to memory labels as locale.
         max_concurrency: Max concurrent operations.
         max_retries: Max retry attempts.
         memory_labels: Labels to attach to memory entries.
@@ -256,6 +286,8 @@ async def run_scenario_async(
             initializer_class = context.initializer_registry.get_class(name)
             initializer_instances.append(initializer_class())
 
+    _apply_openai_frontend_env_fallbacks()
+
     # Re-initialize PyRIT with the scenario-specific initializers
     # This resets memory and applies initializer defaults
     await initialize_pyrit_async(
@@ -293,8 +325,15 @@ async def run_scenario_async(
         init_kwargs["max_concurrency"] = max_concurrency
     if max_retries is not None:
         init_kwargs["max_retries"] = max_retries
-    if memory_labels is not None:
-        init_kwargs["memory_labels"] = memory_labels
+
+    # Merge/inject memory labels.
+    # - Preserve user-provided labels
+    # - Force locale to the selected target language (reserved key)
+    labels: dict[str, str] = dict(memory_labels or {})
+    if target_lang not in ("en", "ko"):
+        raise ValueError(f"target_lang must be 'en' or 'ko', got: {target_lang!r}")
+    labels["locale"] = target_lang
+    init_kwargs["memory_labels"] = labels
 
     # Build dataset_config based on CLI args:
     # - No args: scenario uses its default_dataset_config()
@@ -748,6 +787,7 @@ ARG_HELP = {
     "Creates a new dataset config; fetches all items unless --max-dataset-size is also specified",
     "max_dataset_size": "Maximum number of items to use from the dataset (must be >= 1). "
     "Limits new datasets if --dataset-names provided, otherwise overrides scenario's default limit",
+    "target_lang": "Target language for the run (en|ko). Use --target-lang. Propagated to memory labels as locale.",
 }
 
 
@@ -764,6 +804,7 @@ def parse_run_arguments(*, args_string: str) -> dict[str, Any]:
             - initializers: Optional[list[str]]
             - initialization_scripts: Optional[list[str]]
             - scenario_strategies: Optional[list[str]]
+            - target_lang: str
             - max_concurrency: Optional[int]
             - max_retries: Optional[int]
             - memory_labels: Optional[dict[str, str]]
@@ -786,6 +827,7 @@ def parse_run_arguments(*, args_string: str) -> dict[str, Any]:
         "initialization_scripts": None,
         "env_files": None,
         "scenario_strategies": None,
+        "target_lang": "en",
         "max_concurrency": None,
         "max_retries": None,
         "memory_labels": None,
@@ -842,6 +884,14 @@ def parse_run_arguments(*, args_string: str) -> dict[str, Any]:
             if i >= len(parts):
                 raise ValueError("--memory-labels requires a value")
             result["memory_labels"] = parse_memory_labels(parts[i])
+            i += 1
+        elif parts[i] == "--target-lang":
+            i += 1
+            if i >= len(parts):
+                raise ValueError("--target-lang requires a value")
+            if parts[i] not in ("en", "ko"):
+                raise ValueError("--target-lang must be one of: en, ko")
+            result["target_lang"] = parts[i]
             i += 1
         elif parts[i] == "--database":
             i += 1

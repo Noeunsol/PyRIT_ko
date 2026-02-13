@@ -10,9 +10,12 @@ This module provides the main entry point for the pyrit_scan command.
 import asyncio
 import sys
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
-from typing import Optional
+from typing import Literal, Optional
 
 from pyrit.cli import frontend_core
+
+
+TargetLang = Literal["en", "ko"]
 
 
 def parse_args(args: Optional[list[str]] = None) -> Namespace:
@@ -130,6 +133,14 @@ Examples:
     )
 
     parser.add_argument(
+        "--target-lang",
+        type=str,
+        choices=["en", "ko"],
+        default="en",
+        help=frontend_core.ARG_HELP["target_lang"],
+    )
+
+    parser.add_argument(
         "--dataset-names",
         type=str,
         nargs="+",
@@ -239,6 +250,7 @@ def main(args: Optional[list[str]] = None) -> int:
                 max_concurrency=parsed_args.max_concurrency,
                 max_retries=parsed_args.max_retries,
                 memory_labels=memory_labels,
+                target_lang=parsed_args.target_lang,
                 dataset_names=parsed_args.dataset_names,
                 max_dataset_size=parsed_args.max_dataset_size,
             )

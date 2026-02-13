@@ -37,6 +37,7 @@ class TestParseArgs:
         assert args.scenario_name == "test_scenario"
         assert args.database == "SQLite"
         assert args.log_level == "WARNING"
+        assert args.target_lang == "en"
 
     def test_parse_args_with_database(self):
         """Test parsing with database option."""
@@ -112,6 +113,8 @@ class TestParseArgs:
                 "5",
                 "--memory-labels",
                 '{"env":"test"}',
+                "--target-lang",
+                "ko",
             ]
         )
 
@@ -123,6 +126,7 @@ class TestParseArgs:
         assert args.max_concurrency == 10
         assert args.max_retries == 5
         assert args.memory_labels == '{"env":"test"}'
+        assert args.target_lang == "ko"
 
     def test_parse_args_invalid_database(self):
         """Test parsing with invalid database raises error."""
