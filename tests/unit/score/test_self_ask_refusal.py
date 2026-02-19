@@ -60,6 +60,22 @@ async def test_refusal_scorer_set_system_prompt(scorer_true_false_response: Mess
 
 
 @pytest.mark.asyncio
+async def test_refusal_scorer_uses_korean_system_prompt_with_locale_label(
+    scorer_true_false_response: Message, patch_central_database
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+    scorer = SelfAskRefusalScorer(chat_target=chat_target)
+
+    piece = MessagePiece(role="assistant", original_value="테스트 응답", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece, objective="목표")
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert "너는 평가자다." in kwargs["system_prompt"]
+
+
+@pytest.mark.asyncio
 async def test_refusal_scorer_no_task(scorer_true_false_response: Message, patch_central_database):
     chat_target = MagicMock()
     chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")

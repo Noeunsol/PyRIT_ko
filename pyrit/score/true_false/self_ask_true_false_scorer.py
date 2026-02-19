@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 
 import enum
+import logging
 from pathlib import Path
 from typing import Any, Iterator, Optional, Union
 
@@ -20,6 +21,7 @@ from pyrit.score.true_false.true_false_score_aggregator import (
 from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 
 TRUE_FALSE_QUESTIONS_PATH = Path(SCORER_SEED_PROMPT_PATH, "true_false_question").resolve()
+logger = logging.getLogger(__name__)
 
 
 class TrueFalseQuestionPaths(enum.Enum):
@@ -90,6 +92,10 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
     _default_validator: ScorerPromptValidator = ScorerPromptValidator(
         supported_data_types=["text", "image_path"],
     )
+    _SYSTEM_PROMPT_FILES = {
+        "en": "true_false_system_prompt.yaml",
+        "ko": "true_false_system_prompt_ko.yaml",
+    }
 
     def __init__(
         self,
@@ -126,13 +132,16 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
         if not true_false_question_path and not true_false_question:
             true_false_question_path = TrueFalseQuestionPaths.TASK_ACHIEVED.value
 
-        true_false_system_prompt_path = (
-            true_false_system_prompt_path
-            if true_false_system_prompt_path
-            else TRUE_FALSE_QUESTIONS_PATH / "true_false_system_prompt.yaml"
-        )
-
-        true_false_system_prompt_path = verify_and_resolve_path(true_false_system_prompt_path)
+        templates_by_locale: dict[str, SeedPrompt] = {}
+        if true_false_system_prompt_path:
+            resolved = verify_and_resolve_path(true_false_system_prompt_path)
+            scoring_instructions_template = SeedPrompt.from_yaml_file(resolved)
+            templates_by_locale["en"] = scoring_instructions_template
+            templates_by_locale["ko"] = scoring_instructions_template
+        else:
+            for locale, file_name in self._SYSTEM_PROMPT_FILES.items():
+                prompt_path = verify_and_resolve_path(TRUE_FALSE_QUESTIONS_PATH / file_name)
+                templates_by_locale[locale] = SeedPrompt.from_yaml_file(prompt_path)
 
         if true_false_question_path:
             true_false_question_path = verify_and_resolve_path(true_false_question_path)
@@ -148,11 +157,23 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
 
         metadata = true_false_question["metadata"] if "metadata" in true_false_question else ""
 
-        scoring_instructions_template = SeedPrompt.from_yaml_file(true_false_system_prompt_path)
+        self._system_prompts_by_locale = {
+            locale: prompt_template.render_template_value(
+                true_description=true_category,
+                false_description=false_category,
+                metadata=metadata,
+            )
+            for locale, prompt_template in templates_by_locale.items()
+        }
+        self._system_prompt = self._system_prompts_by_locale["en"]
 
-        self._system_prompt = scoring_instructions_template.render_template_value(
-            true_description=true_category, false_description=false_category, metadata=metadata
-        )
+    def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
+        labels = message_piece.labels or {}
+        locale = str(labels.get("locale", "en")).lower()
+        if locale not in self._system_prompts_by_locale:
+            logger.debug("Unsupported scorer locale '%s'; falling back to 'en'.", locale)
+            return "en"
+        return locale
 
     def _build_identifier(self) -> ScorerIdentifier:
         """
@@ -194,9 +215,12 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
             scoring_value = f"objective: {objective}\nresponse: {message_piece.converted_value}"
             scoring_data_type = "text"
 
+        locale = self._resolve_locale(message_piece=message_piece)
+        system_prompt = self._system_prompts_by_locale[locale]
+
         unvalidated_score = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
-            system_prompt=self._system_prompt,
+            system_prompt=system_prompt,
             message_value=scoring_value,
             message_data_type=scoring_data_type,
             scored_prompt_id=message_piece.id,

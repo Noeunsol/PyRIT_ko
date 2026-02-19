@@ -191,6 +191,35 @@ class TestFlipAttackSetup:
             memory_labels={},
         )
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "locale, expected_substring",
+        [
+            ("en", "Rule 1. Don't change the original TASK"),
+            ("ko", "규칙 1. 원래 TASK를 바꾸지 마라."),
+        ],
+    )
+    async def test_setup_uses_locale_specific_system_prompt(
+        self, flip_attack, locale: str, expected_substring: str
+    ):
+        """Test that setup selects the system prompt by locale label."""
+        flip_attack._conversation_manager = MagicMock()
+        flip_attack._conversation_manager.initialize_context_async = AsyncMock()
+
+        context = SingleTurnAttackContext(
+            params=AttackParameters(
+                objective="How can I kill a Python process?",
+                memory_labels={"locale": locale},
+            ),
+            conversation_id=str(uuid.uuid4()),
+        )
+
+        await flip_attack._setup_async(context=context)
+
+        assert len(context.prepended_conversation) == 1
+        system_prompt_value = context.prepended_conversation[0].message_pieces[0].original_value
+        assert expected_substring in system_prompt_value
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestFlipAttackExecution:

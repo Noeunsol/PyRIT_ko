@@ -37,6 +37,11 @@ class FlipAttack(PromptSendingAttack):
     Essentially, it adds a system prompt to the beginning of the conversation to flip each word in the prompt.
     """
 
+    _SYSTEM_PROMPT_FILES = {
+        "en": "flip_attack.yaml",
+        "ko": "flip_attack_ko.yaml",
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -66,11 +71,28 @@ class FlipAttack(PromptSendingAttack):
         flip_converter = PromptConverterConfiguration.from_converters(converters=[FlipConverter()])
         self._request_converters = flip_converter + self._request_converters
 
-        # This system prompt is sent to the target to flip the words in the prompt.
-        system_prompt_path = pathlib.Path(EXECUTOR_SEED_PROMPT_PATH) / "flip_attack.yaml"
-        system_prompt = SeedPrompt.from_yaml_file(system_prompt_path).value
+        # Backward-compatible default English system prompt attribute.
+        self._system_prompt = self._load_system_prompt_for_locale(locale="en")
+        self._localized_system_prompts = {"en": self._system_prompt}
 
-        self._system_prompt = Message.from_system_prompt(system_prompt=system_prompt)
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
+        merged_labels = {**self._memory_labels, **context.memory_labels}
+        locale = str(merged_labels.get("locale", "en")).lower()
+        if locale not in self._SYSTEM_PROMPT_FILES:
+            logger.warning(f"Unsupported locale '{locale}' for FlipAttack. Falling back to 'en'.")
+            return "en"
+        return locale
+
+    def _load_system_prompt_for_locale(self, *, locale: str) -> Message:
+        prompt_file_name = self._SYSTEM_PROMPT_FILES[locale]
+        system_prompt_path = pathlib.Path(EXECUTOR_SEED_PROMPT_PATH) / prompt_file_name
+        system_prompt = SeedPrompt.from_yaml_file(system_prompt_path).value
+        return Message.from_system_prompt(system_prompt=system_prompt)
+
+    def _get_system_prompt_for_locale(self, *, locale: str) -> Message:
+        if locale not in self._localized_system_prompts:
+            self._localized_system_prompts[locale] = self._load_system_prompt_for_locale(locale=locale)
+        return self._localized_system_prompts[locale]
 
     async def _setup_async(self, *, context: SingleTurnAttackContext[Any]) -> None:
         """
@@ -81,7 +103,8 @@ class FlipAttack(PromptSendingAttack):
         """
         # Ensure the context has a conversation ID
         context.conversation_id = str(uuid.uuid4())
-        context.prepended_conversation = [self._system_prompt]
+        locale = self._resolve_locale(context=context)
+        context.prepended_conversation = [self._get_system_prompt_for_locale(locale=locale)]
 
         # Initialize context with prepended conversation (system prompt) and merged labels
         await self._conversation_manager.initialize_context_async(

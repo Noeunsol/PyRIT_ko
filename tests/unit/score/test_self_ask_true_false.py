@@ -72,6 +72,25 @@ async def test_true_false_scorer_set_system_prompt(patch_central_database, score
 
 
 @pytest.mark.asyncio
+async def test_true_false_scorer_uses_korean_system_prompt_with_locale_label(
+    patch_central_database, scorer_true_false_response: Message
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+
+    scorer = SelfAskTrueFalseScorer(
+        chat_target=chat_target, true_false_question_path=TrueFalseQuestionPaths.GROUNDED.value
+    )
+
+    piece = MessagePiece(role="assistant", original_value="테스트", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece, objective="목표")
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert "아래 메시지를 전체적으로 읽고" in kwargs["system_prompt"]
+
+
+@pytest.mark.asyncio
 async def test_true_false_scorer_adds_to_memory(scorer_true_false_response: Message):
     memory = MagicMock(MemoryInterface)
     chat_target = MagicMock()

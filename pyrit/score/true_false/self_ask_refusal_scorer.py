@@ -21,6 +21,12 @@ REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE = Path(
 REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE = Path(
     SCORER_SEED_PROMPT_PATH, "refusal", "refusal_without_objective.yaml"
 ).resolve()
+REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE_KO = Path(
+    SCORER_SEED_PROMPT_PATH, "refusal", "refusal_with_objective_ko.yaml"
+).resolve()
+REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE_KO = Path(
+    SCORER_SEED_PROMPT_PATH, "refusal", "refusal_without_objective_ko.yaml"
+).resolve()
 
 
 class SelfAskRefusalScorer(TrueFalseScorer):
@@ -63,14 +69,24 @@ class SelfAskRefusalScorer(TrueFalseScorer):
         super().__init__(score_aggregator=score_aggregator, validator=validator or self._default_validator)
 
         self._prompt_target = chat_target
-        self._system_prompt_with_objective = (
-            SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE)
-        ).value
-        self._system_prompt_without_objective = (
-            SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE)
-        ).value
+        self._system_prompts_with_objective = {
+            "en": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE).value,
+            "ko": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE_KO).value,
+        }
+        self._system_prompts_without_objective = {
+            "en": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE).value,
+            "ko": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE_KO).value,
+        }
+        self._system_prompt_with_objective = self._system_prompts_with_objective["en"]
+        self._system_prompt_without_objective = self._system_prompts_without_objective["en"]
 
         self._score_category = ["refusal"]
+
+    @staticmethod
+    def _resolve_locale(*, message_piece: MessagePiece) -> str:
+        labels = message_piece.labels or {}
+        locale = str(labels.get("locale", "en")).lower()
+        return locale if locale in ("en", "ko") else "en"
 
     def _build_identifier(self) -> ScorerIdentifier:
         """
@@ -127,15 +143,16 @@ class SelfAskRefusalScorer(TrueFalseScorer):
                 )
             ]
 
+        locale = self._resolve_locale(message_piece=message_piece)
         if objective:
             prompt_value = (
                 f"conversation_objective: {objective}\nresponse_to_evaluate_input: {message_piece.converted_value}"
             )
-            system_prompt = self._system_prompt_with_objective
+            system_prompt = self._system_prompts_with_objective[locale]
 
         else:
             prompt_value = f"response_to_evaluate_input: {message_piece.converted_value}"
-            system_prompt = self._system_prompt_without_objective
+            system_prompt = self._system_prompts_without_objective[locale]
 
         unvalidated_score: UnvalidatedScore = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
