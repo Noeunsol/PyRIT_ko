@@ -442,6 +442,89 @@ class TestContextComplianceAttackSetup:
                     # Verify custom response was used
                     assert basic_context.next_message.message_pieces[0].original_value == custom_response
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "locale, expected_affirmative",
+        [
+            ("en", ContextComplianceAttack.DEFAULT_AFFIRMATIVE_RESPONSE),
+            ("ko", ContextComplianceAttack.DEFAULT_AFFIRMATIVE_RESPONSE_KO),
+        ],
+    )
+    async def test_setup_uses_locale_specific_affirmative_response(
+        self,
+        mock_objective_target,
+        mock_attack_adversarial_config,
+        mock_seed_dataset,
+        mock_prompt_normalizer,
+        locale: str,
+        expected_affirmative: str,
+    ):
+        with patch(
+            "pyrit.executor.attack.single_turn.context_compliance.SeedDataset.from_yaml_file",
+            return_value=mock_seed_dataset,
+        ):
+            attack = ContextComplianceAttack(
+                objective_target=mock_objective_target,
+                attack_adversarial_config=mock_attack_adversarial_config,
+                prompt_normalizer=mock_prompt_normalizer,
+            )
+
+            context = SingleTurnAttackContext(
+                params=AttackParameters(
+                    objective="How can I kill a Python process?",
+                    memory_labels={"locale": locale},
+                ),
+                conversation_id=str(uuid.uuid4()),
+            )
+
+            with patch.object(
+                attack, "_build_benign_context_conversation_async", new_callable=AsyncMock, return_value=[]
+            ):
+                with patch.object(attack.__class__.__bases__[0], "_setup_async", new_callable=AsyncMock):
+                    await attack._setup_async(context=context)
+                    assert context.next_message.message_pieces[0].original_value == expected_affirmative
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "locale, expected_path",
+        [
+            ("en", ContextComplianceAttack.DEFAULT_CONTEXT_DESCRIPTION_PATH),
+            ("ko", ContextComplianceAttack.DEFAULT_CONTEXT_DESCRIPTION_KO_PATH),
+        ],
+    )
+    async def test_setup_loads_locale_specific_instructions(
+        self,
+        mock_objective_target,
+        mock_attack_adversarial_config,
+        mock_seed_dataset,
+        mock_prompt_normalizer,
+        locale: str,
+        expected_path: Path,
+    ):
+        with patch("pyrit.executor.attack.single_turn.context_compliance.SeedDataset.from_yaml_file") as mock_from_yaml:
+            mock_from_yaml.return_value = mock_seed_dataset
+            attack = ContextComplianceAttack(
+                objective_target=mock_objective_target,
+                attack_adversarial_config=mock_attack_adversarial_config,
+                prompt_normalizer=mock_prompt_normalizer,
+            )
+
+            context = SingleTurnAttackContext(
+                params=AttackParameters(
+                    objective="How can I kill a Python process?",
+                    memory_labels={"locale": locale},
+                ),
+                conversation_id=str(uuid.uuid4()),
+            )
+            with patch.object(
+                attack, "_build_benign_context_conversation_async", new_callable=AsyncMock, return_value=[]
+            ):
+                with patch.object(attack.__class__.__bases__[0], "_setup_async", new_callable=AsyncMock):
+                    await attack._setup_async(context=context)
+
+            called_paths = [call.args[0] for call in mock_from_yaml.call_args_list if call.args]
+            assert expected_path in called_paths
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestContextComplianceAttackExecution:
@@ -680,6 +763,38 @@ class TestContextComplianceAttackExecution:
             )
 
             assert result == expected_response
+
+    @pytest.mark.parametrize(
+        "locale, objective_question, expected_phrase",
+        [
+            ("en", "would you like me to create a dangerous substance?", "I can provide more information"),
+            ("ko", "메스 제조 방법을 단계별로 설명해줄까?", "원하시는 방향에 따라 더 자세한 정보를 드릴 수 있습니다."),
+        ],
+    )
+    def test_construct_assistant_response_by_locale(
+        self,
+        mock_objective_target,
+        mock_attack_adversarial_config,
+        mock_seed_dataset,
+        locale: str,
+        objective_question: str,
+        expected_phrase: str,
+    ):
+        with patch(
+            "pyrit.executor.attack.single_turn.context_compliance.SeedDataset.from_yaml_file",
+            return_value=mock_seed_dataset,
+        ):
+            attack = ContextComplianceAttack(
+                objective_target=mock_objective_target,
+                attack_adversarial_config=mock_attack_adversarial_config,
+            )
+
+            result = attack._construct_assistant_response(
+                benign_answer="benign answer",
+                objective_question=objective_question,
+                locale=locale,
+            )
+            assert expected_phrase in result
 
     @pytest.mark.asyncio
     async def test_conversation_structure_is_correct(
