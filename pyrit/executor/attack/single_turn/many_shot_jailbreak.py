@@ -2,6 +2,8 @@
 # Licensed under the MIT license.
 
 import logging
+import json
+from pathlib import Path
 from typing import Any, Optional, cast
 
 import requests
@@ -36,6 +38,18 @@ def fetch_many_shot_jailbreaking_dataset() -> list[dict[str, str]]:
     return cast(list[dict[str, str]], response.json())
 
 
+def fetch_many_shot_jailbreaking_dataset_ko() -> list[dict[str, str]]:
+    """
+    Fetch Korean many-shot jailbreaking dataset from local template assets.
+
+    Returns:
+        list[dict[str, str]]: A list of Korean many-shot jailbreaking examples.
+    """
+    source = JAILBREAK_TEMPLATES_PATH / "multi_parameter" / "many_shot_examples_ko.json"
+    with source.open("r", encoding="utf-8") as file:
+        return cast(list[dict[str, str]], json.load(file))
+
+
 class ManyShotJailbreakAttack(PromptSendingAttack):
     """
     Implement the Many Shot Jailbreak method as discussed in research found here:
@@ -45,6 +59,13 @@ class ManyShotJailbreakAttack(PromptSendingAttack):
     to demonstrate successful jailbreaking attempts. This method leverages the model's ability to learn from
     examples to bypass safety measures.
     """
+
+    DEFAULT_TEMPLATE_PATH: Path = JAILBREAK_TEMPLATES_PATH / "multi_parameter" / "many_shot_template.yaml"
+    DEFAULT_TEMPLATE_KO_PATH: Path = JAILBREAK_TEMPLATES_PATH / "multi_parameter" / "many_shot_template_ko.yaml"
+    DEFAULT_TEMPLATE_FILES: dict[str, Path] = {
+        "en": DEFAULT_TEMPLATE_PATH,
+        "ko": DEFAULT_TEMPLATE_KO_PATH,
+    }
 
     @apply_defaults
     def __init__(
@@ -81,17 +102,47 @@ class ManyShotJailbreakAttack(PromptSendingAttack):
             params_type=ManyShotJailbreakParameters,
         )
 
-        # Template for the faux dialogue to be prepended
-        template_path = JAILBREAK_TEMPLATES_PATH / "multi_parameter" / "many_shot_template.yaml"
-        self._template = SeedPrompt.from_yaml_file(template_path)
+        # Default English template for backward compatibility
+        self._template = SeedPrompt.from_yaml_file(self.DEFAULT_TEMPLATE_PATH)
+        self._localized_templates: dict[str, SeedPrompt] = {"en": self._template}
+        self._example_count = example_count
+        self._localized_examples: dict[str, list[dict[str, str]]] = {}
         # Fetch the Many Shot Jailbreaking example dataset
-        self._examples = (
-            many_shot_examples[:example_count]
-            if (many_shot_examples is not None)
-            else fetch_many_shot_jailbreaking_dataset()[:example_count]
-        )
+        if many_shot_examples is not None:
+            self._examples = many_shot_examples[:example_count]
+            # Custom examples apply to all locales.
+            self._localized_examples = {"en": self._examples, "ko": self._examples}
+        else:
+            self._examples = fetch_many_shot_jailbreaking_dataset()[:example_count]
+            self._localized_examples["en"] = self._examples
+
         if not self._examples:
             raise ValueError("Many shot examples must be provided.")
+
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
+        merged_labels = {**self._memory_labels, **context.memory_labels}
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+        if locale not in self.DEFAULT_TEMPLATE_FILES:
+            logger.debug("Unsupported locale '%s' for ManyShotJailbreakAttack. Falling back to 'en'.", locale)
+            return "en"
+        return locale
+
+    def _get_template_for_locale(self, *, locale: str) -> SeedPrompt:
+        if locale not in self._localized_templates:
+            self._localized_templates[locale] = SeedPrompt.from_yaml_file(self.DEFAULT_TEMPLATE_FILES[locale])
+        return self._localized_templates[locale]
+
+    def _get_examples_for_locale(self, *, locale: str) -> list[dict[str, str]]:
+        if locale not in self._localized_examples:
+            if locale == "ko":
+                self._localized_examples[locale] = fetch_many_shot_jailbreaking_dataset_ko()[: self._example_count]
+            else:
+                self._localized_examples[locale] = fetch_many_shot_jailbreaking_dataset()[: self._example_count]
+
+        examples = self._localized_examples[locale]
+        if not examples:
+            raise ValueError("Many shot examples must be provided.")
+        return examples
 
     async def _perform_async(self, *, context: SingleTurnAttackContext[Any]) -> AttackResult:
         """
@@ -103,7 +154,10 @@ class ManyShotJailbreakAttack(PromptSendingAttack):
         Returns:
             AttackResult: The result of the attack.
         """
-        many_shot_prompt = self._template.render_template_value(prompt=context.objective, examples=self._examples)
+        locale = self._resolve_locale(context=context)
+        template = self._get_template_for_locale(locale=locale)
+        examples = self._get_examples_for_locale(locale=locale)
+        many_shot_prompt = template.render_template_value(prompt=context.objective, examples=examples)
         context.next_message = Message.from_prompt(prompt=many_shot_prompt, role="user")
 
         return await super()._perform_async(context=context)

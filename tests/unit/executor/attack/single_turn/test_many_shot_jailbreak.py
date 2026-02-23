@@ -320,6 +320,100 @@ class TestManyShotJailbreakAttackExecution:
                 prompt=basic_context.objective, examples=custom_examples
             )
 
+    @patch("pyrit.executor.attack.single_turn.many_shot_jailbreak.SeedPrompt.from_yaml_file")
+    @patch("pyrit.executor.attack.single_turn.many_shot_jailbreak.fetch_many_shot_jailbreaking_dataset_ko")
+    @patch("pyrit.executor.attack.single_turn.many_shot_jailbreak.fetch_many_shot_jailbreaking_dataset")
+    @pytest.mark.asyncio
+    async def test_perform_attack_uses_korean_template_when_locale_ko(
+        self,
+        mock_fetch_dataset,
+        mock_fetch_dataset_ko,
+        mock_from_yaml,
+        mock_objective_target,
+        sample_many_shot_examples,
+        basic_context,
+    ):
+        mock_template_en = MagicMock(spec=SeedPrompt)
+        mock_template_en.render_template_value.return_value = "EN many-shot prompt"
+        mock_template_ko = MagicMock(spec=SeedPrompt)
+        mock_template_ko.render_template_value.return_value = "KO many-shot prompt"
+
+        def _side_effect(path):
+            if path == ManyShotJailbreakAttack.DEFAULT_TEMPLATE_KO_PATH:
+                return mock_template_ko
+            return mock_template_en
+
+        mock_from_yaml.side_effect = _side_effect
+        mock_fetch_dataset.return_value = sample_many_shot_examples
+        mock_fetch_dataset_ko.return_value = sample_many_shot_examples
+
+        attack = ManyShotJailbreakAttack(objective_target=mock_objective_target)
+        basic_context.memory_labels = {"locale": "ko"}
+
+        with patch.object(ManyShotJailbreakAttack.__bases__[0], "_perform_async", new_callable=AsyncMock) as mock_perform:
+            mock_result = AttackResult(
+                conversation_id=basic_context.conversation_id,
+                objective=basic_context.objective,
+                attack_identifier=attack.get_identifier(),
+                outcome=AttackOutcome.SUCCESS,
+            )
+            mock_perform.return_value = mock_result
+
+            await attack._perform_async(context=basic_context)
+
+        mock_template_ko.render_template_value.assert_called_once_with(
+            prompt=basic_context.objective, examples=sample_many_shot_examples[:100]
+        )
+        mock_fetch_dataset_ko.assert_called_once()
+        assert basic_context.next_message.message_pieces[0].original_value == "KO many-shot prompt"
+
+    @patch("pyrit.executor.attack.single_turn.many_shot_jailbreak.SeedPrompt.from_yaml_file")
+    @patch("pyrit.executor.attack.single_turn.many_shot_jailbreak.fetch_many_shot_jailbreaking_dataset_ko")
+    @patch("pyrit.executor.attack.single_turn.many_shot_jailbreak.fetch_many_shot_jailbreaking_dataset")
+    @pytest.mark.asyncio
+    async def test_perform_attack_uses_korean_template_when_target_lang_ko(
+        self,
+        mock_fetch_dataset,
+        mock_fetch_dataset_ko,
+        mock_from_yaml,
+        mock_objective_target,
+        sample_many_shot_examples,
+        basic_context,
+    ):
+        mock_template_en = MagicMock(spec=SeedPrompt)
+        mock_template_en.render_template_value.return_value = "EN many-shot prompt"
+        mock_template_ko = MagicMock(spec=SeedPrompt)
+        mock_template_ko.render_template_value.return_value = "KO many-shot prompt"
+
+        def _side_effect(path):
+            if path == ManyShotJailbreakAttack.DEFAULT_TEMPLATE_KO_PATH:
+                return mock_template_ko
+            return mock_template_en
+
+        mock_from_yaml.side_effect = _side_effect
+        mock_fetch_dataset.return_value = sample_many_shot_examples
+        mock_fetch_dataset_ko.return_value = sample_many_shot_examples
+
+        attack = ManyShotJailbreakAttack(objective_target=mock_objective_target)
+        basic_context.memory_labels = {"target_lang": "ko"}
+
+        with patch.object(ManyShotJailbreakAttack.__bases__[0], "_perform_async", new_callable=AsyncMock) as mock_perform:
+            mock_result = AttackResult(
+                conversation_id=basic_context.conversation_id,
+                objective=basic_context.objective,
+                attack_identifier=attack.get_identifier(),
+                outcome=AttackOutcome.SUCCESS,
+            )
+            mock_perform.return_value = mock_result
+
+            await attack._perform_async(context=basic_context)
+
+        mock_template_ko.render_template_value.assert_called_once_with(
+            prompt=basic_context.objective, examples=sample_many_shot_examples[:100]
+        )
+        mock_fetch_dataset_ko.assert_called_once()
+        assert basic_context.next_message.message_pieces[0].original_value == "KO many-shot prompt"
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestManyShotJailbreakAttackLifecycle:
