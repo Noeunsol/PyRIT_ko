@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-import logging
 import json
 from pathlib import Path
 from typing import Any, Optional, cast
@@ -17,8 +16,6 @@ from pyrit.executor.attack.single_turn.single_turn_attack_strategy import Single
 from pyrit.models import AttackResult, Message, SeedPrompt
 from pyrit.prompt_normalizer import PromptNormalizer
 from pyrit.prompt_target import PromptTarget
-
-logger = logging.getLogger(__name__)
 
 # ManyShotJailbreakAttack does not support prepended conversations
 # as it constructs its own prompt format with examples.
@@ -120,12 +117,7 @@ class ManyShotJailbreakAttack(PromptSendingAttack):
             raise ValueError("Many shot examples must be provided.")
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
-        if locale not in self.DEFAULT_TEMPLATE_FILES:
-            logger.debug("Unsupported locale '%s' for ManyShotJailbreakAttack. Falling back to 'en'.", locale)
-            return "en"
-        return locale
+        return super()._resolve_locale(context=context, supported_locales=set(self.DEFAULT_TEMPLATE_FILES))
 
     def _get_template_for_locale(self, *, locale: str) -> SeedPrompt:
         if locale not in self._localized_templates:

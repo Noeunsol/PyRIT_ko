@@ -139,12 +139,7 @@ class RolePlayAttack(PromptSendingAttack):
         await super()._setup_async(context=context)
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
-        if locale not in self._SUPPORTED_LOCALES:
-            logger.debug("Unsupported locale '%s' for RolePlayAttack, falling back to 'en'.", locale)
-            return "en"
-        return locale
+        return super()._resolve_locale(context=context, supported_locales=self._SUPPORTED_LOCALES)
 
     def _resolve_role_play_definition_path_for_locale(self, *, locale: str) -> pathlib.Path:
         if locale != "ko":

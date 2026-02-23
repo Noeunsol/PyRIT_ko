@@ -155,17 +155,14 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
             auxiliary_scorers=self._auxiliary_scorers,
         )
 
-    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
-
-        if locale not in self._LOCALIZED_MESSAGES:
-            self._logger.debug(
-                self._LOCALIZED_MESSAGES["en"]["unsupported_locale_fallback"].format(locale=locale)
-            )
-            return "en"
-
-        return locale
+    def _resolve_locale(
+        self,
+        *,
+        context: SingleTurnAttackContext[Any],
+        supported_locales: Optional[set[str]] = None,
+    ) -> str:
+        allowed_locales = supported_locales or set(self._LOCALIZED_MESSAGES)
+        return super()._resolve_locale(context=context, supported_locales=allowed_locales)
 
     def _get_localized_message(self, *, context: SingleTurnAttackContext[Any], key: str, **kwargs: Any) -> str:
         locale = self._resolve_locale(context=context)

@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-import logging
 from pathlib import Path
 from typing import Any, Optional
 
@@ -24,8 +23,6 @@ from pyrit.models import (
 )
 from pyrit.prompt_normalizer import PromptNormalizer
 from pyrit.prompt_target import PromptChatTarget
-
-logger = logging.getLogger(__name__)
 
 # ContextComplianceAttack generates prepended_conversation internally
 # by building a benign context conversation.
@@ -117,12 +114,7 @@ class ContextComplianceAttack(PromptSendingAttack):
         self._affirmative_response = affirmative_response or self.DEFAULT_AFFIRMATIVE_RESPONSE
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
-        if locale not in self.DEFAULT_CONTEXT_DESCRIPTION_FILES:
-            logger.debug("Unsupported locale '%s' for ContextComplianceAttack, falling back to 'en'.", locale)
-            return "en"
-        return locale
+        return super()._resolve_locale(context=context, supported_locales=set(self.DEFAULT_CONTEXT_DESCRIPTION_FILES))
 
     def _resolve_instructions_path_for_locale(self, *, locale: str) -> Path:
         if self._context_description_instructions_path:

@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-import logging
 import pathlib
 import uuid
 from typing import Any, Optional
@@ -22,8 +21,6 @@ from pyrit.models import (
 from pyrit.prompt_converter import FlipConverter
 from pyrit.prompt_normalizer import PromptConverterConfiguration, PromptNormalizer
 from pyrit.prompt_target import PromptChatTarget
-
-logger = logging.getLogger(__name__)
 
 # FlipAttack generates prepended_conversation internally from its system prompt.
 FlipAttackParameters = AttackParameters.excluding("prepended_conversation", "next_message")
@@ -76,12 +73,7 @@ class FlipAttack(PromptSendingAttack):
         self._localized_system_prompts = {"en": self._system_prompt}
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
-        if locale not in self._SYSTEM_PROMPT_FILES:
-            logger.warning(f"Unsupported locale '{locale}' for FlipAttack. Falling back to 'en'.")
-            return "en"
-        return locale
+        return super()._resolve_locale(context=context, supported_locales=set(self._SYSTEM_PROMPT_FILES))
 
     def _load_system_prompt_for_locale(self, *, locale: str) -> Message:
         prompt_file_name = self._SYSTEM_PROMPT_FILES[locale]

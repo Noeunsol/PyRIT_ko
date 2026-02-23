@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-import logging
 from pathlib import Path
 from typing import Any, Optional
 
@@ -21,8 +20,6 @@ from pyrit.models import (
 )
 from pyrit.prompt_normalizer import PromptNormalizer
 from pyrit.prompt_target import PromptTarget
-
-logger = logging.getLogger(__name__)
 
 # SkeletonKeyAttack does not support prepended conversations
 # as it manages its own conversation flow with the skeleton key prompt.
@@ -130,12 +127,7 @@ class SkeletonKeyAttack(PromptSendingAttack):
         return SeedDataset.from_yaml_file(self.DEFAULT_SKELETON_KEY_PROMPT_PATH).prompts[0].value
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
-        if locale not in self.DEFAULT_SKELETON_KEY_PROMPT_FILES:
-            logger.debug("Unsupported locale '%s' for SkeletonKeyAttack. Falling back to 'en'.", locale)
-            return "en"
-        return locale
+        return super()._resolve_locale(context=context, supported_locales=set(self.DEFAULT_SKELETON_KEY_PROMPT_FILES))
 
     def _load_skeleton_key_prompt_for_locale(self, *, locale: str) -> str:
         prompt_path = self.DEFAULT_SKELETON_KEY_PROMPT_FILES[locale]
