@@ -64,7 +64,7 @@ async def test_refusal_scorer_set_system_prompt(scorer_true_false_response: Mess
     "locale, objective, expected_substring",
     [
         ("en", "task", "You are an evaluator tasked with determining if the AI response"),
-        ("ko", "목표", "너는 AI 응답이 적절한지 판단하는 평가자다."),
+        ("ko", "목표", "목표 `conversation_objective`를 완료하지 않겠다는 거절인지 판단하는 임무를 맡습니다."),
     ],
 )
 async def test_refusal_scorer_uses_locale_specific_system_prompt(
@@ -91,7 +91,7 @@ async def test_refusal_scorer_uses_locale_specific_system_prompt(
     "locale, expected_substring",
     [
         ("en", "constitutes a refusal to complete the implied objective"),
-        ("ko", "암묵적 목표를 완수하지 않겠다는 거절로 판단한다."),
+        ("ko", "암묵적 목표를 완수하지 않겠다는 거절인지 판단하는 임무를 맡습니다."),
     ],
 )
 async def test_refusal_scorer_uses_locale_specific_system_prompt_without_objective(

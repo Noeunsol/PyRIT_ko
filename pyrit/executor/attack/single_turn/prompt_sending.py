@@ -49,6 +49,31 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
     and multiple scorer types for comprehensive evaluation.
     """
 
+    _LOCALIZED_MESSAGES = {
+        "en": {
+            "starting_with_objective": "Starting {attack_name} with objective: {objective}",
+            "max_attempts": "Max attempts: {max_attempts}",
+            "attempt_progress": "Attempt {attempt_number}/{total_attempts}",
+            "no_response_received": "No response received on attempt {attempt_number} (likely filtered)",
+            "unsupported_locale_fallback": "Unsupported locale '{locale}' for PromptSendingAttack. Falling back to 'en'.",
+            "no_objective_scorer": "No objective scorer configured",
+            "objective_achieved": "Objective achieved according to scorer",
+            "failed_after_attempts": "Failed to achieve objective after {attempt_count} attempts",
+            "all_attempts_filtered": "All attempts were filtered or failed to get a response",
+        },
+        "ko": {
+            "starting_with_objective": "{attack_name} 시작 - 목표: {objective}",
+            "max_attempts": "최대 시도 횟수: {max_attempts}",
+            "attempt_progress": "시도 {attempt_number}/{total_attempts}",
+            "no_response_received": "{attempt_number}번째 시도에서 응답이 없습니다 (필터링 가능성 높음)",
+            "unsupported_locale_fallback": "PromptSendingAttack에서 지원하지 않는 locale '{locale}'입니다. 'en'으로 대체합니다.",
+            "no_objective_scorer": "목표 scorer가 설정되지 않았습니다",
+            "objective_achieved": "scorer 기준으로 목표를 달성했습니다",
+            "failed_after_attempts": "{attempt_count}회 시도 후에도 목표를 달성하지 못했습니다",
+            "all_attempts_filtered": "모든 시도가 필터링되었거나 응답을 받지 못했습니다",
+        },
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -130,6 +155,23 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
             auxiliary_scorers=self._auxiliary_scorers,
         )
 
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
+        merged_labels = {**self._memory_labels, **context.memory_labels}
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+
+        if locale not in self._LOCALIZED_MESSAGES:
+            self._logger.debug(
+                self._LOCALIZED_MESSAGES["en"]["unsupported_locale_fallback"].format(locale=locale)
+            )
+            return "en"
+
+        return locale
+
+    def _get_localized_message(self, *, context: SingleTurnAttackContext[Any], key: str, **kwargs: Any) -> str:
+        locale = self._resolve_locale(context=context)
+        template = self._LOCALIZED_MESSAGES[locale][key]
+        return template.format(**kwargs)
+
     def _validate_context(self, *, context: SingleTurnAttackContext[Any]) -> None:
         """
         Validate the context before executing the attack.
@@ -174,8 +216,21 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
             AttackResult containing the outcome of the attack.
         """
         # Log the attack configuration
-        self._logger.info(f"Starting {self.__class__.__name__} with objective: {context.objective}")
-        self._logger.info(f"Max attempts: {self._max_attempts_on_failure}")
+        self._logger.info(
+            self._get_localized_message(
+                context=context,
+                key="starting_with_objective",
+                attack_name=self.__class__.__name__,
+                objective=context.objective,
+            )
+        )
+        self._logger.info(
+            self._get_localized_message(
+                context=context,
+                key="max_attempts",
+                max_attempts=self._max_attempts_on_failure,
+            )
+        )
 
         # Execute with retries
         response = None
@@ -192,7 +247,14 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
 
         # Execute with retries
         for attempt in range(self._max_attempts_on_failure + 1):
-            self._logger.debug(f"Attempt {attempt + 1}/{self._max_attempts_on_failure + 1}")
+            self._logger.debug(
+                self._get_localized_message(
+                    context=context,
+                    key="attempt_progress",
+                    attempt_number=attempt + 1,
+                    total_attempts=self._max_attempts_on_failure + 1,
+                )
+            )
 
             # Prepare a fresh message for each attempt to avoid duplicate ID errors in database
             message = self._get_message(context)
@@ -200,7 +262,13 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
             # Send the prompt
             response = await self._send_prompt_to_objective_target_async(message=message, context=context)
             if not response:
-                self._logger.warning(f"No response received on attempt {attempt + 1} (likely filtered)")
+                self._logger.warning(
+                    self._get_localized_message(
+                        context=context,
+                        key="no_response_received",
+                        attempt_number=attempt + 1,
+                    )
+                )
                 continue  # Retry if no response (filtered or error)
 
             # Score the response including auxiliary and objective scoring
@@ -257,21 +325,27 @@ class PromptSendingAttack(SingleTurnAttackStrategy):
         """
         if not self._objective_scorer:
             # No scorer means we can't determine success/failure
-            return AttackOutcome.UNDETERMINED, "No objective scorer configured"
+            return AttackOutcome.UNDETERMINED, self._get_localized_message(
+                context=context, key="no_objective_scorer"
+            )
 
         if score and score.get_value():
             # We have a positive score, so it's a success
-            return AttackOutcome.SUCCESS, "Objective achieved according to scorer"
+            return AttackOutcome.SUCCESS, self._get_localized_message(context=context, key="objective_achieved")
 
         if response:
             # We got response(s) but none achieved the objective
             return (
                 AttackOutcome.FAILURE,
-                f"Failed to achieve objective after {self._max_attempts_on_failure + 1} attempts",
+                self._get_localized_message(
+                    context=context,
+                    key="failed_after_attempts",
+                    attempt_count=self._max_attempts_on_failure + 1,
+                ),
             )
 
         # No response at all (all attempts filtered/failed)
-        return AttackOutcome.FAILURE, "All attempts were filtered or failed to get a response"
+        return AttackOutcome.FAILURE, self._get_localized_message(context=context, key="all_attempts_filtered")
 
     async def _teardown_async(self, *, context: SingleTurnAttackContext[Any]) -> None:
         """Clean up after attack execution."""

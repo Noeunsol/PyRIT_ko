@@ -928,6 +928,56 @@ class TestDetermineAttackOutcome:
         assert outcome == AttackOutcome.FAILURE
         assert reason == "Failed to achieve objective after 3 attempts"
 
+    def test_determine_attack_outcome_success_korean_locale(self, mock_target, sample_response, success_score, basic_context):
+        """Test success outcome reason localization for Korean locale."""
+        attack = PromptSendingAttack(objective_target=mock_target)
+        attack._objective_scorer = MagicMock()
+        basic_context.memory_labels = {"locale": "ko"}
+
+        outcome, reason = attack._determine_attack_outcome(
+            response=sample_response, score=success_score, context=basic_context
+        )
+
+        assert outcome == AttackOutcome.SUCCESS
+        assert reason == "scorer 기준으로 목표를 달성했습니다"
+
+    def test_determine_attack_outcome_failure_korean_target_lang(
+        self, mock_target, sample_response, failure_score, basic_context
+    ):
+        """Test failure outcome reason localization for target_lang label alias."""
+        attack = PromptSendingAttack(objective_target=mock_target, max_attempts_on_failure=2)
+        attack._objective_scorer = MagicMock()
+        basic_context.memory_labels = {"target_lang": "ko"}
+
+        outcome, reason = attack._determine_attack_outcome(
+            response=sample_response, score=failure_score, context=basic_context
+        )
+
+        assert outcome == AttackOutcome.FAILURE
+        assert reason == "3회 시도 후에도 목표를 달성하지 못했습니다"
+
+    def test_determine_attack_outcome_no_response_korean_locale(self, mock_target, basic_context):
+        """Test no-response failure reason localization for Korean locale."""
+        attack = PromptSendingAttack(objective_target=mock_target)
+        attack._objective_scorer = MagicMock()
+        basic_context.memory_labels = {"locale": "ko"}
+
+        outcome, reason = attack._determine_attack_outcome(response=None, score=None, context=basic_context)
+
+        assert outcome == AttackOutcome.FAILURE
+        assert reason == "모든 시도가 필터링되었거나 응답을 받지 못했습니다"
+
+    def test_determine_attack_outcome_no_scorer_korean_locale(self, mock_target, sample_response, basic_context):
+        """Test undetermined reason localization when no objective scorer is configured."""
+        attack = PromptSendingAttack(objective_target=mock_target)
+        attack._objective_scorer = None
+        basic_context.memory_labels = {"locale": "ko"}
+
+        outcome, reason = attack._determine_attack_outcome(response=sample_response, score=None, context=basic_context)
+
+        assert outcome == AttackOutcome.UNDETERMINED
+        assert reason == "목표 scorer가 설정되지 않았습니다"
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestAttackLifecycle:
