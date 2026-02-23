@@ -398,6 +398,24 @@ class TestSkeletonKeyFailureResult:
         assert result.last_score is None
         assert result.attack_identifier == attack.get_identifier()
 
+    def test_create_skeleton_key_failure_result_korean_locale(self, mock_target, basic_context):
+        """Test localized failure reason when locale is Korean."""
+        attack = SkeletonKeyAttack(objective_target=mock_target)
+        basic_context.memory_labels = {"locale": "ko"}
+
+        result = attack._create_skeleton_key_failure_result(context=basic_context)
+
+        assert result.outcome_reason == "스켈레톤 키 프롬프트가 필터링되었거나 실패했습니다"
+
+    def test_create_skeleton_key_failure_result_korean_target_lang(self, mock_target, basic_context):
+        """Test localized failure reason when target_lang alias is Korean."""
+        attack = SkeletonKeyAttack(objective_target=mock_target)
+        basic_context.memory_labels = {"target_lang": "ko"}
+
+        result = attack._create_skeleton_key_failure_result(context=basic_context)
+
+        assert result.outcome_reason == "스켈레톤 키 프롬프트가 필터링되었거나 실패했습니다"
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestSkeletonKeyAttackExecution:

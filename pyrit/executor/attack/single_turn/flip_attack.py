@@ -77,7 +77,7 @@ class FlipAttack(PromptSendingAttack):
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
         merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale", "en")).lower()
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
         if locale not in self._SYSTEM_PROMPT_FILES:
             logger.warning(f"Unsupported locale '{locale}' for FlipAttack. Falling back to 'en'.")
             return "en"

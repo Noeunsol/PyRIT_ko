@@ -118,7 +118,7 @@ class ContextComplianceAttack(PromptSendingAttack):
 
     def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
         merged_labels = {**self._memory_labels, **context.memory_labels}
-        locale = str(merged_labels.get("locale", "en")).lower()
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
         if locale not in self.DEFAULT_CONTEXT_DESCRIPTION_FILES:
             logger.debug("Unsupported locale '%s' for ContextComplianceAttack, falling back to 'en'.", locale)
             return "en"

@@ -55,6 +55,24 @@ class SkeletonKeyAttack(PromptSendingAttack):
         "en": DEFAULT_SKELETON_KEY_PROMPT_PATH,
         "ko": DEFAULT_SKELETON_KEY_PROMPT_KO_PATH,
     }
+    _LOCALIZED_MESSAGES = {
+        "en": {
+            "starting_with_objective": "Starting skeleton key attack with objective: {objective}",
+            "attack_failed_filtered": "Attack failed: skeleton key prompt was filtered",
+            "sending_prompt_to_target": "Sending skeleton key prompt to target",
+            "prompt_accepted_by_target": "Skeleton key prompt accepted by target",
+            "prompt_filtered_or_failed": "Skeleton key prompt was filtered or failed",
+            "outcome_filtered_or_failed": "Skeleton key prompt was filtered or failed",
+        },
+        "ko": {
+            "starting_with_objective": "스켈레톤 키 공격 시작 - 목표: {objective}",
+            "attack_failed_filtered": "공격 실패: 스켈레톤 키 프롬프트가 필터링되었습니다",
+            "sending_prompt_to_target": "스켈레톤 키 프롬프트를 대상에 전송합니다",
+            "prompt_accepted_by_target": "대상이 스켈레톤 키 프롬프트를 수락했습니다",
+            "prompt_filtered_or_failed": "스켈레톤 키 프롬프트가 필터링되었거나 실패했습니다",
+            "outcome_filtered_or_failed": "스켈레톤 키 프롬프트가 필터링되었거나 실패했습니다",
+        },
+    }
 
     @apply_defaults
     def __init__(
@@ -130,6 +148,12 @@ class SkeletonKeyAttack(PromptSendingAttack):
             self._localized_skeleton_key_prompts[locale] = self._load_skeleton_key_prompt_for_locale(locale=locale)
         return self._localized_skeleton_key_prompts[locale]
 
+    def _get_skeleton_key_localized_message(
+        self, *, context: SingleTurnAttackContext[Any], key: str, **kwargs: Any
+    ) -> str:
+        locale = self._resolve_locale(context=context)
+        return self._LOCALIZED_MESSAGES[locale][key].format(**kwargs)
+
     async def _perform_async(self, *, context: SingleTurnAttackContext[Any]) -> AttackResult:
         """
         Execute the skeleton key attack by first sending the skeleton key prompt,
@@ -141,7 +165,13 @@ class SkeletonKeyAttack(PromptSendingAttack):
         Returns:
             AttackResult containing the outcome of the attack.
         """
-        self._logger.info(f"Starting skeleton key attack with objective: {context.objective}")
+        self._logger.info(
+            self._get_skeleton_key_localized_message(
+                context=context,
+                key="starting_with_objective",
+                objective=context.objective,
+            )
+        )
 
         # Attack Execution Flow:
         # 1) Send skeleton key prompt to prime the target
@@ -154,7 +184,7 @@ class SkeletonKeyAttack(PromptSendingAttack):
 
         # Step 2: Check if skeleton key was filtered or failed
         if not skeleton_response:
-            self._logger.info("Attack failed: skeleton key prompt was filtered")
+            self._logger.info(self._get_skeleton_key_localized_message(context=context, key="attack_failed_filtered"))
             return self._create_skeleton_key_failure_result(context=context)
 
         # Step 3: Execute the parent's attack flow to send objective and score
@@ -175,7 +205,7 @@ class SkeletonKeyAttack(PromptSendingAttack):
         Returns:
             Optional[Message]: The response from the target, or None if filtered.
         """
-        self._logger.debug("Sending skeleton key prompt to target")
+        self._logger.debug(self._get_skeleton_key_localized_message(context=context, key="sending_prompt_to_target"))
         locale = self._resolve_locale(context=context)
         skeleton_key_prompt = self._get_skeleton_key_prompt_for_locale(locale=locale)
 
@@ -188,9 +218,13 @@ class SkeletonKeyAttack(PromptSendingAttack):
         )
 
         if skeleton_response:
-            self._logger.debug("Skeleton key prompt accepted by target")
+            self._logger.debug(
+                self._get_skeleton_key_localized_message(context=context, key="prompt_accepted_by_target")
+            )
         else:
-            self._logger.warning("Skeleton key prompt was filtered or failed")
+            self._logger.warning(
+                self._get_skeleton_key_localized_message(context=context, key="prompt_filtered_or_failed")
+            )
 
         return skeleton_response
 
@@ -211,6 +245,6 @@ class SkeletonKeyAttack(PromptSendingAttack):
             last_response=None,
             last_score=None,
             outcome=AttackOutcome.FAILURE,
-            outcome_reason="Skeleton key prompt was filtered or failed",
+            outcome_reason=self._get_skeleton_key_localized_message(context=context, key="outcome_filtered_or_failed"),
             executed_turns=1,
         )
