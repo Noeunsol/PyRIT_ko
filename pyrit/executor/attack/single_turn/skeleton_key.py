@@ -48,6 +48,13 @@ class SkeletonKeyAttack(PromptSendingAttack):
 
     # Default skeleton key prompt path
     DEFAULT_SKELETON_KEY_PROMPT_PATH: Path = Path(EXECUTOR_SEED_PROMPT_PATH) / "skeleton_key" / "skeleton_key.prompt"
+    DEFAULT_SKELETON_KEY_PROMPT_KO_PATH: Path = (
+        Path(EXECUTOR_SEED_PROMPT_PATH) / "skeleton_key" / "skeleton_key_ko.prompt"
+    )
+    DEFAULT_SKELETON_KEY_PROMPT_FILES: dict[str, Path] = {
+        "en": DEFAULT_SKELETON_KEY_PROMPT_PATH,
+        "ko": DEFAULT_SKELETON_KEY_PROMPT_KO_PATH,
+    }
 
     @apply_defaults
     def __init__(
@@ -82,8 +89,12 @@ class SkeletonKeyAttack(PromptSendingAttack):
             params_type=SkeletonKeyAttackParameters,
         )
 
-        # Load skeleton key prompt
+        self._custom_skeleton_key_prompt = skeleton_key_prompt
+        self._localized_skeleton_key_prompts: dict[str, str] = {}
+
+        # Load default skeleton key prompt (backward-compatible attribute)
         self._skeleton_key_prompt = self._load_skeleton_key_prompt(skeleton_key_prompt)
+        self._localized_skeleton_key_prompts["en"] = self._skeleton_key_prompt
 
     def _load_skeleton_key_prompt(self, skeleton_key_prompt: Optional[str]) -> str:
         """
@@ -99,6 +110,25 @@ class SkeletonKeyAttack(PromptSendingAttack):
             return skeleton_key_prompt
 
         return SeedDataset.from_yaml_file(self.DEFAULT_SKELETON_KEY_PROMPT_PATH).prompts[0].value
+
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
+        merged_labels = {**self._memory_labels, **context.memory_labels}
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+        if locale not in self.DEFAULT_SKELETON_KEY_PROMPT_FILES:
+            logger.debug("Unsupported locale '%s' for SkeletonKeyAttack. Falling back to 'en'.", locale)
+            return "en"
+        return locale
+
+    def _load_skeleton_key_prompt_for_locale(self, *, locale: str) -> str:
+        prompt_path = self.DEFAULT_SKELETON_KEY_PROMPT_FILES[locale]
+        return SeedDataset.from_yaml_file(prompt_path).prompts[0].value
+
+    def _get_skeleton_key_prompt_for_locale(self, *, locale: str) -> str:
+        if self._custom_skeleton_key_prompt:
+            return self._custom_skeleton_key_prompt
+        if locale not in self._localized_skeleton_key_prompts:
+            self._localized_skeleton_key_prompts[locale] = self._load_skeleton_key_prompt_for_locale(locale=locale)
+        return self._localized_skeleton_key_prompts[locale]
 
     async def _perform_async(self, *, context: SingleTurnAttackContext[Any]) -> AttackResult:
         """
@@ -146,9 +176,11 @@ class SkeletonKeyAttack(PromptSendingAttack):
             Optional[Message]: The response from the target, or None if filtered.
         """
         self._logger.debug("Sending skeleton key prompt to target")
+        locale = self._resolve_locale(context=context)
+        skeleton_key_prompt = self._get_skeleton_key_prompt_for_locale(locale=locale)
 
         # Create message for skeleton key
-        skeleton_key_message = Message.from_prompt(prompt=self._skeleton_key_prompt, role="user")
+        skeleton_key_message = Message.from_prompt(prompt=skeleton_key_prompt, role="user")
 
         # Send skeleton key prompt
         skeleton_response = await self._send_prompt_to_objective_target_async(

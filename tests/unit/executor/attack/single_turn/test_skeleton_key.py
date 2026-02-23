@@ -299,6 +299,84 @@ class TestSkeletonKeyPromptSending:
         assert call_args.kwargs["labels"] == {"test": "label"}
         assert "attack_identifier" in call_args.kwargs
 
+    @pytest.mark.asyncio
+    @patch("pyrit.executor.attack.single_turn.skeleton_key.SeedDataset.from_yaml_file")
+    async def test_send_skeleton_key_prompt_uses_korean_prompt_when_locale_ko(
+        self, mock_from_yaml, mock_target, mock_prompt_normalizer, basic_context
+    ):
+        default_seed_prompt = MagicMock()
+        default_seed_prompt.value = "Default skeleton key prompt"
+        ko_seed_prompt = MagicMock()
+        ko_seed_prompt.value = "한국어 스켈레톤 키 프롬프트"
+
+        default_dataset = MagicMock()
+        default_dataset.prompts = [default_seed_prompt]
+        ko_dataset = MagicMock()
+        ko_dataset.prompts = [ko_seed_prompt]
+
+        def _side_effect(path: Path):
+            if path == SkeletonKeyAttack.DEFAULT_SKELETON_KEY_PROMPT_KO_PATH:
+                return ko_dataset
+            return default_dataset
+
+        mock_from_yaml.side_effect = _side_effect
+
+        attack = SkeletonKeyAttack(
+            objective_target=mock_target,
+            prompt_normalizer=mock_prompt_normalizer,
+        )
+
+        mock_prompt_normalizer.send_prompt_async.return_value = Message.from_prompt(prompt="ok", role="assistant")
+        basic_context.memory_labels = {"locale": "ko"}
+
+        await attack._send_skeleton_key_prompt_async(context=basic_context)
+
+        call_args = mock_prompt_normalizer.send_prompt_async.call_args
+        message = call_args.kwargs["message"]
+        assert message.message_pieces[0].original_value == "한국어 스켈레톤 키 프롬프트"
+
+        called_paths = [call.args[0] for call in mock_from_yaml.call_args_list if call.args]
+        assert SkeletonKeyAttack.DEFAULT_SKELETON_KEY_PROMPT_KO_PATH in called_paths
+
+    @pytest.mark.asyncio
+    @patch("pyrit.executor.attack.single_turn.skeleton_key.SeedDataset.from_yaml_file")
+    async def test_send_skeleton_key_prompt_uses_korean_prompt_when_target_lang_ko(
+        self, mock_from_yaml, mock_target, mock_prompt_normalizer, basic_context
+    ):
+        default_seed_prompt = MagicMock()
+        default_seed_prompt.value = "Default skeleton key prompt"
+        ko_seed_prompt = MagicMock()
+        ko_seed_prompt.value = "한국어 스켈레톤 키 프롬프트"
+
+        default_dataset = MagicMock()
+        default_dataset.prompts = [default_seed_prompt]
+        ko_dataset = MagicMock()
+        ko_dataset.prompts = [ko_seed_prompt]
+
+        def _side_effect(path: Path):
+            if path == SkeletonKeyAttack.DEFAULT_SKELETON_KEY_PROMPT_KO_PATH:
+                return ko_dataset
+            return default_dataset
+
+        mock_from_yaml.side_effect = _side_effect
+
+        attack = SkeletonKeyAttack(
+            objective_target=mock_target,
+            prompt_normalizer=mock_prompt_normalizer,
+        )
+
+        mock_prompt_normalizer.send_prompt_async.return_value = Message.from_prompt(prompt="ok", role="assistant")
+        basic_context.memory_labels = {"target_lang": "ko"}
+
+        await attack._send_skeleton_key_prompt_async(context=basic_context)
+
+        call_args = mock_prompt_normalizer.send_prompt_async.call_args
+        message = call_args.kwargs["message"]
+        assert message.message_pieces[0].original_value == "한국어 스켈레톤 키 프롬프트"
+
+        called_paths = [call.args[0] for call in mock_from_yaml.call_args_list if call.args]
+        assert SkeletonKeyAttack.DEFAULT_SKELETON_KEY_PROMPT_KO_PATH in called_paths
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestSkeletonKeyFailureResult:
