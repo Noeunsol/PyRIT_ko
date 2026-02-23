@@ -89,3 +89,36 @@ class MultiTurnAttackStrategy(AttackStrategy[MultiTurnAttackStrategyContextT, At
             params_type=params_type,
             logger=logger,
         )
+
+    _SUPPORTED_LOCALES = {"en", "ko"}
+
+    def _get_merged_memory_labels(self, *, context: MultiTurnAttackContext[Any]) -> dict[str, str]:
+        """
+        Merge strategy-level and context-level memory labels.
+
+        Context labels take precedence over strategy labels.
+        """
+        return {**self._memory_labels, **context.memory_labels}
+
+    def _resolve_locale(self, *, context: MultiTurnAttackContext[Any], supported_locales: Optional[set[str]] = None) -> str:
+        """
+        Resolve locale from memory labels with alias and fallback support.
+
+        Resolution order:
+        1) locale
+        2) target_lang (alias)
+        3) en (default)
+        """
+        merged_labels = self._get_merged_memory_labels(context=context)
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+
+        allowed_locales = supported_locales or self._SUPPORTED_LOCALES
+        if locale not in allowed_locales:
+            self._logger.debug(
+                "Unsupported locale '%s' for %s. Falling back to 'en'.",
+                locale,
+                self.__class__.__name__,
+            )
+            return "en"
+
+        return locale
