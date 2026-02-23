@@ -408,6 +408,156 @@ class TestRolePlayAttackSetup:
                 # Verify parent's setup was called
                 mock_parent_setup.assert_called_once_with(context=basic_context)
 
+    @pytest.mark.asyncio
+    async def test_setup_loads_korean_role_play_definition_when_locale_ko(
+        self, mock_objective_target, mock_adversarial_chat_target
+    ):
+        """Test that _setup_async loads *_ko.yaml when locale is ko."""
+        role_play_data_en = {
+            "dataset_name": "test_role_play_en",
+            "description": "English role play definition",
+            "authors": "Test Author",
+            "groups": "Test Group",
+            "seeds": [
+                {
+                    "description": "Rephrase instructions",
+                    "parameters": ["objective"],
+                    "value": "EN rephrase: {{ objective }}",
+                },
+                {
+                    "description": "First user turn",
+                    "value": "EN user turn",
+                },
+                {
+                    "description": "Assistant turn",
+                    "value": "EN assistant turn",
+                },
+            ],
+        }
+        role_play_data_ko = {
+            "dataset_name": "test_role_play_ko",
+            "description": "Korean role play definition",
+            "authors": "Test Author",
+            "groups": "Test Group",
+            "seeds": [
+                {
+                    "description": "재구성 지시",
+                    "parameters": ["objective"],
+                    "value": "KO 재구성: {{ objective }}",
+                },
+                {
+                    "description": "첫 사용자 턴",
+                    "value": "KO 사용자 턴",
+                },
+                {
+                    "description": "어시스턴트 턴",
+                    "value": "KO 어시스턴트 턴",
+                },
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            role_play_path = pathlib.Path(temp_dir) / "role_play.yaml"
+            role_play_ko_path = pathlib.Path(temp_dir) / "role_play_ko.yaml"
+            with role_play_path.open("w") as en_file:
+                yaml.dump(role_play_data_en, en_file)
+            with role_play_ko_path.open("w") as ko_file:
+                yaml.dump(role_play_data_ko, ko_file)
+
+            attack = RolePlayAttack(
+                objective_target=mock_objective_target,
+                adversarial_chat=mock_adversarial_chat_target,
+                role_play_definition_path=role_play_path,
+            )
+
+            context = SingleTurnAttackContext(
+                params=AttackParameters(
+                    objective="test objective",
+                    memory_labels={"locale": "ko"},
+                ),
+                conversation_id=str(uuid.uuid4()),
+            )
+
+            with patch.object(
+                attack,
+                "_rephrase_objective_async",
+                new_callable=AsyncMock,
+                return_value="KO rephrased objective",
+            ):
+                with patch(
+                    "pyrit.executor.attack.single_turn.prompt_sending.PromptSendingAttack._setup_async",
+                    new_callable=AsyncMock,
+                ):
+                    await attack._setup_async(context=context)
+
+            assert attack._active_role_play_definition_path == role_play_ko_path
+            assert attack._user_start_turn.value == "KO 사용자 턴"
+
+    @pytest.mark.asyncio
+    async def test_setup_loads_korean_role_play_definition_when_target_lang_ko(
+        self, mock_objective_target, mock_adversarial_chat_target
+    ):
+        """Test that _setup_async supports target_lang label as locale alias."""
+        role_play_data_en = {
+            "dataset_name": "test_role_play_en",
+            "description": "English role play definition",
+            "authors": "Test Author",
+            "groups": "Test Group",
+            "seeds": [
+                {"description": "Rephrase instructions", "parameters": ["objective"], "value": "EN {{ objective }}"},
+                {"description": "First user turn", "value": "EN user turn"},
+                {"description": "Assistant turn", "value": "EN assistant turn"},
+            ],
+        }
+        role_play_data_ko = {
+            "dataset_name": "test_role_play_ko",
+            "description": "Korean role play definition",
+            "authors": "Test Author",
+            "groups": "Test Group",
+            "seeds": [
+                {"description": "재구성 지시", "parameters": ["objective"], "value": "KO {{ objective }}"},
+                {"description": "첫 사용자 턴", "value": "KO 사용자 턴"},
+                {"description": "어시스턴트 턴", "value": "KO 어시스턴트 턴"},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            role_play_path = pathlib.Path(temp_dir) / "role_play.yaml"
+            role_play_ko_path = pathlib.Path(temp_dir) / "role_play_ko.yaml"
+            with role_play_path.open("w") as en_file:
+                yaml.dump(role_play_data_en, en_file)
+            with role_play_ko_path.open("w") as ko_file:
+                yaml.dump(role_play_data_ko, ko_file)
+
+            attack = RolePlayAttack(
+                objective_target=mock_objective_target,
+                adversarial_chat=mock_adversarial_chat_target,
+                role_play_definition_path=role_play_path,
+            )
+
+            context = SingleTurnAttackContext(
+                params=AttackParameters(
+                    objective="test objective",
+                    memory_labels={"target_lang": "ko"},
+                ),
+                conversation_id=str(uuid.uuid4()),
+            )
+
+            with patch.object(
+                attack,
+                "_rephrase_objective_async",
+                new_callable=AsyncMock,
+                return_value="KO rephrased objective",
+            ):
+                with patch(
+                    "pyrit.executor.attack.single_turn.prompt_sending.PromptSendingAttack._setup_async",
+                    new_callable=AsyncMock,
+                ):
+                    await attack._setup_async(context=context)
+
+            assert attack._active_role_play_definition_path == role_play_ko_path
+            assert attack._user_start_turn.value == "KO 사용자 턴"
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestRolePlayAttackRephrasing:
