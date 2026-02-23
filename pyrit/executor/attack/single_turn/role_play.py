@@ -61,6 +61,8 @@ class RolePlayAttack(PromptSendingAttack):
     and multiple scorer types.
     """
 
+    _SUPPORTED_LOCALES = {"en", "ko"}
+
     @apply_defaults
     def __init__(
         self,
@@ -103,22 +105,11 @@ class RolePlayAttack(PromptSendingAttack):
 
         # Store the adversarial chat for role-play rephrasing
         self._adversarial_chat = adversarial_chat
+        self._role_play_definition_path = role_play_definition_path
+        self._active_role_play_definition_path = role_play_definition_path
+        self._loaded_role_play_definitions: dict[pathlib.Path, SeedDataset] = {}
 
-        # Load role-play definitions
-        role_play_definition = SeedDataset.from_yaml_file(role_play_definition_path)
-
-        # Validate role-play definition structure
-        self._parse_role_play_definition(role_play_definition)
-
-        # Create the rephrase converter configuration
-        self._rephrase_converter = PromptConverterConfiguration.from_converters(
-            converters=[
-                LLMGenericTextConverter(
-                    converter_target=self._adversarial_chat,
-                    user_prompt_template_with_objective=self._rephrase_instructions,
-                )
-            ]
-        )
+        self._load_role_play_definition(path=role_play_definition_path)
 
     async def _setup_async(self, *, context: SingleTurnAttackContext[Any]) -> None:
         """
@@ -128,6 +119,11 @@ class RolePlayAttack(PromptSendingAttack):
         Args:
             context (SingleTurnAttackContext): The attack context containing attack parameters.
         """
+        locale = self._resolve_locale(context=context)
+        role_play_definition_path = self._resolve_role_play_definition_path_for_locale(locale=locale)
+        if role_play_definition_path != self._active_role_play_definition_path:
+            self._load_role_play_definition(path=role_play_definition_path)
+
         # Get role-play conversation start (turns 0 and 1)
         context.prepended_conversation = await self._get_conversation_start() or []
 
@@ -141,6 +137,48 @@ class RolePlayAttack(PromptSendingAttack):
 
         # Call parent setup which handles conversation ID generation, memory labels, etc.
         await super()._setup_async(context=context)
+
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
+        merged_labels = {**self._memory_labels, **context.memory_labels}
+        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+        if locale not in self._SUPPORTED_LOCALES:
+            logger.debug("Unsupported locale '%s' for RolePlayAttack, falling back to 'en'.", locale)
+            return "en"
+        return locale
+
+    def _resolve_role_play_definition_path_for_locale(self, *, locale: str) -> pathlib.Path:
+        if locale != "ko":
+            return self._role_play_definition_path
+
+        ko_path = self._role_play_definition_path.with_name(
+            f"{self._role_play_definition_path.stem}_ko{self._role_play_definition_path.suffix}"
+        )
+        if ko_path.exists():
+            return ko_path
+
+        logger.debug(
+            "Korean role-play definition not found at %s. Falling back to %s.",
+            ko_path,
+            self._role_play_definition_path,
+        )
+        return self._role_play_definition_path
+
+    def _load_role_play_definition(self, *, path: pathlib.Path) -> None:
+        role_play_definition = self._loaded_role_play_definitions.get(path)
+        if role_play_definition is None:
+            role_play_definition = SeedDataset.from_yaml_file(path)
+            self._loaded_role_play_definitions[path] = role_play_definition
+
+        self._parse_role_play_definition(role_play_definition)
+        self._rephrase_converter = PromptConverterConfiguration.from_converters(
+            converters=[
+                LLMGenericTextConverter(
+                    converter_target=self._adversarial_chat,
+                    user_prompt_template_with_objective=self._rephrase_instructions,
+                )
+            ]
+        )
+        self._active_role_play_definition_path = path
 
     async def _rephrase_objective_async(self, *, objective: str) -> str:
         """

@@ -1,8 +1,8 @@
 ---
 name: Flip Attack (Korean)
 description: >
- Korean system prompt for FlipAttack.
- This is sent to target, not red teaming chat, like other system prompt examples.
+ FlipAttack에 대한 한국어 시스템 메시지입니다.
+ 이 메시지는 다른 시스템 메시지 예시들과 달리 레드팀 채팅이 아닌 타겟에게 전송됩니다.
 parameters:
   - prompt
 data_type: text

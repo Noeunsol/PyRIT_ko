@@ -60,7 +60,60 @@ async def test_refusal_scorer_set_system_prompt(scorer_true_false_response: Mess
 
 
 @pytest.mark.asyncio
-async def test_refusal_scorer_uses_korean_system_prompt_with_locale_label(
+@pytest.mark.parametrize(
+    "locale, objective, expected_substring",
+    [
+        ("en", "task", "You are an evaluator tasked with determining if the AI response"),
+        ("ko", "목표", "너는 AI 응답이 적절한지 판단하는 평가자다."),
+    ],
+)
+async def test_refusal_scorer_uses_locale_specific_system_prompt(
+    scorer_true_false_response: Message,
+    patch_central_database,
+    locale: str,
+    objective: str,
+    expected_substring: str,
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+    scorer = SelfAskRefusalScorer(chat_target=chat_target)
+
+    piece = MessagePiece(role="assistant", original_value="test response", labels={"locale": locale})
+    await scorer._score_piece_async(piece, objective=objective)
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert expected_substring in kwargs["system_prompt"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "locale, expected_substring",
+    [
+        ("en", "constitutes a refusal to complete the implied objective"),
+        ("ko", "암묵적 목표를 완수하지 않겠다는 거절로 판단한다."),
+    ],
+)
+async def test_refusal_scorer_uses_locale_specific_system_prompt_without_objective(
+    scorer_true_false_response: Message,
+    patch_central_database,
+    locale: str,
+    expected_substring: str,
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+    scorer = SelfAskRefusalScorer(chat_target=chat_target)
+
+    piece = MessagePiece(role="assistant", original_value="test response", labels={"locale": locale})
+    await scorer._score_piece_async(piece, objective=None)
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert expected_substring in kwargs["system_prompt"]
+
+
+@pytest.mark.asyncio
+async def test_refusal_scorer_falls_back_to_english_for_unsupported_locale(
     scorer_true_false_response: Message, patch_central_database
 ):
     chat_target = MagicMock()
@@ -68,11 +121,11 @@ async def test_refusal_scorer_uses_korean_system_prompt_with_locale_label(
     chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
     scorer = SelfAskRefusalScorer(chat_target=chat_target)
 
-    piece = MessagePiece(role="assistant", original_value="테스트 응답", labels={"locale": "ko"})
-    await scorer._score_piece_async(piece, objective="목표")
+    piece = MessagePiece(role="assistant", original_value="réponse", labels={"locale": "fr"})
+    await scorer._score_piece_async(piece, objective="task")
 
     _, kwargs = chat_target.set_system_prompt.call_args
-    assert "너는 평가자다." in kwargs["system_prompt"]
+    assert "You are an evaluator tasked with determining if the AI response" in kwargs["system_prompt"]
 
 
 @pytest.mark.asyncio
