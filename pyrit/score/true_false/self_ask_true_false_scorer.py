@@ -169,7 +169,7 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
 
     def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
         labels = message_piece.labels or {}
-        locale = str(labels.get("locale", "en")).lower()
+        locale = str(labels.get("locale") or labels.get("target_lang") or "en").lower()
         if locale not in self._system_prompts_by_locale:
             logger.debug("Unsupported scorer locale '%s'; falling back to 'en'.", locale)
             return "en"
