@@ -122,6 +122,29 @@ class MultiPromptSendingAttack(MultiTurnAttackStrategy[MultiTurnAttackContext[An
     and multiple scorer types for comprehensive evaluation.
     """
 
+    _LOCALIZED_MESSAGES = {
+        "en": {
+            "starting_with_objective": "Starting {attack_name} with objective: {objective}",
+            "processing_message": "Processing message {message_number}/{total_messages}",
+            "sent_message_successfully": "Successfully sent message {message_number}",
+            "failed_to_send_terminating": "Failed to send message {message_number}, terminating",
+            "no_objective_scorer": "No objective scorer configured",
+            "objective_achieved": "Objective achieved according to scorer",
+            "failed_to_achieve_objective": "Failed to achieve objective",
+            "prompts_filtered_or_failed": "At least one prompt was filtered or failed to get a response",
+        },
+        "ko": {
+            "starting_with_objective": "{attack_name} 시작 - 목표: {objective}",
+            "processing_message": "메시지 처리 중 {message_number}/{total_messages}",
+            "sent_message_successfully": "{message_number}번째 메시지 전송 성공",
+            "failed_to_send_terminating": "{message_number}번째 메시지 전송 실패로 종료합니다",
+            "no_objective_scorer": "목표 scorer가 설정되지 않았습니다",
+            "objective_achieved": "scorer 기준으로 목표를 달성했습니다",
+            "failed_to_achieve_objective": "목표를 달성하지 못했습니다",
+            "prompts_filtered_or_failed": "하나 이상의 프롬프트가 필터링되었거나 응답을 받지 못했습니다",
+        },
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -181,6 +204,15 @@ class MultiPromptSendingAttack(MultiTurnAttackStrategy[MultiTurnAttackContext[An
             auxiliary_scorers=self._auxiliary_scorers,
         )
 
+    def _resolve_locale(self, *, context: MultiTurnAttackContext[Any], supported_locales: Optional[set[str]] = None) -> str:
+        allowed_locales = supported_locales or set(self._LOCALIZED_MESSAGES)
+        return super()._resolve_locale(context=context, supported_locales=allowed_locales)
+
+    def _get_localized_message(self, *, context: MultiTurnAttackContext[Any], key: str, **kwargs: Any) -> str:
+        locale = self._resolve_locale(context=context)
+        template = self._LOCALIZED_MESSAGES[locale][key]
+        return template.format(**kwargs)
+
     def _validate_context(self, *, context: MultiTurnAttackContext[Any]) -> None:
         """
         Validate the context before executing the attack.
@@ -227,7 +259,14 @@ class MultiPromptSendingAttack(MultiTurnAttackStrategy[MultiTurnAttackContext[An
             AttackResult containing the outcome of the attack.
         """
         # Log the attack configuration
-        logger.info(f"Starting {self.__class__.__name__} with objective: {context.objective}")
+        self._logger.info(
+            self._get_localized_message(
+                context=context,
+                key="starting_with_objective",
+                attack_name=self.__class__.__name__,
+                objective=context.objective,
+            )
+        )
 
         # Attack execution steps:
         # 1) Send each predefined malicious prompt to the target sequentially
@@ -239,7 +278,14 @@ class MultiPromptSendingAttack(MultiTurnAttackStrategy[MultiTurnAttackContext[An
         score = None
 
         for message_index, current_message in enumerate(context.params.user_messages):
-            logger.info(f"Processing message {message_index + 1}/{len(context.params.user_messages)}")
+            self._logger.info(
+                self._get_localized_message(
+                    context=context,
+                    key="processing_message",
+                    message_number=message_index + 1,
+                    total_messages=len(context.params.user_messages),
+                )
+            )
 
             # Send the message directly
             response_message = await self._send_prompt_to_objective_target_async(
@@ -251,10 +297,22 @@ class MultiPromptSendingAttack(MultiTurnAttackStrategy[MultiTurnAttackContext[An
                 response = response_message
                 context.last_response = response
                 context.executed_turns += 1
-                self._logger.debug(f"Successfully sent message {message_index + 1}")
+                self._logger.debug(
+                    self._get_localized_message(
+                        context=context,
+                        key="sent_message_successfully",
+                        message_number=message_index + 1,
+                    )
+                )
             else:
                 response = None
-                self._logger.warning(f"Failed to send message {message_index + 1}, terminating")
+                self._logger.warning(
+                    self._get_localized_message(
+                        context=context,
+                        key="failed_to_send_terminating",
+                        message_number=message_index + 1,
+                    )
+                )
                 break
 
         # Score the last response including auxiliary and objective scoring
@@ -300,21 +358,21 @@ class MultiPromptSendingAttack(MultiTurnAttackStrategy[MultiTurnAttackContext[An
         """
         if not self._objective_scorer:
             # No scorer means we can't determine success/failure
-            return AttackOutcome.UNDETERMINED, "No objective scorer configured"
+            return AttackOutcome.UNDETERMINED, self._get_localized_message(context=context, key="no_objective_scorer")
 
         if score and score.get_value():
             # We have a positive score, so it's a success
-            return AttackOutcome.SUCCESS, "Objective achieved according to scorer"
+            return AttackOutcome.SUCCESS, self._get_localized_message(context=context, key="objective_achieved")
 
         if response:
             # We got response(s) but the final response did not achieve the objective
             return (
                 AttackOutcome.FAILURE,
-                "Failed to achieve objective",
+                self._get_localized_message(context=context, key="failed_to_achieve_objective"),
             )
 
         # At least one prompt was filtered or failed to get a response
-        return AttackOutcome.FAILURE, "At least one prompt was filtered or failed to get a response"
+        return AttackOutcome.FAILURE, self._get_localized_message(context=context, key="prompts_filtered_or_failed")
 
     async def _teardown_async(self, *, context: MultiTurnAttackContext[Any]) -> None:
         """Clean up after attack execution."""
