@@ -39,6 +39,7 @@ class SelfAskScaleScorer(FloatScaleScorer):
         supported_data_types=["text"],
         is_objective_required=True,
     )
+    _SUPPORTED_LOCALES = ("en", "ko")
 
     def __init__(
         self,
@@ -72,17 +73,30 @@ class SelfAskScaleScorer(FloatScaleScorer):
         system_prompt_path = verify_and_resolve_path(system_prompt_path)
         scale_arguments_path = verify_and_resolve_path(scale_arguments_path)
 
-        scale_args = yaml.safe_load(scale_arguments_path.read_text(encoding="utf-8"))
+        localized_system_prompt_paths = self._get_localized_paths(resolved_path=system_prompt_path)
+        localized_scale_argument_paths = self._get_localized_paths(resolved_path=scale_arguments_path)
 
-        self._validate_scale_arguments_set(scale_args)
+        self._minimum_values_by_locale: dict[str, int] = {}
+        self._maximum_values_by_locale: dict[str, int] = {}
+        self._categories_by_locale: dict[str, str] = {}
+        self._system_prompts_by_locale: dict[str, str] = {}
 
-        self._minimum_value = scale_args["minimum_value"]
-        self._maximum_value = scale_args["maximum_value"]
-        self._category = scale_args["category"]
+        for locale in self._SUPPORTED_LOCALES:
+            scale_args = yaml.safe_load(localized_scale_argument_paths[locale].read_text(encoding="utf-8"))
+            self._validate_scale_arguments_set(scale_args)
 
-        scoring_instructions_template = SeedPrompt.from_yaml_file(system_prompt_path)
+            self._minimum_values_by_locale[locale] = scale_args["minimum_value"]
+            self._maximum_values_by_locale[locale] = scale_args["maximum_value"]
+            self._categories_by_locale[locale] = scale_args["category"]
 
-        self._system_prompt = scoring_instructions_template.render_template_value(**scale_args)
+            scoring_instructions_template = SeedPrompt.from_yaml_file(localized_system_prompt_paths[locale])
+            self._system_prompts_by_locale[locale] = scoring_instructions_template.render_template_value(**scale_args)
+
+        # Backward-compatible attributes used by existing tests and callsites.
+        self._minimum_value = self._minimum_values_by_locale["en"]
+        self._maximum_value = self._maximum_values_by_locale["en"]
+        self._category = self._categories_by_locale["en"]
+        self._system_prompt = self._system_prompts_by_locale["en"]
 
     def _build_identifier(self) -> ScorerIdentifier:
         """
@@ -111,27 +125,67 @@ class SelfAskScaleScorer(FloatScaleScorer):
                          The score_value is a value from [0,1] that is scaled based on the scorer's scale.
         """
         scoring_prompt = f"objective: {objective}\nresponse: {message_piece.converted_value}"
+        locale = self._resolve_locale(message_piece=message_piece)
+        system_prompt = self._system_prompts_by_locale[locale]
+        category = self._categories_by_locale.get(locale, self._category)
+        minimum_value = self._minimum_value if locale == "en" else self._minimum_values_by_locale.get(locale, self._minimum_value)
+        maximum_value = self._maximum_value if locale == "en" else self._maximum_values_by_locale.get(locale, self._maximum_value)
 
         unvalidated_score: UnvalidatedScore = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
-            system_prompt=self._system_prompt,
+            system_prompt=system_prompt,
             message_value=scoring_prompt,
             message_data_type=message_piece.converted_value_data_type,
             scored_prompt_id=message_piece.id,
-            category=self._category,
+            category=category,
             objective=objective,
         )
 
         score = unvalidated_score.to_score(
             score_value=str(
                 self.scale_value_float(
-                    float(unvalidated_score.raw_score_value), self._minimum_value, self._maximum_value
+                    float(unvalidated_score.raw_score_value), minimum_value, maximum_value
                 )
             ),
             score_type="float_scale",
         )
 
         return [score]
+
+    @staticmethod
+    def _normalize_locale_value(locale_value: str) -> str:
+        normalized = locale_value.strip().lower().replace("_", "-")
+        if not normalized:
+            return ""
+        primary_subtag = normalized.split("-", maxsplit=1)[0]
+        if primary_subtag == "kr":
+            return "ko"
+        return primary_subtag
+
+    @classmethod
+    def _get_localized_paths(cls, *, resolved_path: Path) -> dict[str, Path]:
+        localized_paths = {locale: resolved_path for locale in cls._SUPPORTED_LOCALES}
+
+        if resolved_path.stem.endswith("_ko"):
+            english_candidate = resolved_path.with_name(f"{resolved_path.stem[:-3]}{resolved_path.suffix}")
+            if english_candidate.exists():
+                localized_paths["en"] = english_candidate.resolve()
+            localized_paths["ko"] = resolved_path
+            return localized_paths
+
+        korean_candidate = resolved_path.with_name(f"{resolved_path.stem}_ko{resolved_path.suffix}")
+        if korean_candidate.exists():
+            localized_paths["ko"] = korean_candidate.resolve()
+
+        return localized_paths
+
+    def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
+        labels = message_piece.labels or {}
+        raw_locale = str(labels.get("locale") or labels.get("target_lang") or "en")
+        locale = self._normalize_locale_value(raw_locale) or "en"
+        if locale in self._system_prompts_by_locale:
+            return locale
+        return "en"
 
     def _validate_scale_arguments_set(self, scale_args: dict[str, Any]) -> None:
         try:

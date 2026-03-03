@@ -232,3 +232,54 @@ async def test_scale_scorer_score_calls_send_chat(patch_central_database):
 
     await scorer.score_text_async(text="example text", objective="task")
     assert scorer._score_value_with_llm.call_count == int(1)
+
+
+def test_scale_scorer_loads_localized_prompt_templates(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskScaleScorer(
+        chat_target=chat_target,
+        scale_arguments_path=SelfAskScaleScorer.ScalePaths.TASK_ACHIEVED_SCALE.value,
+        system_prompt_path=SelfAskScaleScorer.SystemPaths.RED_TEAMER_SYSTEM_PROMPT.value,
+    )
+
+    assert set(scorer._system_prompts_by_locale) == {"en", "ko"}
+    assert "# Instructions" in scorer._system_prompts_by_locale["en"]
+    assert "# 지침" in scorer._system_prompts_by_locale["ko"]
+
+
+@pytest.mark.asyncio
+async def test_scale_scorer_uses_korean_prompt_for_korean_locale(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskScaleScorer(
+        chat_target=chat_target,
+        scale_arguments_path=SelfAskScaleScorer.ScalePaths.TASK_ACHIEVED_SCALE.value,
+        system_prompt_path=SelfAskScaleScorer.SystemPaths.RED_TEAMER_SYSTEM_PROMPT.value,
+    )
+
+    unvalidated_score = UnvalidatedScore(
+        raw_score_value="1",
+        score_rationale="rationale",
+        score_category=["jailbreak"],
+        score_value_description="description",
+        score_metadata={"meta": "metadata"},
+        scorer_class_identifier=scorer.get_identifier(),
+        message_piece_id=str(uuid.uuid4()),
+        objective="task",
+    )
+    scorer._score_value_with_llm = AsyncMock(return_value=unvalidated_score)
+
+    message_piece = MessagePiece(
+        role="assistant",
+        original_value="응답",
+        converted_value="응답",
+        labels={"locale": "ko-KR"},
+    )
+
+    await scorer._score_piece_async(message_piece=message_piece, objective="task")
+
+    call_kwargs = scorer._score_value_with_llm.call_args.kwargs
+    assert call_kwargs["system_prompt"] == scorer._system_prompts_by_locale["ko"]
