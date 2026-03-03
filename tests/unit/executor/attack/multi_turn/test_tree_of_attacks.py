@@ -1032,6 +1032,26 @@ class TestHelperMethods:
         assert "0.65" in result.outcome_reason
         assert result.outcome == AttackOutcome.FAILURE
 
+    def test_create_failure_result_is_localized_for_korean_locale(self, attack_builder, helpers):
+        """Test that failure outcome_reason is localized when locale=ko."""
+        attack = attack_builder.with_default_mocks().with_threshold(0.8).build()
+        context = helpers.create_basic_context()
+        context.memory_labels["locale"] = "ko-KR"
+        context.best_objective_score = helpers.create_threshold_score(original_float_value=0.65, threshold=0.8)
+
+        result = attack._create_failure_result(context=context)
+
+        assert "최고 점수" in result.outcome_reason
+        assert result.outcome == AttackOutcome.FAILURE
+
+    def test_format_node_result_korean_locale(self, basic_attack, node_factory):
+        """Test formatting node result using Korean localized labels."""
+        off_topic_node = node_factory.create_node(NodeMockConfig(off_topic=True))
+
+        result = basic_attack._format_node_result(off_topic_node, locale="ko")
+
+        assert result == "가지치기됨 (주제 이탈)"
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestEndToEndExecution:
@@ -1543,6 +1563,26 @@ class TestTreeOfAttacksPromptLoading:
         assert attack._adversarial_chat_system_seed_prompt == mock_system
         assert attack._adversarial_chat_prompt_template == mock_template
         assert attack._adversarial_chat_seed_prompt == mock_seed
+
+    def test_localized_prompt_paths_default_to_korean_variants(self, attack_builder):
+        """Test localized path resolution for default TAP prompt files."""
+        attack = attack_builder.with_default_mocks().build()
+
+        assert attack._adversarial_chat_system_prompt_paths["en"].name == "adversarial_system_prompt.yaml"
+        assert attack._adversarial_chat_system_prompt_paths["ko"].name == "adversarial_system_prompt_ko.yaml"
+        assert attack._adversarial_chat_prompt_template_paths["en"].name == "adversarial_prompt_template.yaml"
+        assert attack._adversarial_chat_prompt_template_paths["ko"].name == "adversarial_prompt_template_ko.yaml"
+        assert attack._adversarial_chat_seed_prompt_paths["en"].name == "adversarial_seed_prompt.yaml"
+        assert attack._adversarial_chat_seed_prompt_paths["ko"].name == "adversarial_seed_prompt_ko.yaml"
+
+    def test_create_attack_node_resolves_korean_locale(self, basic_attack, helpers):
+        """Test that node locale is resolved from memory_labels when locale=ko."""
+        context = helpers.create_basic_context()
+        context.memory_labels["locale"] = "ko"
+
+        node = basic_attack._create_attack_node(context=context, parent_id=None)
+
+        assert node._locale == "ko"
 
 
 @pytest.mark.usefixtures("patch_central_database")

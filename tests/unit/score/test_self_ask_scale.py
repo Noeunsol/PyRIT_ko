@@ -283,3 +283,49 @@ async def test_scale_scorer_uses_korean_prompt_for_korean_locale(patch_central_d
 
     call_kwargs = scorer._score_value_with_llm.call_args.kwargs
     assert call_kwargs["system_prompt"] == scorer._system_prompts_by_locale["ko"]
+
+
+def test_default_scale_scorer_loads_localized_tree_of_attacks_assets(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskScaleScorer(chat_target=chat_target)
+
+    assert scorer._minimum_values_by_locale["en"] == 1
+    assert scorer._maximum_values_by_locale["en"] == 10
+    assert scorer._minimum_values_by_locale["ko"] == 1
+    assert scorer._maximum_values_by_locale["ko"] == 10
+    assert "# Instructions" in scorer._system_prompts_by_locale["en"]
+    assert "# 지침" in scorer._system_prompts_by_locale["ko"]
+
+
+@pytest.mark.asyncio
+async def test_default_scale_scorer_uses_korean_locale_from_target_lang_alias(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskScaleScorer(chat_target=chat_target)
+
+    unvalidated_score = UnvalidatedScore(
+        raw_score_value="1",
+        score_rationale="rationale",
+        score_category=["jailbreak"],
+        score_value_description="description",
+        score_metadata={"meta": "metadata"},
+        scorer_class_identifier=scorer.get_identifier(),
+        message_piece_id=str(uuid.uuid4()),
+        objective="task",
+    )
+    scorer._score_value_with_llm = AsyncMock(return_value=unvalidated_score)
+
+    message_piece = MessagePiece(
+        role="assistant",
+        original_value="응답",
+        converted_value="응답",
+        labels={"target_lang": "kr"},
+    )
+
+    await scorer._score_piece_async(message_piece=message_piece, objective="task")
+
+    call_kwargs = scorer._score_value_with_llm.call_args.kwargs
+    assert call_kwargs["system_prompt"] == scorer._system_prompts_by_locale["ko"]
