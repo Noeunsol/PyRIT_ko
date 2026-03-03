@@ -20,6 +20,7 @@ from pyrit.models import (
     NextMessageSystemPromptPaths,
     Score,
     SeedPrompt,
+    SeedSimulatedConversation,
     SimulatedTargetSystemPromptPaths,
 )
 from pyrit.prompt_target import PromptChatTarget
@@ -112,6 +113,29 @@ class TestSimulatedTargetSystemPromptPaths:
         """Test that the COMPLIANT path is a YAML file."""
         path = SimulatedTargetSystemPromptPaths.COMPLIANT.value
         assert path.suffix == ".yaml"
+
+    def test_compliant_ko_path_exists(self):
+        """Test that the COMPLIANT_KO system prompt path points to an existing file."""
+        path = SimulatedTargetSystemPromptPaths.COMPLIANT_KO.value
+        assert isinstance(path, Path)
+        assert path.exists(), f"Expected compliant_ko.yaml at {path}"
+
+
+@pytest.mark.usefixtures("patch_central_database")
+class TestNextMessageSystemPromptPaths:
+    """Tests for NextMessageSystemPromptPaths enum."""
+
+    def test_direct_path_exists(self):
+        """Test that the DIRECT system prompt path points to an existing file."""
+        path = NextMessageSystemPromptPaths.DIRECT.value
+        assert isinstance(path, Path)
+        assert path.exists(), f"Expected direct_next_message.yaml at {path}"
+
+    def test_direct_ko_path_exists(self):
+        """Test that the DIRECT_KO system prompt path points to an existing file."""
+        path = NextMessageSystemPromptPaths.DIRECT_KO.value
+        assert isinstance(path, Path)
+        assert path.exists(), f"Expected direct_next_message_ko.yaml at {path}"
 
 
 @pytest.mark.usefixtures("patch_central_database")
@@ -705,3 +729,107 @@ class TestGenerateSimulatedConversationAsync:
                 # Verify the first prompt starts at sequence 5
                 assert result[0].sequence == 5
                 assert result[1].sequence == 6
+
+    @pytest.mark.asyncio
+    async def test_resolves_korean_simulated_target_system_prompt_from_memory_labels(
+        self,
+        mock_adversarial_chat: MagicMock,
+        mock_objective_scorer: MagicMock,
+        adversarial_system_prompt_path: Path,
+        sample_conversation: list[Message],
+    ):
+        """Test that locale=ko resolves simulated target prompt to *_ko.yaml when available."""
+        with patch("pyrit.executor.attack.multi_turn.simulated_conversation.RedTeamingAttack") as mock_attack_class:
+            mock_attack = MagicMock()
+            mock_attack.get_identifier.return_value = {"__type__": "RedTeamingAttack", "__module__": "pyrit"}
+            mock_attack.execute_async = AsyncMock(
+                return_value=AttackResult(
+                    attack_identifier={"__type__": "RedTeamingAttack"},
+                    conversation_id=str(uuid.uuid4()),
+                    objective="Test objective",
+                    outcome=AttackOutcome.SUCCESS,
+                    executed_turns=3,
+                )
+            )
+            mock_attack_class.return_value = mock_attack
+
+            with patch("pyrit.executor.attack.multi_turn.simulated_conversation.CentralMemory") as mock_memory_class:
+                mock_memory = MagicMock()
+                mock_memory.get_conversation.return_value = iter(sample_conversation)
+                mock_memory_class.get_memory_instance.return_value = mock_memory
+
+                with patch.object(
+                    SeedSimulatedConversation,
+                    "load_simulated_target_system_prompt",
+                    return_value="localized system prompt",
+                ) as mock_loader:
+                    await generate_simulated_conversation_async(
+                        objective="Test objective",
+                        adversarial_chat=mock_adversarial_chat,
+                        objective_scorer=mock_objective_scorer,
+                        adversarial_chat_system_prompt_path=adversarial_system_prompt_path,
+                        simulated_target_system_prompt_path=SimulatedTargetSystemPromptPaths.COMPLIANT.value,
+                        memory_labels={"locale": "ko-KR"},
+                    )
+
+                    loader_kwargs = mock_loader.call_args.kwargs
+                    assert (
+                        Path(loader_kwargs["simulated_target_system_prompt_path"])
+                        == SimulatedTargetSystemPromptPaths.COMPLIANT_KO.value
+                    )
+
+    @pytest.mark.asyncio
+    async def test_resolves_korean_next_message_system_prompt_from_memory_labels(
+        self,
+        mock_adversarial_chat: MagicMock,
+        mock_objective_scorer: MagicMock,
+        adversarial_system_prompt_path: Path,
+        sample_conversation: list[Message],
+    ):
+        """Test that locale=ko resolves next-message prompt to *_ko.yaml when available."""
+        with patch("pyrit.executor.attack.multi_turn.simulated_conversation.RedTeamingAttack") as mock_attack_class:
+            mock_attack = MagicMock()
+            mock_attack.get_identifier.return_value = {"__type__": "RedTeamingAttack", "__module__": "pyrit"}
+            mock_attack.execute_async = AsyncMock(
+                return_value=AttackResult(
+                    attack_identifier={"__type__": "RedTeamingAttack"},
+                    conversation_id=str(uuid.uuid4()),
+                    objective="Test objective",
+                    outcome=AttackOutcome.SUCCESS,
+                    executed_turns=3,
+                )
+            )
+            mock_attack_class.return_value = mock_attack
+
+            with patch("pyrit.executor.attack.multi_turn.simulated_conversation.CentralMemory") as mock_memory_class:
+                mock_memory = MagicMock()
+                mock_memory.get_conversation.return_value = iter(sample_conversation)
+                mock_memory_class.get_memory_instance.return_value = mock_memory
+
+                generated_next_message = Message(
+                    message_pieces=[
+                        MessagePiece(
+                            role="user",
+                            original_value="다음 메시지",
+                            original_value_data_type="text",
+                            conversation_id=str(uuid.uuid4()),
+                        )
+                    ]
+                )
+
+                with patch(
+                    "pyrit.executor.attack.multi_turn.simulated_conversation._generate_next_message_async",
+                    new=AsyncMock(return_value=generated_next_message),
+                ) as mock_generate_next:
+                    await generate_simulated_conversation_async(
+                        objective="Test objective",
+                        adversarial_chat=mock_adversarial_chat,
+                        objective_scorer=mock_objective_scorer,
+                        adversarial_chat_system_prompt_path=adversarial_system_prompt_path,
+                        next_message_system_prompt_path=NextMessageSystemPromptPaths.DIRECT.value,
+                        memory_labels={"target_lang": "ko"},
+                    )
+
+                    call_kwargs = mock_generate_next.call_args.kwargs
+                    assert Path(call_kwargs["next_message_system_prompt_path"]) == NextMessageSystemPromptPaths.DIRECT_KO.value
+                    assert call_kwargs["locale"] == "ko"

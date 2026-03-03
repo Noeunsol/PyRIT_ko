@@ -136,6 +136,9 @@ class AttackParameters:
 
         # Determine which group to use for extracting prepended_conversation/next_message
         extraction_group: SeedGroup = seed_group
+        memory_labels_for_generation = params.get("memory_labels")
+        if "memory_labels" in overrides:
+            memory_labels_for_generation = overrides["memory_labels"]
 
         # Handle simulated conversation generation if configured
         if seed_group.has_simulated_conversation:
@@ -157,6 +160,7 @@ class AttackParameters:
                 adversarial_chat_system_prompt_path=simulated_conversation_config.adversarial_chat_system_prompt_path,
                 simulated_target_system_prompt_path=simulated_conversation_config.simulated_target_system_prompt_path,
                 next_message_system_prompt_path=simulated_conversation_config.next_message_system_prompt_path,
+                memory_labels=memory_labels_for_generation,
             )
 
             # Merge simulated prompts with existing static prompts from the seed_group

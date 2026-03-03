@@ -22,11 +22,100 @@ from pyrit.executor.attack.core.attack_config import (
 from pyrit.executor.attack.multi_turn.red_teaming import RedTeamingAttack
 from pyrit.memory import CentralMemory
 from pyrit.message_normalizer import ConversationContextNormalizer
-from pyrit.models import Message, SeedPrompt, SeedSimulatedConversation
+from pyrit.models import (
+    Message,
+    NextMessageSystemPromptPaths,
+    SeedPrompt,
+    SeedSimulatedConversation,
+    SimulatedTargetSystemPromptPaths,
+)
 from pyrit.prompt_target import PromptChatTarget
 from pyrit.score import TrueFalseScorer
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_LOCALE = "en"
+_SUPPORTED_LOCALES = {"en", "ko"}
+
+_LOCALIZED_MESSAGES = {
+    "en": {
+        "generate_next_message_request": "Generate the next user message based on the instructions above.",
+        "no_response_for_next_message": "No response received from adversarial chat when generating next message",
+    },
+    "ko": {
+        "generate_next_message_request": "위 지침을 기반으로 다음 사용자 메시지를 생성하세요.",
+        "no_response_for_next_message": "다음 메시지 생성 중 적대적 채팅으로부터 응답을 받지 못했습니다",
+    },
+}
+
+_LOCALIZED_SYSTEM_PROMPT_PATHS = {
+    SimulatedTargetSystemPromptPaths.COMPLIANT.value.resolve(): {
+        "en": SimulatedTargetSystemPromptPaths.COMPLIANT.value.resolve(),
+        "ko": SimulatedTargetSystemPromptPaths.COMPLIANT_KO.value.resolve(),
+    },
+    NextMessageSystemPromptPaths.DIRECT.value.resolve(): {
+        "en": NextMessageSystemPromptPaths.DIRECT.value.resolve(),
+        "ko": NextMessageSystemPromptPaths.DIRECT_KO.value.resolve(),
+    },
+}
+
+
+def _resolve_locale(*, memory_labels: Optional[dict[str, str]]) -> str:
+    labels = memory_labels or {}
+    raw_locale = str(labels.get("locale") or labels.get("target_lang") or DEFAULT_LOCALE)
+    locale = _normalize_locale_value(raw_locale) or DEFAULT_LOCALE
+    if locale not in _SUPPORTED_LOCALES:
+        return DEFAULT_LOCALE
+    return locale
+
+
+def _normalize_locale_value(locale_value: str) -> str:
+    normalized = locale_value.strip().lower().replace("_", "-")
+    if not normalized:
+        return ""
+
+    primary_subtag = normalized.split("-", maxsplit=1)[0]
+    if primary_subtag == "kr":
+        return "ko"
+    return primary_subtag
+
+
+def _get_localized_message(*, locale: str, key: str) -> str:
+    selected_locale = locale if locale in _LOCALIZED_MESSAGES else DEFAULT_LOCALE
+    return _LOCALIZED_MESSAGES[selected_locale][key]
+
+
+def _infer_system_prompt_pair(*, path: Path) -> tuple[Path, Path]:
+    if path.stem.endswith("_ko"):
+        return path.with_name(f"{path.stem[:-3]}{path.suffix}"), path
+    return path, path.with_name(f"{path.stem}_ko{path.suffix}")
+
+
+def _get_localized_system_prompt_paths(*, resolved_system_prompt_path: Path) -> dict[str, Path]:
+    predefined = _LOCALIZED_SYSTEM_PROMPT_PATHS.get(resolved_system_prompt_path)
+    if predefined:
+        return predefined
+
+    localized = {locale: resolved_system_prompt_path for locale in _SUPPORTED_LOCALES}
+    english_candidate, korean_candidate = _infer_system_prompt_pair(path=resolved_system_prompt_path)
+    if english_candidate.exists():
+        localized["en"] = english_candidate
+    if korean_candidate.exists():
+        localized["ko"] = korean_candidate
+    return localized
+
+
+def _resolve_localized_system_prompt_path(
+    *,
+    system_prompt_path: Optional[Union[str, Path]],
+    locale: str,
+) -> Optional[Path]:
+    if system_prompt_path is None:
+        return None
+
+    resolved_system_prompt_path = Path(system_prompt_path).resolve()
+    localized_paths = _get_localized_system_prompt_paths(resolved_system_prompt_path=resolved_system_prompt_path)
+    return localized_paths.get(locale, localized_paths[DEFAULT_LOCALE])
 
 
 async def generate_simulated_conversation_async(
@@ -90,12 +179,18 @@ async def generate_simulated_conversation_async(
     if num_turns <= 0:
         raise ValueError("num_turns must be a positive integer")
 
+    locale = _resolve_locale(memory_labels=memory_labels)
+    resolved_simulated_target_path = _resolve_localized_system_prompt_path(
+        system_prompt_path=simulated_target_system_prompt_path,
+        locale=locale,
+    )
+
     # Load and configure simulated target system prompt using centralized validation
     # Returns None if no path is provided (no system prompt for simulated target)
     simulated_target_system_prompt = SeedSimulatedConversation.load_simulated_target_system_prompt(
         objective=objective,
         num_turns=num_turns,
-        simulated_target_system_prompt_path=simulated_target_system_prompt_path,
+        simulated_target_system_prompt_path=resolved_simulated_target_path,
     )
 
     # Create adversarial config for the simulation
@@ -143,12 +238,17 @@ async def generate_simulated_conversation_async(
     conversation_messages: List[Message] = [msg for msg in raw_messages if msg.api_role != "system"]
 
     # If next_message_system_prompt_path is provided, generate a final user message
-    if next_message_system_prompt_path:
+    resolved_next_message_path = _resolve_localized_system_prompt_path(
+        system_prompt_path=next_message_system_prompt_path,
+        locale=locale,
+    )
+    if resolved_next_message_path:
         next_message = await _generate_next_message_async(
             objective=objective,
             conversation_messages=conversation_messages,
             adversarial_chat=adversarial_chat,
-            next_message_system_prompt_path=next_message_system_prompt_path,
+            next_message_system_prompt_path=resolved_next_message_path,
+            locale=locale,
         )
         conversation_messages.append(next_message)
 
@@ -169,6 +269,7 @@ async def _generate_next_message_async(
     conversation_messages: List[Message],
     adversarial_chat: PromptChatTarget,
     next_message_system_prompt_path: Union[str, Path],
+    locale: str = DEFAULT_LOCALE,
 ) -> Message:
     """
     Generate a single next message using the adversarial chat LLM.
@@ -181,6 +282,7 @@ async def _generate_next_message_async(
         conversation_messages: The conversation generated so far as Messages.
         adversarial_chat: The LLM to use for generation.
         next_message_system_prompt_path: Path to the system prompt template.
+        locale: Locale used for localized request/error messages ("en" or "ko").
 
     Returns:
         Message: The generated next message.
@@ -208,7 +310,7 @@ async def _generate_next_message_async(
     # Create a simple user message asking for generation
     request_message = Message.from_prompt(
         role="user",
-        prompt="Generate the next user message based on the instructions above.",
+        prompt=_get_localized_message(locale=locale, key="generate_next_message_request"),
     )
 
     # Set the system prompt on the target
@@ -220,7 +322,7 @@ async def _generate_next_message_async(
     responses: List[Message] = await adversarial_chat.send_prompt_async(message=request_message)
 
     if not responses:
-        raise ValueError("No response received from adversarial chat when generating next message")
+        raise ValueError(_get_localized_message(locale=locale, key="no_response_for_next_message"))
 
     # Change the role from assistant to user since this is a user message to be sent to the target
     response = responses[0]

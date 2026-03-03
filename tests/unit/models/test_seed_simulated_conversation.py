@@ -9,6 +9,7 @@ import uuid
 import pytest
 
 from pyrit.models.seeds import (
+    NextMessageSystemPromptPaths,
     SeedSimulatedConversation,
     SimulatedTargetSystemPromptPaths,
 )
@@ -172,6 +173,13 @@ class TestSeedSimulatedConversationInit:
         )
 
         assert conv.next_message_system_prompt_path == next_msg_path
+
+    def test_builtin_localized_prompt_paths_exist(self):
+        """Test that built-in EN/KO simulated target and next-message prompt paths exist."""
+        assert SimulatedTargetSystemPromptPaths.COMPLIANT.value.exists()
+        assert SimulatedTargetSystemPromptPaths.COMPLIANT_KO.value.exists()
+        assert NextMessageSystemPromptPaths.DIRECT.value.exists()
+        assert NextMessageSystemPromptPaths.DIRECT_KO.value.exists()
 
 
 class TestSeedSimulatedConversationFromDict:

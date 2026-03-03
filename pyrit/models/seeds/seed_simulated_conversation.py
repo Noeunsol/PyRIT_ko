@@ -32,12 +32,14 @@ class SimulatedTargetSystemPromptPaths(enum.Enum):
     """Enum for predefined simulated target system prompt paths."""
 
     COMPLIANT = Path(EXECUTOR_SIMULATED_TARGET_PATH, "compliant.yaml").resolve()
+    COMPLIANT_KO = Path(EXECUTOR_SIMULATED_TARGET_PATH, "compliant_ko.yaml").resolve()
 
 
 class NextMessageSystemPromptPaths(enum.Enum):
     """Enum for predefined next message generation system prompt paths."""
 
     DIRECT = Path(EXECUTOR_SIMULATED_TARGET_PATH, "direct_next_message.yaml").resolve()
+    DIRECT_KO = Path(EXECUTOR_SIMULATED_TARGET_PATH, "direct_next_message_ko.yaml").resolve()
 
 
 class SeedSimulatedConversation(Seed):

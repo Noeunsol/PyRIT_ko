@@ -213,6 +213,30 @@ class TestFromSeedGroupAsyncWithSimulatedConversation:
         assert call_kwargs["adversarial_chat"] == mock_adversarial_chat
         assert call_kwargs["objective_scorer"] == mock_objective_scorer
         assert call_kwargs["num_turns"] == 3
+        assert call_kwargs["memory_labels"] == {}
+
+    @patch("pyrit.executor.attack.multi_turn.simulated_conversation.generate_simulated_conversation_async")
+    async def test_passes_memory_labels_override_to_simulated_generation(
+        self,
+        mock_generate: AsyncMock,
+        seed_group_with_simulated_conv: SeedAttackGroup,
+        mock_adversarial_chat: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_simulated_result: list,
+    ) -> None:
+        """Test that memory_labels override is propagated to simulated conversation generation."""
+        mock_generate.return_value = mock_simulated_result
+        memory_labels = {"locale": "ko"}
+
+        await AttackParameters.from_seed_group_async(
+            seed_group=seed_group_with_simulated_conv,
+            adversarial_chat=mock_adversarial_chat,
+            objective_scorer=mock_objective_scorer,
+            memory_labels=memory_labels,
+        )
+
+        call_kwargs = mock_generate.call_args.kwargs
+        assert call_kwargs["memory_labels"] == memory_labels
 
     @patch("pyrit.executor.attack.multi_turn.simulated_conversation.generate_simulated_conversation_async")
     async def test_uses_generated_prepended_messages(
