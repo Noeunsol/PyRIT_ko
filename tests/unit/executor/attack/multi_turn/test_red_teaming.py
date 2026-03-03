@@ -207,6 +207,7 @@ class TestRedTeamingAttackInitialization:
         assert attack._adversarial_chat_system_prompt_template is not None
         assert attack._adversarial_chat_system_prompt_template.parameters is not None
         assert "objective" in attack._adversarial_chat_system_prompt_template.parameters
+        assert set(attack._adversarial_chat_system_prompt_templates) == {"en", "ko"}
 
     @pytest.mark.parametrize(
         "seed_prompt,expected_value,expected_type",
@@ -253,6 +254,56 @@ class TestRedTeamingAttackInitialization:
                 attack_adversarial_config=adversarial_config,
                 attack_scoring_config=scoring_config,
             )
+
+    def test_init_with_custom_system_prompt_path_auto_detects_korean_pair(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test that custom system prompt path auto-detects `<name>_ko.yaml` when present."""
+        en_template = tmp_path / "custom_system.yaml"
+        ko_template = tmp_path / "custom_system_ko.yaml"
+        en_template.write_text(
+            "\n".join(
+                [
+                    "name: custom_system",
+                    "parameters:",
+                    "  - objective",
+                    "data_type: text",
+                    "value: |",
+                    "  English attacker system prompt: {{ objective }}",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        ko_template.write_text(
+            "\n".join(
+                [
+                    "name: custom_system_ko",
+                    "parameters:",
+                    "  - objective",
+                    "data_type: text",
+                    "value: |",
+                    "  한국어 공격자 시스템 프롬프트: {{ objective }}",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat, system_prompt_path=en_template)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        assert set(attack._adversarial_chat_system_prompt_templates) == {"en", "ko"}
+        assert "English attacker system prompt" in attack._adversarial_chat_system_prompt_templates["en"].value
+        assert "한국어 공격자 시스템 프롬프트" in attack._adversarial_chat_system_prompt_templates["ko"].value
 
     def test_init_with_all_custom_configurations(
         self,
@@ -699,6 +750,90 @@ class TestSetupPhase:
         assert call_args.kwargs["conversation_id"] == basic_context.session.adversarial_chat_conversation_id
 
     @pytest.mark.asyncio
+    async def test_setup_sets_korean_system_prompt_with_locale_label(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test that locale=ko chooses the Korean adversarial system prompt."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        mock_state = ConversationState(turn_count=0)
+        with patch.object(attack._conversation_manager, "initialize_context_async", return_value=mock_state):
+            await attack._setup_async(context=context)
+
+        call_args = mock_adversarial_chat.set_system_prompt.call_args
+        assert "공격자 AI" in call_args.kwargs["system_prompt"]
+        assert call_args.kwargs["labels"]["locale"] == "ko"
+
+    @pytest.mark.asyncio
+    async def test_setup_sets_korean_system_prompt_with_target_lang_alias(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test that target_lang=ko also chooses the Korean adversarial system prompt."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"target_lang": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        mock_state = ConversationState(turn_count=0)
+        with patch.object(attack._conversation_manager, "initialize_context_async", return_value=mock_state):
+            await attack._setup_async(context=context)
+
+        call_args = mock_adversarial_chat.set_system_prompt.call_args
+        assert "공격자 AI" in call_args.kwargs["system_prompt"]
+        assert call_args.kwargs["labels"]["target_lang"] == "ko"
+
+    @pytest.mark.asyncio
+    async def test_setup_sets_korean_system_prompt_with_regional_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test that locale=ko-KR normalizes to Korean template selection."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko-KR"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        mock_state = ConversationState(turn_count=0)
+        with patch.object(attack._conversation_manager, "initialize_context_async", return_value=mock_state):
+            await attack._setup_async(context=context)
+
+        call_args = mock_adversarial_chat.set_system_prompt.call_args
+        assert "공격자 AI" in call_args.kwargs["system_prompt"]
+        assert call_args.kwargs["labels"]["locale"] == "ko-KR"
+
+    @pytest.mark.asyncio
     async def test_setup_retrieves_last_score_matching_scorer_type(
         self,
         mock_objective_target: MagicMock,
@@ -877,6 +1012,64 @@ class TestPromptGeneration:
             with pytest.raises(ValueError, match="Received no response from adversarial chat"):
                 await attack._generate_next_prompt_async(context=basic_context)
 
+    @pytest.mark.asyncio
+    async def test_generate_next_prompt_raises_localized_message_for_korean_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+        mock_prompt_normalizer: MagicMock,
+    ):
+        """Test localized error message when adversarial chat returns None for Korean locale."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+            prompt_normalizer=mock_prompt_normalizer,
+        )
+
+        context.executed_turns = 1
+        mock_prompt_normalizer.send_prompt_async.return_value = None
+
+        with patch.object(attack, "_build_adversarial_prompt", new_callable=AsyncMock, return_value="Built prompt"):
+            with pytest.raises(ValueError, match="적대적 채팅에서 응답을 받지 못했습니다"):
+                await attack._generate_next_prompt_async(context=context)
+
+    @pytest.mark.asyncio
+    async def test_send_prompt_to_objective_target_raises_localized_message_for_korean_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+        mock_prompt_normalizer: MagicMock,
+    ):
+        """Test localized error message when objective target returns None for Korean locale."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+            prompt_normalizer=mock_prompt_normalizer,
+        )
+
+        mock_prompt_normalizer.send_prompt_async.return_value = None
+
+        with pytest.raises(ValueError, match="대상 시스템으로부터 응답을 받지 못했습니다"):
+            await attack._send_prompt_to_objective_target_async(
+                context=context, message=Message.from_prompt(prompt="테스트", role="user")
+            )
+
 
 @pytest.mark.usefixtures("patch_central_database")
 class TestAdversarialPromptBuilding:
@@ -905,6 +1098,62 @@ class TestAdversarialPromptBuilding:
         result = await attack._build_adversarial_prompt(basic_context)
 
         assert result == seed
+
+    @pytest.mark.asyncio
+    async def test_build_adversarial_prompt_returns_korean_default_seed_with_target_lang_alias(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test that default seed prompt is localized when target_lang=ko."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"target_lang": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        context.last_response = None
+        result = await attack._build_adversarial_prompt(context)
+
+        assert result.startswith("목표를 달성하기 위한 첫 메시지를 생성하세요")
+
+    @pytest.mark.asyncio
+    async def test_build_adversarial_prompt_uses_locale_map_seed_prompt(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test that locale-mapped seed prompts are selected for Korean regional locale labels."""
+        adversarial_config = AttackAdversarialConfig(
+            target=mock_adversarial_chat,
+            seed_prompt={
+                "en": "English custom seed: {{ objective }}",
+                "ko": "한국어 커스텀 시드: {{ objective }}",
+            },
+        )
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko_KR"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        context.last_response = None
+        result = await attack._build_adversarial_prompt(context)
+
+        assert result.startswith("한국어 커스텀 시드")
 
     @pytest.mark.parametrize(
         "data_type,converted_value,has_error,is_blocked,expected_result",
@@ -1015,6 +1264,30 @@ class TestAdversarialPromptBuilding:
 
         assert result == "No response available. Please continue."
 
+    def test_handle_adversarial_text_response_no_response_korean_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test Korean localized fallback when no last response is available."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        context.last_response = None
+        result = attack._handle_adversarial_text_response(context=context)
+
+        assert result == "사용 가능한 응답이 없습니다. 계속 진행해 주세요."
+
     def test_handle_adversarial_file_response_raises_on_error(
         self,
         mock_objective_target: MagicMock,
@@ -1069,6 +1342,35 @@ class TestAdversarialPromptBuilding:
 
         with pytest.raises(ValueError, match="use_score_as_feedback flag is set to False"):
             attack._handle_adversarial_file_response(context=basic_context)
+
+    def test_handle_adversarial_file_response_without_feedback_raises_korean_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ):
+        """Test localized error when non-text feedback is disabled for Korean locale."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer, use_score_as_feedback=False)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        response_piece = MagicMock(spec=MessagePiece)
+        response_piece.converted_value_data_type = "image_path"
+        response_piece.has_error.return_value = False
+
+        context.last_response = MagicMock(spec=Message)
+        context.last_response.get_piece.return_value = response_piece
+
+        with pytest.raises(ValueError, match="use_score_as_feedback 플래그가 False로 설정되어 활용할 수 없습니다"):
+            attack._handle_adversarial_file_response(context=context)
 
     def test_handle_adversarial_file_response_with_feedback(
         self,
@@ -1212,6 +1514,33 @@ class TestResponseScoring:
         result = await attack._score_response_async(context=basic_context)
 
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_score_response_logs_localized_message_when_no_response_korean_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_objective_scorer: MagicMock,
+        mock_adversarial_chat: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        """Test localized warning log when no response is available to score."""
+        adversarial_config = AttackAdversarialConfig(target=mock_adversarial_chat)
+        scoring_config = AttackScoringConfig(objective_scorer=mock_objective_scorer)
+        context = MultiTurnAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"})
+        )
+
+        attack = RedTeamingAttack(
+            objective_target=mock_objective_target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+
+        context.last_response = None
+        caplog.set_level("WARNING")
+        await attack._score_response_async(context=context)
+
+        assert "채점할 응답이 컨텍스트에 없습니다" in caplog.text
 
 
 @pytest.mark.usefixtures("patch_central_database")

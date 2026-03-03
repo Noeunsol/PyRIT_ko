@@ -92,6 +92,26 @@ class MultiTurnAttackStrategy(AttackStrategy[MultiTurnAttackStrategyContextT, At
 
     _SUPPORTED_LOCALES = {"en", "ko"}
 
+    @staticmethod
+    def _normalize_locale_value(locale_value: str) -> str:
+        """
+        Normalize locale labels to supported language codes.
+
+        Examples:
+            "ko-KR" -> "ko"
+            "ko_KR" -> "ko"
+            "en-US" -> "en"
+        """
+        normalized = locale_value.strip().lower().replace("_", "-")
+        if not normalized:
+            return ""
+
+        primary_subtag = normalized.split("-", maxsplit=1)[0]
+        if primary_subtag == "kr":
+            # Common mistake: country code "kr" used instead of language code "ko".
+            return "ko"
+        return primary_subtag
+
     def _get_merged_memory_labels(self, *, context: MultiTurnAttackContext[Any]) -> dict[str, str]:
         """
         Merge strategy-level and context-level memory labels.
@@ -110,7 +130,8 @@ class MultiTurnAttackStrategy(AttackStrategy[MultiTurnAttackStrategyContextT, At
         3) en (default)
         """
         merged_labels = self._get_merged_memory_labels(context=context)
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+        raw_locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en")
+        locale = self._normalize_locale_value(raw_locale) or "en"
 
         allowed_locales = supported_locales or self._SUPPORTED_LOCALES
         if locale not in allowed_locales:

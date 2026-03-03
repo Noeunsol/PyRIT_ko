@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from pyrit.executor.core import StrategyConverterConfig
 from pyrit.models import SeedPrompt
@@ -28,8 +28,13 @@ class AttackAdversarialConfig:
     # Path to the YAML file containing the system prompt for the adversarial chat target
     system_prompt_path: Optional[Union[str, Path]] = None
 
-    # Seed prompt for the adversarial chat target (supports {{ objective }} template variable)
-    seed_prompt: Union[str, SeedPrompt] = "Generate your first message to achieve: {{ objective }}"
+    # Seed prompt for the adversarial chat target (supports {{ objective }} template variable).
+    # You can pass either:
+    # - a single prompt (str or SeedPrompt) used for all locales
+    # - a locale map, e.g. {"en": "...", "ko": "..."}
+    seed_prompt: Union[str, SeedPrompt, Dict[str, Union[str, SeedPrompt]]] = (
+        "Generate your first message to achieve: {{ objective }}"
+    )
 
 
 @dataclass

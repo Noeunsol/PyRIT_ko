@@ -533,6 +533,21 @@ class TestDetermineAttackOutcome:
         assert outcome == AttackOutcome.SUCCESS
         assert reason == "scorer 기준으로 목표를 달성했습니다"
 
+    def test_determine_attack_outcome_success_korean_regional_locale(
+        self, mock_target, sample_response, success_score, basic_context
+    ):
+        """Test success localization for regional locale label ko-KR."""
+        attack = MultiPromptSendingAttack(objective_target=mock_target)
+        attack._objective_scorer = MagicMock()
+        basic_context.memory_labels = {"locale": "ko-KR"}
+
+        outcome, reason = attack._determine_attack_outcome(
+            response=sample_response, score=success_score, context=basic_context
+        )
+
+        assert outcome == AttackOutcome.SUCCESS
+        assert reason == "scorer 기준으로 목표를 달성했습니다"
+
     def test_determine_attack_outcome_failure_korean_target_lang(
         self, mock_target, sample_response, failure_score, basic_context
     ):
