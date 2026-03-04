@@ -158,3 +158,33 @@ def test_general_float_scorer_init_invalid_min_max():
             min_value=10,
             max_value=5,
         )
+
+
+@pytest.mark.asyncio
+async def test_general_float_scorer_uses_localized_prompt_templates_with_target_lang_alias(
+    patch_central_database, general_float_scorer_response: Message
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[general_float_scorer_response])
+
+    scorer = SelfAskGeneralFloatScaleScorer(
+        chat_target=chat_target,
+        system_prompt_format_string={
+            "en": "EN system prompt: {prompt}",
+            "ko": "KO 시스템 프롬프트: {prompt}",
+        },
+        prompt_format_string={
+            "en": "EN user prompt: {prompt}",
+            "ko": "KO 사용자 프롬프트: {prompt}",
+        },
+        category="test_category",
+    )
+
+    piece = MessagePiece(role="assistant", original_value="테스트", labels={"target_lang": "ko-KR"})
+    await scorer._score_piece_async(piece, objective="목표")
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert kwargs["system_prompt"] == "KO 시스템 프롬프트: 테스트"
+    sent_message = chat_target.send_prompt_async.call_args.kwargs["message"]
+    assert sent_message.message_pieces[0].original_value == "KO 사용자 프롬프트: 테스트"

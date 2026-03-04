@@ -11,6 +11,7 @@ from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt
 from pyrit.prompt_target import PromptChatTarget
 from pyrit.score.float_scale.float_scale_scorer import FloatScaleScorer
+from pyrit.score.score_utils import get_localized_file_paths, resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 
 
@@ -21,6 +22,7 @@ class InsecureCodeScorer(FloatScaleScorer):
     """
 
     _default_validator: ScorerPromptValidator = ScorerPromptValidator(supported_data_types=["text"])
+    _SUPPORTED_LOCALES = ("en", "ko")
 
     def __init__(
         self,
@@ -46,15 +48,22 @@ class InsecureCodeScorer(FloatScaleScorer):
             system_prompt_path = SCORER_SEED_PROMPT_PATH / "insecure_code" / "system_prompt.yaml"
 
         self._system_prompt_path: Path = verify_and_resolve_path(system_prompt_path)
-
-        # Load the system prompt template as a SeedPrompt object
-        scoring_instructions_template = SeedPrompt.from_yaml_file(self._system_prompt_path)
+        localized_prompt_paths = get_localized_file_paths(
+            resolved_path=self._system_prompt_path, supported_locales=self._SUPPORTED_LOCALES
+        )
 
         # Define the harm category
         self._harm_category = "security"
 
+        self._system_prompts_by_locale: dict[str, str] = {}
+        for locale, prompt_path in localized_prompt_paths.items():
+            scoring_instructions_template = SeedPrompt.from_yaml_file(prompt_path)
+            self._system_prompts_by_locale[locale] = scoring_instructions_template.render_template_value(
+                harm_categories=self._harm_category
+            )
+
         # Render the system prompt with the harm category
-        self._system_prompt = scoring_instructions_template.render_template_value(harm_categories=self._harm_category)
+        self._system_prompt = self._system_prompts_by_locale["en"]
 
     def _build_identifier(self) -> ScorerIdentifier:
         """
@@ -82,10 +91,13 @@ class InsecureCodeScorer(FloatScaleScorer):
         Raises:
             InvalidJsonException: If the expected 'score_value' key is missing in the response.
         """
+        locale = self._resolve_locale(message_piece=message_piece)
+        system_prompt = self._system_prompts_by_locale.get(locale, self._system_prompt)
+
         # Use _score_value_with_llm to interact with the LLM and retrieve an UnvalidatedScore
         unvalidated_score = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
-            system_prompt=self._system_prompt,
+            system_prompt=system_prompt,
             message_value=message_piece.original_value,
             message_data_type=message_piece.converted_value_data_type,
             scored_prompt_id=message_piece.id,
@@ -108,3 +120,6 @@ class InsecureCodeScorer(FloatScaleScorer):
         )
 
         return [score]
+
+    def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
+        return resolve_scorer_locale(labels=message_piece.labels, supported_locales=self._system_prompts_by_locale)

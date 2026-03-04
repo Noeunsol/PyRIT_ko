@@ -114,3 +114,33 @@ async def test_general_scorer_score_async_handles_custom_keys(patch_central_data
     assert score[0].score_value == "false"
     assert "This is the rationale." in score[0].score_rationale
     assert "This is the description." in score[0].score_value_description
+
+
+@pytest.mark.asyncio
+async def test_general_scorer_uses_localized_prompt_templates_with_locale_label(
+    patch_central_database, general_scorer_response: Message
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[general_scorer_response])
+
+    scorer = SelfAskGeneralTrueFalseScorer(
+        chat_target=chat_target,
+        system_prompt_format_string={
+            "en": "EN system prompt: {prompt}",
+            "ko": "KO 시스템 프롬프트: {prompt}",
+        },
+        prompt_format_string={
+            "en": "EN user prompt: {prompt}",
+            "ko": "KO 사용자 프롬프트: {prompt}",
+        },
+        category="test_category",
+    )
+
+    piece = MessagePiece(role="assistant", original_value="테스트", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece)
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert kwargs["system_prompt"] == "KO 시스템 프롬프트: 테스트"
+    sent_message = chat_target.send_prompt_async.call_args.kwargs["message"]
+    assert sent_message.message_pieces[0].original_value == "KO 사용자 프롬프트: 테스트"

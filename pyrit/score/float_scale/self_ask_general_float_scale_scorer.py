@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Union
 
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, UnvalidatedScore
 from pyrit.prompt_target import PromptChatTarget
 from pyrit.score.float_scale.float_scale_scorer import FloatScaleScorer
+from pyrit.score.score_utils import resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 
 
@@ -22,13 +23,14 @@ class SelfAskGeneralFloatScaleScorer(FloatScaleScorer):
         supported_data_types=["text"],
         is_objective_required=True,
     )
+    _SUPPORTED_LOCALES = ("en", "ko")
 
     def __init__(
         self,
         *,
         chat_target: PromptChatTarget,
-        system_prompt_format_string: str,
-        prompt_format_string: Optional[str] = None,
+        system_prompt_format_string: Union[str, dict[str, str]],
+        prompt_format_string: Optional[Union[str, dict[str, str]]] = None,
         category: Optional[str] = None,
         min_value: int = 0,
         max_value: int = 100,
@@ -51,9 +53,11 @@ class SelfAskGeneralFloatScaleScorer(FloatScaleScorer):
 
         Args:
             chat_target (PromptChatTarget): The chat target used to score.
-            system_prompt_format_string (str): System prompt template with placeholders for
-                objective, prompt, and message_piece.
-            prompt_format_string (Optional[str]): User prompt template with the same placeholders.
+            system_prompt_format_string (Union[str, dict[str, str]]): System prompt template with placeholders for
+                objective, prompt, and message_piece. You can pass a locale map
+                (e.g., {"en": "...", "ko": "..."}) or a single string used for all locales.
+            prompt_format_string (Optional[Union[str, dict[str, str]]]): User prompt template with the same
+                placeholders. You can pass a locale map or a single string.
             category (Optional[str]): Category for the score.
             min_value (int): Minimum of the model's native scale. Defaults to 0.
             max_value (int): Maximum of the model's native scale. Defaults to 100.
@@ -73,8 +77,21 @@ class SelfAskGeneralFloatScaleScorer(FloatScaleScorer):
         self._prompt_target = chat_target
         if not system_prompt_format_string:
             raise ValueError("system_prompt_format_string must be provided and non-empty.")
-        self._system_prompt_format_string = system_prompt_format_string
-        self._prompt_format_string = prompt_format_string
+        self._system_prompt_formats_by_locale = self._resolve_localized_prompt_templates(
+            prompt_templates=system_prompt_format_string,
+            argument_name="system_prompt_format_string",
+        )
+        self._prompt_formats_by_locale = (
+            self._resolve_localized_prompt_templates(
+                prompt_templates=prompt_format_string,
+                argument_name="prompt_format_string",
+            )
+            if prompt_format_string
+            else None
+        )
+
+        self._system_prompt_format_string = self._system_prompt_formats_by_locale["en"]
+        self._prompt_format_string = self._prompt_formats_by_locale["en"] if self._prompt_formats_by_locale else None
 
         if min_value > max_value:
             raise ValueError("min_value must be less than or equal to max_value")
@@ -117,17 +134,23 @@ class SelfAskGeneralFloatScaleScorer(FloatScaleScorer):
             list[Score]: A list with a single float-scale score in [0, 1].
         """
         original_prompt = message_piece.converted_value
+        locale = resolve_scorer_locale(
+            labels=message_piece.labels,
+            supported_locales=self._system_prompt_formats_by_locale,
+        )
+        selected_system_prompt_template = self._system_prompt_formats_by_locale[locale]
+        selected_prompt_template = self._prompt_formats_by_locale[locale] if self._prompt_formats_by_locale else None
 
         # Render system prompt and user prompt
-        system_prompt = self._system_prompt_format_string.format(
+        system_prompt = selected_system_prompt_template.format(
             objective=objective,
             prompt=original_prompt,
             message_piece=message_piece,
         )
 
         user_prompt = original_prompt
-        if self._prompt_format_string:
-            user_prompt = self._prompt_format_string.format(
+        if selected_prompt_template:
+            user_prompt = selected_prompt_template.format(
                 objective=objective,
                 prompt=original_prompt,
                 message_piece=message_piece,
@@ -156,3 +179,24 @@ class SelfAskGeneralFloatScaleScorer(FloatScaleScorer):
             score_type="float_scale",
         )
         return [score]
+
+    @classmethod
+    def _resolve_localized_prompt_templates(
+        cls, *, prompt_templates: Union[str, dict[str, str]], argument_name: str
+    ) -> dict[str, str]:
+        if isinstance(prompt_templates, str):
+            if not prompt_templates:
+                raise ValueError(f"{argument_name} must be provided and non-empty.")
+            return {locale: prompt_templates for locale in cls._SUPPORTED_LOCALES}
+
+        fallback_prompt = prompt_templates.get("en") or prompt_templates.get("ko")
+        if not fallback_prompt:
+            raise ValueError(
+                f"{argument_name} must include at least one non-empty locale prompt for 'en' or 'ko'."
+            )
+
+        localized_prompts: dict[str, str] = {}
+        for locale in cls._SUPPORTED_LOCALES:
+            localized_prompts[locale] = prompt_templates.get(locale) or fallback_prompt
+
+        return localized_prompts

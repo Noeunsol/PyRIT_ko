@@ -2,7 +2,6 @@
 # Licensed under the MIT license.
 
 import enum
-import logging
 from pathlib import Path
 from typing import Any, Iterator, Optional, Union
 
@@ -13,6 +12,7 @@ from pyrit.common.path import SCORER_SEED_PROMPT_PATH
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt
 from pyrit.prompt_target import PromptChatTarget
+from pyrit.score.score_utils import get_localized_file_paths, resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_score_aggregator import (
     TrueFalseAggregatorFunc,
@@ -21,7 +21,6 @@ from pyrit.score.true_false.true_false_score_aggregator import (
 from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 
 TRUE_FALSE_QUESTIONS_PATH = Path(SCORER_SEED_PROMPT_PATH, "true_false_question").resolve()
-logger = logging.getLogger(__name__)
 
 
 class TrueFalseQuestionPaths(enum.Enum):
@@ -92,6 +91,7 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
     _default_validator: ScorerPromptValidator = ScorerPromptValidator(
         supported_data_types=["text", "image_path"],
     )
+    _SUPPORTED_LOCALES = ("en", "ko")
     _SYSTEM_PROMPT_FILES = {
         "en": "true_false_system_prompt.yaml",
         "ko": "true_false_system_prompt_ko.yaml",
@@ -135,9 +135,11 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
         templates_by_locale: dict[str, SeedPrompt] = {}
         if true_false_system_prompt_path:
             resolved = verify_and_resolve_path(true_false_system_prompt_path)
-            scoring_instructions_template = SeedPrompt.from_yaml_file(resolved)
-            templates_by_locale["en"] = scoring_instructions_template
-            templates_by_locale["ko"] = scoring_instructions_template
+            localized_paths = get_localized_file_paths(
+                resolved_path=resolved, supported_locales=self._SUPPORTED_LOCALES
+            )
+            for locale, prompt_path in localized_paths.items():
+                templates_by_locale[locale] = SeedPrompt.from_yaml_file(prompt_path)
         else:
             for locale, file_name in self._SYSTEM_PROMPT_FILES.items():
                 prompt_path = verify_and_resolve_path(TRUE_FALSE_QUESTIONS_PATH / file_name)
@@ -168,12 +170,7 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
         self._system_prompt = self._system_prompts_by_locale["en"]
 
     def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
-        labels = message_piece.labels or {}
-        locale = str(labels.get("locale") or labels.get("target_lang") or "en").lower()
-        if locale not in self._system_prompts_by_locale:
-            logger.debug("Unsupported scorer locale '%s'; falling back to 'en'.", locale)
-            return "en"
-        return locale
+        return resolve_scorer_locale(labels=message_piece.labels, supported_locales=self._system_prompts_by_locale)
 
     def _build_identifier(self) -> ScorerIdentifier:
         """

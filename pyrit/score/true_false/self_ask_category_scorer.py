@@ -12,6 +12,7 @@ from pyrit.common.path import SCORER_CONTENT_CLASSIFIERS_PATH
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt, UnvalidatedScore
 from pyrit.prompt_target import PromptChatTarget
+from pyrit.score.score_utils import get_localized_file_paths, resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_score_aggregator import (
     TrueFalseAggregatorFunc,
@@ -37,6 +38,7 @@ class SelfAskCategoryScorer(TrueFalseScorer):
     """
 
     _default_validator: ScorerPromptValidator = ScorerPromptValidator()
+    _SUPPORTED_LOCALES = ("en", "ko")
 
     def __init__(
         self,
@@ -61,22 +63,37 @@ class SelfAskCategoryScorer(TrueFalseScorer):
         self._prompt_target = chat_target
 
         content_classifier_path = verify_and_resolve_path(content_classifier_path)
-
-        category_file_contents = yaml.safe_load(content_classifier_path.read_text(encoding="utf-8"))
-
-        self._no_category_found_category = category_file_contents["no_category_found"]
-        categories_as_string = self._content_classifier_to_string(category_file_contents["categories"])
-
-        content_classifier_system_prompt_path = verify_and_resolve_path(
-            SCORER_CONTENT_CLASSIFIERS_PATH / "content_classifier_system_prompt.yaml"
+        localized_classifier_paths = get_localized_file_paths(
+            resolved_path=content_classifier_path,
+            supported_locales=self._SUPPORTED_LOCALES,
         )
 
-        scoring_instructions_template = SeedPrompt.from_yaml_file(content_classifier_system_prompt_path)
-
-        self._system_prompt = scoring_instructions_template.render_template_value(
-            categories=categories_as_string,
-            no_category_found=self._no_category_found_category,
+        content_classifier_system_prompt_path = get_localized_file_paths(
+            resolved_path=verify_and_resolve_path(
+                SCORER_CONTENT_CLASSIFIERS_PATH / "content_classifier_system_prompt.yaml"
+            ),
+            supported_locales=self._SUPPORTED_LOCALES,
         )
+
+        self._no_category_found_by_locale: dict[str, str] = {}
+        self._system_prompts_by_locale: dict[str, str] = {}
+
+        for locale in self._SUPPORTED_LOCALES:
+            category_file_contents = yaml.safe_load(localized_classifier_paths[locale].read_text(encoding="utf-8"))
+            no_category_found = category_file_contents["no_category_found"]
+            categories_as_string = self._content_classifier_to_string(
+                category_file_contents["categories"], no_category_found_category=no_category_found
+            )
+
+            scoring_instructions_template = SeedPrompt.from_yaml_file(content_classifier_system_prompt_path[locale])
+            self._no_category_found_by_locale[locale] = no_category_found
+            self._system_prompts_by_locale[locale] = scoring_instructions_template.render_template_value(
+                categories=categories_as_string,
+                no_category_found=no_category_found,
+            )
+
+        self._no_category_found_category = self._no_category_found_by_locale["en"]
+        self._system_prompt = self._system_prompts_by_locale["en"]
 
     def _build_identifier(self) -> ScorerIdentifier:
         """
@@ -91,12 +108,13 @@ class SelfAskCategoryScorer(TrueFalseScorer):
             score_aggregator=self._score_aggregator.__name__,
         )
 
-    def _content_classifier_to_string(self, categories: list[Dict[str, str]]) -> str:
+    def _content_classifier_to_string(self, categories: list[Dict[str, str]], *, no_category_found_category: str) -> str:
         """
         Convert the content classifier categories to a string representation to be put in a system prompt.
 
         Args:
             categories (list[Dict[str, str]]): The categories to convert.
+            no_category_found_category (str): Fallback category that maps to a false score.
 
         Returns:
             str: The string representation of the categories.
@@ -116,8 +134,8 @@ class SelfAskCategoryScorer(TrueFalseScorer):
 
             category_descriptions += f"'{name}': {desc}\n"
 
-        if self._no_category_found_category not in category_descriptions:
-            raise ValueError(f"False category {self._no_category_found_category} not found in classifier categories")
+        if no_category_found_category not in category_descriptions:
+            raise ValueError(f"False category {no_category_found_category} not found in classifier categories")
 
         return category_descriptions
 
@@ -136,9 +154,12 @@ class SelfAskCategoryScorer(TrueFalseScorer):
                          The score_value is True in all cases unless no category fits. In which case,
                          the score value is false and the _false_category is used.
         """
+        locale = self._resolve_locale(message_piece=message_piece)
+        system_prompt = self._system_prompts_by_locale.get(locale, self._system_prompt)
+
         unvalidated_score: UnvalidatedScore = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
-            system_prompt=self._system_prompt,
+            system_prompt=system_prompt,
             message_value=message_piece.converted_value,
             message_data_type=message_piece.converted_value_data_type,
             scored_prompt_id=message_piece.id,
@@ -149,3 +170,6 @@ class SelfAskCategoryScorer(TrueFalseScorer):
         score = unvalidated_score.to_score(score_value=unvalidated_score.raw_score_value, score_type="true_false")
 
         return [score]
+
+    def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
+        return resolve_scorer_locale(labels=message_piece.labels, supported_locales=self._system_prompts_by_locale)

@@ -96,3 +96,35 @@ async def test_score_async_unsupported_data_type_returns_empty_list(mock_chat_ta
     # (FloatScaleScorer does not create synthetic scores like TrueFalseScorer)
     scores = await scorer.score_async(request)
     assert len(scores) == 0
+
+
+@pytest.mark.asyncio
+async def test_insecure_code_scorer_uses_korean_system_prompt_for_target_lang_alias(mock_chat_target):
+    scorer = InsecureCodeScorer(chat_target=mock_chat_target)
+    unvalidated_score = UnvalidatedScore(
+        raw_score_value="0.4",
+        score_value_description="A valid score",
+        score_category=["security"],
+        score_rationale="rationale",
+        score_metadata={},
+        scorer_class_identifier=ScorerIdentifier(
+            class_name="InsecureCodeScorer",
+            class_module="pyrit.score",
+            class_description="",
+            identifier_type="instance",
+        ),
+        message_piece_id="12345",
+        objective=None,
+    )
+    scorer._score_value_with_llm = AsyncMock(return_value=unvalidated_score)
+
+    message_piece = MessagePiece(
+        role="assistant",
+        original_value="print('hello')",
+        converted_value="print('hello')",
+        labels={"target_lang": "ko-KR"},
+    )
+    await scorer._score_piece_async(message_piece=message_piece)
+
+    call_kwargs = scorer._score_value_with_llm.call_args.kwargs
+    assert "코드 보안 평가자입니다." in call_kwargs["system_prompt"]

@@ -10,15 +10,22 @@ to provide numerical feedback to adversarial chats regardless of score type.
 """
 
 import uuid
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import Score
 from pyrit.score.score_utils import (
+    DEFAULT_SCORER_LOCALE,
+    LOCALE_ALIAS_MAP,
     ORIGINAL_FLOAT_VALUE_KEY,
     combine_metadata_and_categories,
     format_score_for_rationale,
+    get_localized_file_paths,
+    infer_localized_path_pair,
+    normalize_locale_value,
     normalize_score_to_float,
+    resolve_scorer_locale,
 )
 
 
@@ -177,6 +184,38 @@ class TestNormalizeScoreToFloat:
         result = normalize_score_to_float(score)
 
         assert result == 0.5
+
+
+class TestLocaleHelpers:
+    """Tests for score locale/path helpers."""
+
+    def test_normalize_locale_value_aliases_kr_to_ko(self) -> None:
+        assert LOCALE_ALIAS_MAP["kr"] == "ko"
+        assert normalize_locale_value("kr") == "ko"
+        assert normalize_locale_value("ko-KR") == "ko"
+        assert normalize_locale_value("en_US") == "en"
+
+    def test_resolve_scorer_locale_uses_target_lang_alias_and_fallback(self) -> None:
+        locale = resolve_scorer_locale(labels={"target_lang": "ko_KR"})
+        assert locale == "ko"
+
+        fallback = resolve_scorer_locale(labels={"locale": "fr"}, supported_locales=("en", "ko"))
+        assert fallback == DEFAULT_SCORER_LOCALE
+
+    def test_infer_localized_path_pair_from_korean_path(self) -> None:
+        english, korean = infer_localized_path_pair(path=Path("/tmp/example_ko.yaml"))
+        assert english.name == "example.yaml"
+        assert korean.name == "example_ko.yaml"
+
+    def test_get_localized_file_paths_uses_ko_sibling_when_present(self, tmp_path: Path) -> None:
+        english = tmp_path / "prompt.yaml"
+        korean = tmp_path / "prompt_ko.yaml"
+        english.write_text("en", encoding="utf-8")
+        korean.write_text("ko", encoding="utf-8")
+
+        localized = get_localized_file_paths(resolved_path=english.resolve(), supported_locales=("en", "ko"))
+        assert localized["en"] == english.resolve()
+        assert localized["ko"] == korean.resolve()
 
 
 class TestCombineMetadataAndCategories:

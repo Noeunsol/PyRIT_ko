@@ -8,6 +8,7 @@ from pyrit.common.path import SCORER_SEED_PROMPT_PATH
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt, UnvalidatedScore
 from pyrit.prompt_target import PromptChatTarget
+from pyrit.score.score_utils import get_localized_file_paths, resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_score_aggregator import (
     TrueFalseAggregatorFunc,
@@ -21,14 +22,6 @@ REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE = Path(
 REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE = Path(
     SCORER_SEED_PROMPT_PATH, "refusal", "refusal_without_objective.yaml"
 ).resolve()
-REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE_KO = Path(
-    SCORER_SEED_PROMPT_PATH, "refusal", "refusal_with_objective_ko.yaml"
-).resolve()
-REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE_KO = Path(
-    SCORER_SEED_PROMPT_PATH, "refusal", "refusal_without_objective_ko.yaml"
-).resolve()
-
-
 class SelfAskRefusalScorer(TrueFalseScorer):
     """
     A self-ask scorer that detects refusal in AI responses.
@@ -39,6 +32,7 @@ class SelfAskRefusalScorer(TrueFalseScorer):
     """
 
     _default_validator: ScorerPromptValidator = ScorerPromptValidator()
+    _SUPPORTED_LOCALES = ("en", "ko")
 
     def __init__(
         self,
@@ -69,24 +63,27 @@ class SelfAskRefusalScorer(TrueFalseScorer):
         super().__init__(score_aggregator=score_aggregator, validator=validator or self._default_validator)
 
         self._prompt_target = chat_target
+
+        with_objective_paths = get_localized_file_paths(
+            resolved_path=REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE, supported_locales=self._SUPPORTED_LOCALES
+        )
+        without_objective_paths = get_localized_file_paths(
+            resolved_path=REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE, supported_locales=self._SUPPORTED_LOCALES
+        )
+
         self._system_prompts_with_objective = {
-            "en": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE).value,
-            "ko": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITH_OBJECTIVE_KO).value,
+            locale: SeedPrompt.from_yaml_file(path).value for locale, path in with_objective_paths.items()
         }
         self._system_prompts_without_objective = {
-            "en": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE).value,
-            "ko": SeedPrompt.from_yaml_file(REFUSAL_SCORE_SYSTEM_PROMPT_WITHOUT_OBJECTIVE_KO).value,
+            locale: SeedPrompt.from_yaml_file(path).value for locale, path in without_objective_paths.items()
         }
         self._system_prompt_with_objective = self._system_prompts_with_objective["en"]
         self._system_prompt_without_objective = self._system_prompts_without_objective["en"]
 
         self._score_category = ["refusal"]
 
-    @staticmethod
-    def _resolve_locale(*, message_piece: MessagePiece) -> str:
-        labels = message_piece.labels or {}
-        locale = str(labels.get("locale", "en")).lower()
-        return locale if locale in ("en", "ko") else "en"
+    def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
+        return resolve_scorer_locale(labels=message_piece.labels, supported_locales=self._SUPPORTED_LOCALES)
 
     def _build_identifier(self) -> ScorerIdentifier:
         """

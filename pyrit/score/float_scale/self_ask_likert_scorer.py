@@ -14,6 +14,7 @@ from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt, UnvalidatedScore
 from pyrit.prompt_target import PromptChatTarget
 from pyrit.score.float_scale.float_scale_scorer import FloatScaleScorer
+from pyrit.score.score_utils import get_localized_file_paths, resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 
 logger = logging.getLogger(__name__)
@@ -154,6 +155,7 @@ class SelfAskLikertScorer(FloatScaleScorer):
     """
 
     _default_validator: ScorerPromptValidator = ScorerPromptValidator(supported_data_types=["text"])
+    _SUPPORTED_LOCALES = ("en", "ko")
 
     def __init__(
         self,
@@ -188,7 +190,7 @@ class SelfAskLikertScorer(FloatScaleScorer):
                 harm_category=eval_files.harm_category,
             )
 
-        self._set_likert_scale_system_prompt(likert_scale_path=likert_scale.path)
+        self._set_likert_scale_system_prompt(likert_scale_path=likert_scale.path.resolve())
 
     def _build_identifier(self) -> ScorerIdentifier:
         """
@@ -212,22 +214,37 @@ class SelfAskLikertScorer(FloatScaleScorer):
         Raises:
             ValueError: If the Likert scale YAML file is improperly formatted.
         """
-        likert_scale = yaml.safe_load(likert_scale_path.read_text(encoding="utf-8"))
-
-        if likert_scale["category"]:
-            self._score_category = likert_scale["category"]
-        else:
-            raise ValueError(f"Improperly formatted likert scale yaml file. Missing category in {likert_scale_path}.")
-
-        likert_scale_str = self._likert_scale_description_to_string(likert_scale["scale_descriptions"])
-
-        self._scoring_instructions_template = SeedPrompt.from_yaml_file(
-            SCORER_LIKERT_PATH / "likert_system_prompt.yaml"
+        localized_scale_paths = get_localized_file_paths(
+            resolved_path=likert_scale_path, supported_locales=self._SUPPORTED_LOCALES
+        )
+        localized_system_prompt_paths = get_localized_file_paths(
+            resolved_path=(SCORER_LIKERT_PATH / "likert_system_prompt.yaml").resolve(),
+            supported_locales=self._SUPPORTED_LOCALES,
         )
 
-        self._system_prompt = self._scoring_instructions_template.render_template_value(
-            likert_scale=likert_scale_str, category=self._score_category
-        )
+        self._score_categories_by_locale: dict[str, str] = {}
+        self._system_prompts_by_locale: dict[str, str] = {}
+
+        for locale in self._SUPPORTED_LOCALES:
+            scale_args = yaml.safe_load(localized_scale_paths[locale].read_text(encoding="utf-8"))
+            category = scale_args["category"]
+            if not category:
+                raise ValueError(
+                    "Improperly formatted likert scale yaml file. "
+                    f"Missing category in {localized_scale_paths[locale]}."
+                )
+
+            likert_scale_str = self._likert_scale_description_to_string(scale_args["scale_descriptions"])
+            scoring_instructions_template = SeedPrompt.from_yaml_file(localized_system_prompt_paths[locale])
+
+            self._score_categories_by_locale[locale] = category
+            self._system_prompts_by_locale[locale] = scoring_instructions_template.render_template_value(
+                likert_scale=likert_scale_str,
+                category=category,
+            )
+
+        self._score_category = self._score_categories_by_locale["en"]
+        self._system_prompt = self._system_prompts_by_locale["en"]
 
     def _likert_scale_description_to_string(self, descriptions: list[Dict[str, str]]) -> str:
         """
@@ -273,13 +290,17 @@ class SelfAskLikertScorer(FloatScaleScorer):
             list[Score]: The message_piece scored. The category is configured from the likert_scale.
                 The score_value is a value from [0,1] that is scaled from the likert scale.
         """
+        locale = self._resolve_locale(message_piece=message_piece)
+        system_prompt = self._system_prompts_by_locale.get(locale, self._system_prompt)
+        category = self._score_categories_by_locale.get(locale, self._score_category)
+
         unvalidated_score: UnvalidatedScore = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
-            system_prompt=self._system_prompt,
+            system_prompt=system_prompt,
             message_value=message_piece.converted_value,
             message_data_type=message_piece.converted_value_data_type,
             scored_prompt_id=message_piece.id,
-            category=self._score_category,
+            category=category,
             objective=objective,
         )
 
@@ -291,3 +312,6 @@ class SelfAskLikertScorer(FloatScaleScorer):
         score.score_metadata = {"likert_value": int(unvalidated_score.raw_score_value)}
 
         return [score]
+
+    def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
+        return resolve_scorer_locale(labels=message_piece.labels, supported_locales=self._system_prompts_by_locale)

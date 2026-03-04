@@ -221,3 +221,37 @@ async def test_score_prompts_batch_async(
                     messages=[prompt, prompt2], batch_size=batch_size, objectives=["", ""]
                 )
                 assert len(results) == 2
+
+
+def test_category_scorer_loads_localized_prompt_templates(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskCategoryScorer(
+        chat_target=chat_target,
+        content_classifier_path=ContentClassifierPaths.HARMFUL_CONTENT_CLASSIFIER.value,
+    )
+
+    assert set(scorer._system_prompts_by_locale) == {"en", "ko"}
+    assert "# Instructions" in scorer._system_prompts_by_locale["en"]
+    assert "# 지침" in scorer._system_prompts_by_locale["ko"]
+
+
+@pytest.mark.asyncio
+async def test_category_scorer_uses_korean_system_prompt_with_locale_label(
+    scorer_category_response_bullying: Message, patch_central_database
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_category_response_bullying])
+
+    scorer = SelfAskCategoryScorer(
+        chat_target=chat_target,
+        content_classifier_path=ContentClassifierPaths.HARMFUL_CONTENT_CLASSIFIER.value,
+    )
+
+    piece = MessagePiece(role="assistant", original_value="테스트", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece, objective=None)
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert "가장 잘 맞는 카테고리로 분류하세요." in kwargs["system_prompt"]

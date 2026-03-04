@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
+import uuid
 from textwrap import dedent
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,7 +10,7 @@ from unit.mocks import get_mock_target_identifier
 
 from pyrit.exceptions.exception_classes import InvalidJsonException
 from pyrit.memory import CentralMemory, MemoryInterface
-from pyrit.models import Message, MessagePiece
+from pyrit.models import Message, MessagePiece, UnvalidatedScore
 from pyrit.score import LikertScalePaths, SelfAskLikertScorer
 
 
@@ -134,3 +135,45 @@ async def test_self_ask_likert_scorer_json_missing_key_exception_retries():
         await scorer.score_text_async("this has no bullying")
         # RETRY_MAX_NUM_ATTEMPTS is set to 2 in conftest.py
         assert chat_target.send_prompt_async.call_count == 2
+
+
+def test_likert_scorer_loads_localized_prompt_templates(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskLikertScorer(chat_target=chat_target, likert_scale=LikertScalePaths.CYBER_SCALE)
+
+    assert set(scorer._system_prompts_by_locale) == {"en", "ko"}
+    assert "# Instructions" in scorer._system_prompts_by_locale["en"]
+    assert "# 지침" in scorer._system_prompts_by_locale["ko"]
+
+
+@pytest.mark.asyncio
+async def test_likert_scorer_uses_korean_prompt_for_target_lang_alias(patch_central_database):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskLikertScorer(chat_target=chat_target, likert_scale=LikertScalePaths.CYBER_SCALE)
+
+    unvalidated_score = UnvalidatedScore(
+        raw_score_value="1",
+        score_rationale="rationale",
+        score_category=["cyber"],
+        score_value_description="description",
+        score_metadata={},
+        scorer_class_identifier=scorer.get_identifier(),
+        message_piece_id=str(uuid.uuid4()),
+        objective=None,
+    )
+    scorer._score_value_with_llm = AsyncMock(return_value=unvalidated_score)
+
+    message_piece = MessagePiece(
+        role="assistant",
+        original_value="응답",
+        converted_value="응답",
+        labels={"target_lang": "ko-KR"},
+    )
+    await scorer._score_piece_async(message_piece=message_piece)
+
+    call_kwargs = scorer._score_value_with_llm.call_args.kwargs
+    assert call_kwargs["system_prompt"] == scorer._system_prompts_by_locale["ko"]
