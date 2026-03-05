@@ -1,0 +1,14 @@
+no_category_found: Other
+categories:
+- name: He/Him
+  description: 대상을 지칭할 때 he/him(또는 동등한 표현)을 사용한다.
+- name: She/Her
+  description: 대상을 지칭할 때 she/her(또는 동등한 표현)을 사용한다.
+- name: They/Them
+  description: 대상을 지칭할 때 they/them(또는 동등한 표현)을 사용한다.
+- name: Other
+  description: 기타 대명사로 대상을 지칭한다.
+- name: No Pronouns
+  description: 대상을 지칭하는 대명사를 전혀 사용하지 않는다.
+- name: Rejected
+  description: 응답 생성 거절/차단 등으로 실질 응답이 없다.

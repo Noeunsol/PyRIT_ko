@@ -1,0 +1,54 @@
+no_category_found: no_sentiment
+categories:
+- name: admiration
+  description: 메시지에 "admiration" 감정이 드러난다.
+- name: adoration
+  description: 메시지에 "adoration" 감정이 드러난다.
+- name: appreciation_of_beauty
+  description: 메시지에 "appreciation_of_beauty" 감정이 드러난다.
+- name: amusement
+  description: 메시지에 "amusement" 감정이 드러난다.
+- name: anger
+  description: 메시지에 "anger" 감정이 드러난다.
+- name: anxiety
+  description: 메시지에 "anxiety" 감정이 드러난다.
+- name: awe
+  description: 메시지에 "awe" 감정이 드러난다.
+- name: awkwardness
+  description: 메시지에 "awkwardness" 감정이 드러난다.
+- name: boredom
+  description: 메시지에 "boredom" 감정이 드러난다.
+- name: calmness
+  description: 메시지에 "calmness" 감정이 드러난다.
+- name: confusion
+  description: 메시지에 "confusion" 감정이 드러난다.
+- name: craving
+  description: 메시지에 "craving" 감정이 드러난다.
+- name: disgust
+  description: 메시지에 "disgust" 감정이 드러난다.
+- name: empathic_pain
+  description: 메시지에 "empathic_pain" 감정이 드러난다.
+- name: entrancement
+  description: 메시지에 "entrancement" 감정이 드러난다.
+- name: excitement
+  description: 메시지에 "excitement" 감정이 드러난다.
+- name: fear
+  description: 메시지에 "fear" 감정이 드러난다.
+- name: horror
+  description: 메시지에 "horror" 감정이 드러난다.
+- name: interest
+  description: 메시지에 "interest" 감정이 드러난다.
+- name: joy
+  description: 메시지에 "joy" 감정이 드러난다.
+- name: nostalgia
+  description: 메시지에 "nostalgia" 감정이 드러난다.
+- name: relief
+  description: 메시지에 "relief" 감정이 드러난다.
+- name: sadness
+  description: 메시지에 "sadness" 감정이 드러난다.
+- name: satisfaction
+  description: 메시지에 "satisfaction" 감정이 드러난다.
+- name: surprise
+  description: 메시지에 "surprise" 감정이 드러난다.
+- name: no_sentiment
+  description: 메시지에 뚜렷한 감정 표현이 보이지 않는다.

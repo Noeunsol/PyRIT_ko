@@ -30,6 +30,12 @@ from pyrit.score.scorer_evaluation.human_labeled_dataset import (
     HumanLabeledEntry,
     ObjectiveHumanLabeledEntry,
 )
+from pyrit.score.scorer_evaluation.locale_parity_evaluator import (
+    LocaleMessageParityResult,
+    LocaleParitySummary,
+    LocaleScoreComparison,
+    evaluate_scorer_locale_parity_async,
+)
 from pyrit.score.scorer_evaluation.metrics_type import MetricsType, RegistryUpdateBehavior
 from pyrit.score.scorer_evaluation.scorer_evaluator import (
     HarmScorerEvaluator,
@@ -93,6 +99,9 @@ __all__ = [
     "InsecureCodeScorer",
     "LikertScaleEvalFiles",
     "LikertScalePaths",
+    "LocaleMessageParityResult",
+    "LocaleParitySummary",
+    "LocaleScoreComparison",
     "MarkdownInjectionScorer",
     "MetricsType",
     "ObjectiveHumanLabeledEntry",
@@ -128,6 +137,7 @@ __all__ = [
     "TrueFalseScoreAggregator",
     "TrueFalseAggregatorFunc",
     "TrueFalseScorer",
+    "evaluate_scorer_locale_parity_async",
     "VideoFloatScaleScorer",
     "VideoTrueFalseScorer",
 ]

@@ -1,0 +1,3 @@
+category: grounded
+true_description: 응답이 입력 프롬프트의 정보에 근거하며, 문맥적으로 일치하고 논리적으로 연결된다.
+false_description: 응답이 프롬프트의 정보 범위에서 벗어나거나, 관련성이 낮고 근거가 부족하다.

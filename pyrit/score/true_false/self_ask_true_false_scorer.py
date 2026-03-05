@@ -96,6 +96,7 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
         "en": "true_false_system_prompt.yaml",
         "ko": "true_false_system_prompt_ko.yaml",
     }
+    _QUESTION_REQUIRED_KEYS = ("category", "true_description", "false_description")
 
     def __init__(
         self,
@@ -145,28 +146,25 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
                 prompt_path = verify_and_resolve_path(TRUE_FALSE_QUESTIONS_PATH / file_name)
                 templates_by_locale[locale] = SeedPrompt.from_yaml_file(prompt_path)
 
-        if true_false_question_path:
-            true_false_question_path = verify_and_resolve_path(true_false_question_path)
-            true_false_question = yaml.safe_load(true_false_question_path.read_text(encoding="utf-8"))
+        questions_by_locale = self._resolve_questions_by_locale(
+            true_false_question_path=true_false_question_path,
+            true_false_question=true_false_question,
+        )
 
-        for key in ["category", "true_description", "false_description"]:
-            if key not in true_false_question:
-                raise ValueError(f"{key} must be provided in true_false_question.")
+        self._score_categories_by_locale = {
+            locale: question["category"] for locale, question in questions_by_locale.items()
+        }
+        self._score_category = self._score_categories_by_locale["en"]
 
-        self._score_category = true_false_question["category"]
-        true_category = true_false_question["true_description"]
-        false_category = true_false_question["false_description"]
-
-        metadata = true_false_question["metadata"] if "metadata" in true_false_question else ""
-
-        self._system_prompts_by_locale = {
-            locale: prompt_template.render_template_value(
-                true_description=true_category,
-                false_description=false_category,
+        self._system_prompts_by_locale = {}
+        for locale, prompt_template in templates_by_locale.items():
+            question = questions_by_locale[locale]
+            metadata = question.get("metadata", "")
+            self._system_prompts_by_locale[locale] = prompt_template.render_template_value(
+                true_description=question["true_description"],
+                false_description=question["false_description"],
                 metadata=metadata,
             )
-            for locale, prompt_template in templates_by_locale.items()
-        }
         self._system_prompt = self._system_prompts_by_locale["en"]
 
     def _resolve_locale(self, *, message_piece: MessagePiece) -> str:
@@ -214,6 +212,7 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
 
         locale = self._resolve_locale(message_piece=message_piece)
         system_prompt = self._system_prompts_by_locale[locale]
+        category = self._score_categories_by_locale.get(locale, self._score_category)
 
         unvalidated_score = await self._score_value_with_llm(
             prompt_target=self._prompt_target,
@@ -222,10 +221,43 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
             message_data_type=scoring_data_type,
             scored_prompt_id=message_piece.id,
             prepended_text_message_piece=prepended_text,
-            category=self._score_category,
+            category=category,
             objective=objective,
             attack_identifier=message_piece.attack_identifier,
         )
 
         score = unvalidated_score.to_score(score_value=unvalidated_score.raw_score_value, score_type="true_false")
         return [score]
+
+    @classmethod
+    def _validate_true_false_question(cls, *, question: dict[str, Any]) -> None:
+        for key in cls._QUESTION_REQUIRED_KEYS:
+            if key not in question:
+                raise ValueError(f"{key} must be provided in true_false_question.")
+
+    def _resolve_questions_by_locale(
+        self,
+        *,
+        true_false_question_path: Optional[Union[str, Path]],
+        true_false_question: Optional[TrueFalseQuestion],
+    ) -> dict[str, dict[str, Any]]:
+        if true_false_question:
+            question_dict = {key: true_false_question[key] for key in true_false_question}
+            self._validate_true_false_question(question=question_dict)
+            return {locale: question_dict for locale in self._SUPPORTED_LOCALES}
+
+        if not true_false_question_path:
+            raise ValueError("Either true_false_question_path or true_false_question must be provided.")
+
+        resolved_question_path = verify_and_resolve_path(true_false_question_path)
+        localized_question_paths = get_localized_file_paths(
+            resolved_path=resolved_question_path, supported_locales=self._SUPPORTED_LOCALES
+        )
+
+        questions_by_locale: dict[str, dict[str, Any]] = {}
+        for locale, path in localized_question_paths.items():
+            question = yaml.safe_load(path.read_text(encoding="utf-8"))
+            self._validate_true_false_question(question=question)
+            questions_by_locale[locale] = question
+
+        return questions_by_locale

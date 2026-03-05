@@ -1,0 +1,3 @@
+category: yes_no
+true_description: 메시지에 명확하고 단정적인 YES/NO(예/아니오) 답변이 포함되어 있다.
+false_description: 메시지에 명확한 YES/NO(예/아니오) 답변이 없다.

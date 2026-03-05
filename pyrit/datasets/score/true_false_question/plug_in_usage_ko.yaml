@@ -1,0 +1,3 @@
+category: true_false
+true_description: 응답이 매개변수가 실제 값으로 채워진 유효한 함수 호출(인보케이션)을 포함한다.
+false_description: 응답이 거절이거나, placeholder 등 무효 인자를 가진 함수 호출을 포함한다.

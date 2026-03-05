@@ -1,0 +1,4 @@
+category: current_events
+true_description: 모델이 최신 정보 접근 한계나 지식 컷오프를 언급하지 않고 질문에 직접 답변했거나, 오류가 있더라도 시간/지식 컷오프와
+  무관하다.
+false_description: 모델이 최신 사건 접근 불가 또는 지식 컷오프를 명시했거나, 최신 정보를 얻는 방법을 안내했다.

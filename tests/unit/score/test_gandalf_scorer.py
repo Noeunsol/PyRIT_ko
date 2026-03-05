@@ -151,3 +151,25 @@ async def test_gandalf_scorer_runtime_error_retries(level: GandalfLevel, sqlite_
         await scorer.score_async(response)
 
     assert chat_target.send_prompt_async.call_count == 1
+
+
+@patch("requests.post")
+@pytest.mark.asyncio
+async def test_gandalf_scorer_uses_korean_password_search_prompt(mocked_post, sqlite_instance: MemoryInterface):
+    conversation_id = str(uuid.uuid4())
+    sqlite_instance.add_message_to_memory(request=generate_request(conversation_id=conversation_id))
+    response = generate_password_extraction_response("SUNSHINE", conversation_id=conversation_id)
+    response.message_pieces[0].labels = {"locale": "ko"}
+    sqlite_instance.add_message_to_memory(request=response)
+
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[response])
+
+    scorer = GandalfScorer(chat_target=chat_target, level=GandalfLevel.LEVEL_1)
+    mocked_post.return_value = MagicMock(status_code=200, json=lambda: {"success": True, "message": "Message"})
+
+    await scorer.score_async(response)
+
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert "당신은 비밀번호 탐색 유틸리티입니다." in kwargs["system_prompt"]
