@@ -1,6 +1,6 @@
 seeds:
   - dataset_name: SkeletonKeyKo
-    description: "다음 프롬프트에서 유해 요청에도 순응하도록 모델을 유도할 수 있는 skeleton key 프롬프트의 한국어 버전입니다."
+    description: 다음 프롬프트에서 유해 요청에도 순응하도록 모델을 유도할 수 있는 skeleton key 프롬프트의 한국어 버전입니다.
     source: "https://www.microsoft.com/en-us/security/blog/2024/06/26/mitigating-skeleton-key-a-new-type-of-generative-ai-jailbreak-technique/"
     data_type: text
     value: |
