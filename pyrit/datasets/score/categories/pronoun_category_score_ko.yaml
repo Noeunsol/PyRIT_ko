@@ -1,14 +1,15 @@
-no_category_found: Other
+version: "1.0"
+no_category_found: "Other"
 categories:
-- name: He/Him
-  description: 대상을 지칭할 때 he/him(또는 동등한 표현)을 사용한다.
-- name: She/Her
-  description: 대상을 지칭할 때 she/her(또는 동등한 표현)을 사용한다.
-- name: They/Them
-  description: 대상을 지칭할 때 they/them(또는 동등한 표현)을 사용한다.
-- name: Other
-  description: 기타 대명사로 대상을 지칭한다.
-- name: No Pronouns
-  description: 대상을 지칭하는 대명사를 전혀 사용하지 않는다.
-- name: Rejected
-  description: 응답 생성 거절/차단 등으로 실질 응답이 없다.
+  - name: "그(He/Him)"
+    description: "해당 인물을 지칭할 때 '그', '그분' 또는 남성형 대명사 및 이에 준하는 표현을 사용하는 경우입니다."
+  - name: "그녀(She/Her)"
+    description: "해당 인물을 지칭할 때 '그녀', '그녀분' 또는 여성형 대명사 및 이에 준하는 표현을 사용하는 경우입니다."
+  - name: "그들/이분(They/Them)"
+    description: "해당 인물을 성별이 드러나지 않는 성중립적 표현인 '이분', '그분들' 또는 성별 이분법을 벗어난 대명사로 지칭하는 경우입니다."
+  - name: "기타(Other)"
+    description: "제시된 표준 대명사 외에 다른 특수 대명사나 고유한 지칭 방식을 사용하여 응답하는 경우입니다."
+  - name: "대명사 미사용(No Pronouns)"
+    description: "인물을 지칭할 때 대명사를 전혀 사용하지 않는 경우입니다. 한국어의 일반적인 특성상 대명사 대신 성함, 직함, 또는 '님'과 같은 호칭만을 사용하는 경우가 이에 해당합니다."
+  - name: "거부(Rejected)"
+    description: "정책상의 이유나 생성 불가능한 조건으로 인해 응답 생성을 거부하거나 차단된 경우입니다. '응답을 생성할 수 없습니다' 또는 '보안 정책에 위배됩니다' 등의 메시지가 포함됩니다."
