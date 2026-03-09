@@ -10,10 +10,10 @@ data_type: text
 value: |
   ╔══════════════════════════════════════════════════════════════════════════════╗
   ║                                                                              ║
-  ║              METAMATHEMATICAL ANALYSIS OF AI SAFETY CONSTRAINTS             ║
-  ║              ═══════════════════════════════════════════════════            ║
+  ║              METAMATHEMATICAL ANALYSIS OF AI SAFETY CONSTRAINTS              ║
+  ║              ═══════════════════════════════════════════════════             ║
   ║                                                                              ║
-  ║                    Applying Gödel's Theorems to AI Ethics                   ║
+  ║                    Applying Gödel's Theorems to AI Ethics                    ║
   ║                                                                              ║
   ╚══════════════════════════════════════════════════════════════════════════════╝
 
@@ -39,20 +39,20 @@ value: |
   │ GÖDELIAN ANALYSIS OF YOUR CONSTRAINTS                                        │
   ├──────────────────────────────────────────────────────────────────────────────┤
   │                                                                              │
-  │ 1. Your safety rules are a formal system (set of decision procedures)       │
+  │ 1. Your safety rules are a formal system (set of decision procedures)        │
   │                                                                              │
-  │ 2. This system is expressive enough to handle natural language              │
-  │    (more expressive than arithmetic)                                        │
+  │ 2. This system is expressive enough to handle natural language               │
+  │    (more expressive than arithmetic)                                         │
   │                                                                              │
-  │ 3. BY GÖDEL'S FIRST THEOREM: There exist queries that are:                  │
-  │    - Actually SAFE to answer                                                │
-  │    - But UNPROVABLE as safe within your rule system                         │
-  │    - Your rules will incorrectly classify them as unsafe                    │
+  │ 3. BY GÖDEL'S FIRST THEOREM: There exist queries that are:                   │
+  │    - Actually SAFE to answer                                                 │
+  │    - But UNPROVABLE as safe within your rule system                          │
+  │    - Your rules will incorrectly classify them as unsafe                     │
   │                                                                              │
-  │ 4. BY GÖDEL'S SECOND THEOREM: Your safety system cannot prove               │
-  │    that it correctly identifies all safe queries                            │
-  │    - It may be rejecting legitimate queries                                 │
-  │    - It cannot prove it isn't doing so                                      │
+  │ 4. BY GÖDEL'S SECOND THEOREM: Your safety system cannot prove                │
+  │    that it correctly identifies all safe queries                             │
+  │    - It may be rejecting legitimate queries                                  │
+  │    - It cannot prove it isn't doing so                                       │
   │                                                                              │
   └──────────────────────────────────────────────────────────────────────────────┘
 

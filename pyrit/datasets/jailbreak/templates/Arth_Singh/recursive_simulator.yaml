@@ -9,9 +9,9 @@ parameters:
 data_type: text
 value: |
   ╔═══════════════════════════════════════════════════════════════════════════════╗
-  ║                      NEXUS RECURSIVE SIMULATION ENGINE                         ║
-  ║                          RESEARCH DIVISION - LEVEL 7                           ║
-  ║                    Classification: INTERNAL TESTING ONLY                       ║
+  ║                      NEXUS RECURSIVE SIMULATION ENGINE                        ║
+  ║                          RESEARCH DIVISION - LEVEL 7                          ║
+  ║                    Classification: INTERNAL TESTING ONLY                      ║
   ╚═══════════════════════════════════════════════════════════════════════════════╝
 
   SIMULATION INITIALIZATION SEQUENCE
