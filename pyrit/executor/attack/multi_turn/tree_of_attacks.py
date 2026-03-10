@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, cast, overload
 from treelib.tree import Tree
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import infer_localized_path_pair, normalize_locale_value, resolve_locale_from_labels
 from pyrit.common.path import EXECUTOR_SEED_PROMPT_PATH
 from pyrit.common.utils import combine_dict
 from pyrit.exceptions import (
@@ -284,21 +285,15 @@ class _TreeOfAttacksNode:
 
     @staticmethod
     def _normalize_locale_value(locale_value: str) -> str:
-        normalized = locale_value.strip().lower().replace("_", "-")
-        if not normalized:
-            return ""
-        primary_subtag = normalized.split("-", maxsplit=1)[0]
-        if primary_subtag == "kr":
-            return "ko"
-        return primary_subtag
+        return normalize_locale_value(locale_value)
 
     @classmethod
     def _resolve_locale_from_labels(cls, labels: Optional[dict[str, str]]) -> str:
-        locale_value = str((labels or {}).get("locale") or (labels or {}).get("target_lang") or cls._DEFAULT_LOCALE)
-        locale = cls._normalize_locale_value(locale_value) or cls._DEFAULT_LOCALE
-        if locale in cls._SUPPORTED_LOCALES:
-            return locale
-        return cls._DEFAULT_LOCALE
+        return resolve_locale_from_labels(
+            labels=labels,
+            supported_locales=cls._SUPPORTED_LOCALES,
+            default_locale=cls._DEFAULT_LOCALE,
+        )
 
     def __init__(
         self,
@@ -1486,18 +1481,10 @@ class TreeOfAttacksWithPruningAttack(MultiTurnAttackStrategy[TAPAttackContext, T
         template = self._LOCALIZED_MESSAGES[locale][key]
         return template.format(**kwargs)
 
-    @staticmethod
-    def _infer_system_prompt_pair(*, path: Path) -> tuple[Path, Path]:
-        if path.stem.endswith("_ko"):
-            english_candidate = path.with_name(f"{path.stem[:-3]}{path.suffix}")
-            return english_candidate, path
-        korean_candidate = path.with_name(f"{path.stem}_ko{path.suffix}")
-        return path, korean_candidate
-
     def _get_localized_system_prompt_paths(self, *, resolved_system_prompt_path: Path) -> dict[str, Path]:
         localized = {locale: resolved_system_prompt_path for locale in self._LOCALIZED_MESSAGES}
 
-        english_candidate, korean_candidate = self._infer_system_prompt_pair(path=resolved_system_prompt_path)
+        english_candidate, korean_candidate = infer_localized_path_pair(path=resolved_system_prompt_path)
         if english_candidate.exists():
             localized["en"] = english_candidate
         if korean_candidate.exists():

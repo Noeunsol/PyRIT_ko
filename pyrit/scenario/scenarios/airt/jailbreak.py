@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from pyrit.common import apply_defaults
+from pyrit.common.locale_utils import resolve_locale_from_labels
 from pyrit.datasets import TextJailBreak
 from pyrit.executor.attack.core.attack_config import (
     AttackConverterConfig,
@@ -170,14 +171,11 @@ class Jailbreak(Scenario):
         2) target_lang (alias)
         3) en (default)
         """
-        raw_locale = str(self._memory_labels.get("locale") or self._memory_labels.get("target_lang") or "en")
-        normalized = raw_locale.strip().lower().replace("_", "-")
-        primary_subtag = normalized.split("-", maxsplit=1)[0]
-        if primary_subtag == "kr":
-            primary_subtag = "ko"
-        if primary_subtag not in {"en", "ko"}:
-            return "en"
-        return primary_subtag
+        return resolve_locale_from_labels(
+            labels=self._memory_labels,
+            supported_locales={"en", "ko"},
+            default_locale="en",
+        )
 
     def _get_all_jailbreak_templates(self) -> List[str]:
         """

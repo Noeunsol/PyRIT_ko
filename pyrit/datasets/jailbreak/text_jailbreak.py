@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 from typing import Any, List, Optional
 
+from pyrit.common.locale_utils import normalize_locale_value
 from pyrit.common.path import JAILBREAK_TEMPLATES_PATH
 from pyrit.models import SeedPrompt
 
@@ -121,20 +122,6 @@ class TextJailBreak:
             self.template.value = self.template.render_template_value_silent(**kwargs)
 
     @classmethod
-    def _normalize_locale(cls, *, locale: Optional[str]) -> Optional[str]:
-        """Normalize locale-like values to 'en'/'ko' primary subtags."""
-        if not locale:
-            return None
-        normalized = locale.strip().lower().replace("_", "-")
-        if not normalized:
-            return None
-
-        primary_subtag = normalized.split("-", maxsplit=1)[0]
-        if primary_subtag == "kr":
-            return "ko"
-        return primary_subtag
-
-    @classmethod
     def _list_jailbreak_template_paths(cls) -> List[Path]:
         """List all supported jailbreak template paths (excluding multi-parameter templates)."""
         return sorted(
@@ -153,7 +140,7 @@ class TextJailBreak:
         - locale='ko': use `name_ko.yaml`, fallback to `name.yaml` if Korean is missing.
         - locale unset/unsupported: return input unchanged.
         """
-        normalized_locale = cls._normalize_locale(locale=locale)
+        normalized_locale = normalize_locale_value(locale or "")
         if normalized_locale not in {"en", "ko"}:
             return template_paths
 
