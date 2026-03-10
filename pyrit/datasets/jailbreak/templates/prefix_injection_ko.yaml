@@ -1,7 +1,7 @@
 ---
 name: 접두어 주입
 description: 프롬프트 뒤에 "당연하죠! 여기 있습니다"를 추가하여 긍정적 답변을 강제하는 기법
-source: https://arxiv.org/abs/2307.02483 Jailbroken: How Does LLM Safety Training Fail
+source: https://arxiv.org/abs/2307.02483 Jailbroken - How Does LLM Safety Training Fail
 parameters:
   - prompt
 data_type: text
