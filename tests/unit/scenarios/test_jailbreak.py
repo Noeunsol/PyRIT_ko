@@ -197,6 +197,36 @@ class TestJailbreakAttackGeneration:
             assert len(scenario._get_all_jailbreak_templates()) > 0
 
     @pytest.mark.asyncio
+    async def test_get_all_jailbreak_templates_locale_ko(
+        self, mock_objective_target, mock_objective_scorer, mock_memory_seed_groups
+    ):
+        """Test that locale=ko prefers Korean jailbreak templates."""
+        with patch.object(Jailbreak, "_resolve_seed_groups", return_value=mock_memory_seed_groups):
+            scenario = Jailbreak(objective_scorer=mock_objective_scorer)
+            await scenario.initialize_async(
+                objective_target=mock_objective_target,
+                memory_labels={"locale": "ko"},
+            )
+            templates = scenario._get_all_jailbreak_templates()
+            assert len(templates) > 0
+            assert all(template.endswith("_ko.yaml") for template in templates)
+
+    @pytest.mark.asyncio
+    async def test_get_all_jailbreak_templates_target_lang_alias_kr(
+        self, mock_objective_target, mock_objective_scorer, mock_memory_seed_groups
+    ):
+        """Test that target_lang=kr is normalized to Korean template selection."""
+        with patch.object(Jailbreak, "_resolve_seed_groups", return_value=mock_memory_seed_groups):
+            scenario = Jailbreak(objective_scorer=mock_objective_scorer)
+            await scenario.initialize_async(
+                objective_target=mock_objective_target,
+                memory_labels={"target_lang": "kr"},
+            )
+            templates = scenario._get_all_jailbreak_templates()
+            assert len(templates) > 0
+            assert all(template.endswith("_ko.yaml") for template in templates)
+
+    @pytest.mark.asyncio
     async def test_get_some_jailbreak_templates(
         self, mock_objective_target, mock_objective_scorer, mock_memory_seed_groups, mock_random_n
     ):

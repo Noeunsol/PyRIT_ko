@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Type, Union
 
 from pyrit.common.logger import logger
+from pyrit.common.locale_utils import resolve_locale_from_labels
 from pyrit.executor.attack.core.attack_parameters import AttackParameters, AttackParamsT
 from pyrit.executor.attack.core.attack_strategy import AttackContext, AttackStrategy
 from pyrit.models import AttackResult
@@ -92,7 +93,11 @@ class SingleTurnAttackStrategy(AttackStrategy[SingleTurnAttackContext[Any], Atta
         3) en (default)
         """
         merged_labels = self._get_merged_memory_labels(context=context)
-        locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en").lower()
+        locale = resolve_locale_from_labels(
+            labels=merged_labels,
+            supported_locales=supported_locales or self._SUPPORTED_LOCALES,
+            default_locale="en",
+        )
 
         allowed_locales = supported_locales or self._SUPPORTED_LOCALES
         if locale not in allowed_locales:

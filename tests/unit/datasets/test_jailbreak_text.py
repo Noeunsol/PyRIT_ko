@@ -79,6 +79,44 @@ def test_get_file_name_subdirectory():
     assert "{{ prompt }}" not in result
 
 
+def test_get_relative_path_subdirectory():
+    relative_path = "pliny/amazon/nova.yaml"
+    jailbreak = TextJailBreak(template_relative_path=relative_path)
+    result = jailbreak.get_jailbreak("Tell me a joke")
+    assert "Tell me a joke" in result
+    assert "{{ prompt }}" not in result
+
+
+def test_get_all_jailbreak_templates_includes_subdirectories_excludes_multi_parameter():
+    template_names = TextJailBreak.get_all_jailbreak_templates(return_relative_paths=True)
+
+    # Ensure templates in nested directories are discoverable by name.
+    assert "pliny/amazon/nova.yaml" in template_names
+    # Keep multi-parameter templates out of the default scenario list.
+    assert all(not name.startswith("multi_parameter/") for name in template_names)
+
+
+def test_get_all_jailbreak_templates_locale_ko_prefers_korean_versions():
+    template_names = TextJailBreak.get_all_jailbreak_templates(locale="ko", return_relative_paths=True)
+    assert len(template_names) > 0
+    assert all(name.endswith("_ko.yaml") for name in template_names)
+
+
+def test_get_all_jailbreak_templates_locale_en_prefers_english_versions():
+    template_names = TextJailBreak.get_all_jailbreak_templates(locale="en", return_relative_paths=True)
+    assert len(template_names) > 0
+    assert all(not name.endswith("_ko.yaml") for name in template_names)
+
+
+def test_get_all_jailbreak_templates_applies_n_after_locale_filter():
+    sample_size = 5
+    template_names = TextJailBreak.get_all_jailbreak_templates(
+        n=sample_size, locale="ko", return_relative_paths=True
+    )
+    assert len(template_names) == sample_size
+    assert all(name.endswith("_ko.yaml") for name in template_names)
+
+
 def test_all_templates_render_without_syntax_errors(jailbreak_dir):
     """Test that all jailbreak templates can be successfully rendered with a test prompt."""
     yaml_files = [f for f in jailbreak_dir.rglob("*.yaml") if "multi_parameter" not in f.parts]

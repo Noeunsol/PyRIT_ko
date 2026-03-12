@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Type, TypeVar
 
 from pyrit.common.logger import logger
+from pyrit.common.locale_utils import normalize_locale_value, resolve_locale_from_labels
 from pyrit.executor.attack.core.attack_parameters import AttackParameters, AttackParamsT
 from pyrit.executor.attack.core.attack_strategy import (
     AttackContext,
@@ -102,15 +103,7 @@ class MultiTurnAttackStrategy(AttackStrategy[MultiTurnAttackStrategyContextT, At
             "ko_KR" -> "ko"
             "en-US" -> "en"
         """
-        normalized = locale_value.strip().lower().replace("_", "-")
-        if not normalized:
-            return ""
-
-        primary_subtag = normalized.split("-", maxsplit=1)[0]
-        if primary_subtag == "kr":
-            # Common mistake: country code "kr" used instead of language code "ko".
-            return "ko"
-        return primary_subtag
+        return normalize_locale_value(locale_value)
 
     def _get_merged_memory_labels(self, *, context: MultiTurnAttackContext[Any]) -> dict[str, str]:
         """
@@ -130,8 +123,11 @@ class MultiTurnAttackStrategy(AttackStrategy[MultiTurnAttackStrategyContextT, At
         3) en (default)
         """
         merged_labels = self._get_merged_memory_labels(context=context)
-        raw_locale = str(merged_labels.get("locale") or merged_labels.get("target_lang") or "en")
-        locale = self._normalize_locale_value(raw_locale) or "en"
+        locale = resolve_locale_from_labels(
+            labels=merged_labels,
+            supported_locales=supported_locales or self._SUPPORTED_LOCALES,
+            default_locale="en",
+        )
 
         allowed_locales = supported_locales or self._SUPPORTED_LOCALES
         if locale not in allowed_locales:

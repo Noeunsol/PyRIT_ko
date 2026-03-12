@@ -505,6 +505,78 @@ class TestCrescendoAttackInitialization:
 
 
 @pytest.mark.usefixtures("patch_central_database")
+class TestCrescendoLocalization:
+    """Tests for locale resolution and localized assets/messages in CrescendoAttack."""
+
+    def test_resolve_locale_with_target_lang_alias_kr(
+        self,
+        mock_objective_target: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ) -> None:
+        attack = CrescendoTestHelper.create_attack(
+            objective_target=mock_objective_target,
+            adversarial_chat=mock_adversarial_chat,
+        )
+        context = CrescendoAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"target_lang": "kr"}),
+            session=ConversationSession(),
+        )
+
+        assert attack._resolve_locale(context=context) == "ko"
+
+    def test_get_localized_message_returns_korean_for_regional_locale(
+        self,
+        mock_objective_target: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ) -> None:
+        attack = CrescendoTestHelper.create_attack(
+            objective_target=mock_objective_target,
+            adversarial_chat=mock_adversarial_chat,
+        )
+        context = CrescendoAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko-KR"}),
+            session=ConversationSession(),
+        )
+
+        message = attack._get_localized_message(context=context, key="attack_objective_required")
+        assert message == "공격 목표가 제공되어야 합니다"
+
+    def test_get_adversarial_system_prompt_template_uses_korean_for_locale_ko(
+        self,
+        mock_objective_target: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ) -> None:
+        attack = CrescendoTestHelper.create_attack(
+            objective_target=mock_objective_target,
+            adversarial_chat=mock_adversarial_chat,
+        )
+        context = CrescendoAttackContext(
+            params=AttackParameters(objective="테스트 목표", memory_labels={"locale": "ko"}),
+            session=ConversationSession(),
+        )
+
+        selected_template = attack._get_adversarial_system_prompt_template(context=context)
+        assert selected_template is attack._adversarial_chat_system_prompt_templates["ko"]
+
+    def test_validate_context_raises_korean_error_for_empty_objective(
+        self,
+        mock_objective_target: MagicMock,
+        mock_adversarial_chat: MagicMock,
+    ) -> None:
+        attack = CrescendoTestHelper.create_attack(
+            objective_target=mock_objective_target,
+            adversarial_chat=mock_adversarial_chat,
+        )
+        context = CrescendoAttackContext(
+            params=AttackParameters(objective="", memory_labels={"locale": "ko"}),
+            session=ConversationSession(),
+        )
+
+        with pytest.raises(ValueError, match="공격 목표가 제공되어야 합니다"):
+            attack._validate_context(context=context)
+
+
+@pytest.mark.usefixtures("patch_central_database")
 class TestContextValidation:
     """Tests for context validation logic"""
 

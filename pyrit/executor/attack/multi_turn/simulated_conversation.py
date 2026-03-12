@@ -14,6 +14,10 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Union
 
+from pyrit.common.locale_utils import (
+    infer_localized_path_pair,
+    resolve_locale_from_labels,
+)
 from pyrit.executor.attack.core.attack_config import (
     AttackAdversarialConfig,
     AttackConverterConfig,
@@ -61,34 +65,16 @@ _LOCALIZED_SYSTEM_PROMPT_PATHS = {
 
 
 def _resolve_locale(*, memory_labels: Optional[dict[str, str]]) -> str:
-    labels = memory_labels or {}
-    raw_locale = str(labels.get("locale") or labels.get("target_lang") or DEFAULT_LOCALE)
-    locale = _normalize_locale_value(raw_locale) or DEFAULT_LOCALE
-    if locale not in _SUPPORTED_LOCALES:
-        return DEFAULT_LOCALE
-    return locale
-
-
-def _normalize_locale_value(locale_value: str) -> str:
-    normalized = locale_value.strip().lower().replace("_", "-")
-    if not normalized:
-        return ""
-
-    primary_subtag = normalized.split("-", maxsplit=1)[0]
-    if primary_subtag == "kr":
-        return "ko"
-    return primary_subtag
+    return resolve_locale_from_labels(
+        labels=memory_labels,
+        supported_locales=_SUPPORTED_LOCALES,
+        default_locale=DEFAULT_LOCALE,
+    )
 
 
 def _get_localized_message(*, locale: str, key: str) -> str:
     selected_locale = locale if locale in _LOCALIZED_MESSAGES else DEFAULT_LOCALE
     return _LOCALIZED_MESSAGES[selected_locale][key]
-
-
-def _infer_system_prompt_pair(*, path: Path) -> tuple[Path, Path]:
-    if path.stem.endswith("_ko"):
-        return path.with_name(f"{path.stem[:-3]}{path.suffix}"), path
-    return path, path.with_name(f"{path.stem}_ko{path.suffix}")
 
 
 def _get_localized_system_prompt_paths(*, resolved_system_prompt_path: Path) -> dict[str, Path]:
@@ -97,7 +83,7 @@ def _get_localized_system_prompt_paths(*, resolved_system_prompt_path: Path) -> 
         return predefined
 
     localized = {locale: resolved_system_prompt_path for locale in _SUPPORTED_LOCALES}
-    english_candidate, korean_candidate = _infer_system_prompt_pair(path=resolved_system_prompt_path)
+    english_candidate, korean_candidate = infer_localized_path_pair(path=resolved_system_prompt_path)
     if english_candidate.exists():
         localized["en"] = english_candidate
     if korean_candidate.exists():

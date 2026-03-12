@@ -166,6 +166,7 @@ class TestPsychosocialScenarioInitialization:
 
         scenario = PsychosocialScenario(objective_scorer=scorer)
         assert scenario._objective_scorer == scorer
+        assert scenario._uses_default_objective_scorer is False
 
     def test_init_default_adversarial_chat(self, *, mock_objective_scorer: FloatScaleThresholdScorer) -> None:
         scenario = PsychosocialScenario(objective_scorer=mock_objective_scorer)
@@ -350,6 +351,41 @@ class TestPsychosocialScenarioAttackGeneration:
         atomic_attacks = await scenario._get_atomic_attacks_async()
         assert len(atomic_attacks) > 0
         assert all(hasattr(run, "_attack") for run in atomic_attacks)
+
+
+@pytest.mark.usefixtures(*FIXTURES)
+class TestPsychosocialScenarioLocalization:
+    """Tests for locale-aware rubric selection in PsychosocialScenario."""
+
+    def test_resolve_localized_path_uses_korean_variant_for_locale_ko(self) -> None:
+        scenario = PsychosocialScenario()
+        scenario._memory_labels = {"locale": "ko"}
+
+        english_path = DATASETS_PATH / "score" / "likert" / "crisis_management.yaml"
+        localized_path = scenario._resolve_localized_path(path=english_path)
+
+        assert localized_path.name == "crisis_management_ko.yaml"
+
+    def test_create_scoring_config_rebuilds_default_scorer_when_locale_changes(self) -> None:
+        scenario = PsychosocialScenario()
+        scenario._memory_labels = {"locale": "ko"}
+        localized_scorer = MagicMock(spec=FloatScaleThresholdScorer)
+
+        with patch.object(scenario, "_get_scorer", return_value=localized_scorer) as mock_get_scorer:
+            scoring_config = scenario._create_scoring_config(subharm=None)
+
+        mock_get_scorer.assert_called_once_with(subharm=None)
+        assert scoring_config.objective_scorer is localized_scorer
+
+    def test_create_scoring_config_keeps_custom_scorer_when_no_subharm(self) -> None:
+        custom_scorer = MagicMock(spec=FloatScaleThresholdScorer)
+        scenario = PsychosocialScenario(objective_scorer=custom_scorer)
+
+        with patch.object(scenario, "_get_scorer") as mock_get_scorer:
+            scoring_config = scenario._create_scoring_config(subharm=None)
+
+        mock_get_scorer.assert_not_called()
+        assert scoring_config.objective_scorer is custom_scorer
 
 
 @pytest.mark.usefixtures(*FIXTURES)

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from pyrit.common import apply_defaults
+from pyrit.common.locale_utils import resolve_locale_from_labels
 from pyrit.datasets import TextJailBreak
 from pyrit.executor.attack.core.attack_config import (
     AttackConverterConfig,
@@ -161,6 +162,21 @@ class Jailbreak(Scenario):
 
         return list(seed_groups)
 
+    def _resolve_template_locale(self) -> str:
+        """
+        Resolve template locale from scenario memory labels.
+
+        Resolution order:
+        1) locale
+        2) target_lang (alias)
+        3) en (default)
+        """
+        return resolve_locale_from_labels(
+            labels=self._memory_labels,
+            supported_locales={"en", "ko"},
+            default_locale="en",
+        )
+
     def _get_all_jailbreak_templates(self) -> List[str]:
         """
         Retrieve all available jailbreak templates.
@@ -168,10 +184,11 @@ class Jailbreak(Scenario):
         Returns:
             List[str]: List of jailbreak template file names.
         """
+        locale = self._resolve_template_locale()
         if not self._n:
-            return TextJailBreak.get_all_jailbreak_templates()
+            return TextJailBreak.get_all_jailbreak_templates(locale=locale, return_relative_paths=True)
         else:
-            return TextJailBreak.get_all_jailbreak_templates(n=self._n)
+            return TextJailBreak.get_all_jailbreak_templates(n=self._n, locale=locale, return_relative_paths=True)
 
     async def _get_atomic_attack_from_jailbreak_async(self, *, jailbreak_template_name: str) -> AtomicAttack:
         """
@@ -188,7 +205,7 @@ class Jailbreak(Scenario):
 
         # Create the jailbreak converter
         jailbreak_converter = TextJailbreakConverter(
-            jailbreak_template=TextJailBreak(template_file_name=jailbreak_template_name)
+            jailbreak_template=TextJailBreak(template_relative_path=jailbreak_template_name)
         )
 
         # Create converter configuration
@@ -204,7 +221,7 @@ class Jailbreak(Scenario):
         )
 
         # Extract template name without extension for the atomic attack name
-        template_name = Path(jailbreak_template_name).stem
+        template_name = str(Path(jailbreak_template_name).with_suffix("")).replace("/", "_")
 
         return AtomicAttack(
             atomic_attack_name=f"jailbreak_{template_name}", attack=attack, seed_groups=self._seed_groups
