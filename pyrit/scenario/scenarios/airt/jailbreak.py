@@ -3,7 +3,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Sequence
 
 from pyrit.common import apply_defaults
 from pyrit.common.locale_utils import resolve_locale_from_labels
@@ -21,8 +21,10 @@ from pyrit.scenario.core.atomic_attack import AtomicAttack
 from pyrit.scenario.core.dataset_configuration import DatasetConfiguration
 from pyrit.scenario.core.scenario import Scenario
 from pyrit.scenario.core.scenario_strategy import (
+    ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
+from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
 from pyrit.score import (
     SelfAskRefusalScorer,
     TrueFalseInverterScorer,
@@ -249,3 +251,30 @@ class Jailbreak(Scenario):
             atomic_attacks.append(atomic_attack)
 
         return atomic_attacks
+
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[Dict[str, str]] = None,
+    ) -> None:
+        if dataset_config is None:
+            localized_dataset_names = get_localized_dataset_names(
+                dataset_names=["airt_harms"],
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = DatasetConfiguration(dataset_names=localized_dataset_names, max_dataset_size=4)
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
+        )

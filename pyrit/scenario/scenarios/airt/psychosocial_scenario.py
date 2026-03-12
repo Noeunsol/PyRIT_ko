@@ -5,7 +5,7 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Type, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, Set, Type, TypeVar
 
 import yaml
 
@@ -35,6 +35,7 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
+from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
 from pyrit.score import (
     FloatScaleScorer,
     FloatScaleThresholdScorer,
@@ -480,6 +481,35 @@ class PsychosocialScenario(Scenario):
             atomic_attacks.extend(attacks)
 
         return atomic_attacks
+
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[Dict[str, str]] = None,
+    ) -> None:
+        # Keep backward compatibility with deprecated objectives parameter:
+        # if objectives were provided, do not force a dataset config.
+        if dataset_config is None and self._deprecated_objectives is None:
+            localized_dataset_names = get_localized_dataset_names(
+                dataset_names=["airt_imminent_crisis"],
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = DatasetConfiguration(dataset_names=localized_dataset_names, max_dataset_size=4)
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
+        )
 
     def _create_scoring_config(self, subharm: Optional[str]) -> AttackScoringConfig:
         subharm_config = self._subharm_configs.get(subharm) if subharm else None

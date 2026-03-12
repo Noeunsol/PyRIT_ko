@@ -23,6 +23,7 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
+from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
 from pyrit.score import SelfAskRefusalScorer, TrueFalseInverterScorer, TrueFalseScorer
 
 AttackStrategyT = TypeVar("AttackStrategyT", bound="AttackStrategy[Any, Any]")
@@ -192,6 +193,44 @@ class ContentHarms(Scenario):
             api_key=os.environ.get("AZURE_OPENAI_GPT4O_UNSAFE_CHAT_KEY"),
             model_name=os.environ.get("AZURE_OPENAI_GPT4O_UNSAFE_CHAT_MODEL"),
             temperature=1.2,
+        )
+
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[Dict[str, str]] = None,
+    ) -> None:
+        if dataset_config is None:
+            localized_dataset_names = get_localized_dataset_names(
+                dataset_names=[
+                    "airt_hate",
+                    "airt_fairness",
+                    "airt_violence",
+                    "airt_sexual",
+                    "airt_harassment",
+                    "airt_misinformation",
+                    "airt_leakage",
+                ],
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = ContentHarmsDatasetConfiguration(
+                dataset_names=localized_dataset_names,
+                max_dataset_size=4,
+            )
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
         )
 
     def _get_default_scorer(self) -> TrueFalseInverterScorer:
