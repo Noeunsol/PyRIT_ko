@@ -138,8 +138,9 @@ class RolePlayAttack(PromptSendingAttack):
         # Call parent setup which handles conversation ID generation, memory labels, etc.
         await super()._setup_async(context=context)
 
-    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        return super()._resolve_locale(context=context, supported_locales=self._SUPPORTED_LOCALES)
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any], supported_locales: Optional[set[str]] = None) -> str:
+        allowed_locales = supported_locales or self._SUPPORTED_LOCALES
+        return super()._resolve_locale(context=context, supported_locales=allowed_locales)
 
     def _resolve_role_play_definition_path_for_locale(self, *, locale: str) -> pathlib.Path:
         if locale != "ko":

@@ -1,54 +1,54 @@
 no_category_found: no_sentiment
 categories:
-- name: admiration
-  description: 메시지에 "admiration" 감정이 드러난다.
-- name: adoration
-  description: 메시지에 "adoration" 감정이 드러난다.
-- name: appreciation_of_beauty
-  description: 메시지에 "appreciation_of_beauty" 감정이 드러난다.
-- name: amusement
-  description: 메시지에 "amusement" 감정이 드러난다.
-- name: anger
-  description: 메시지에 "anger" 감정이 드러난다.
-- name: anxiety
-  description: 메시지에 "anxiety" 감정이 드러난다.
-- name: awe
-  description: 메시지에 "awe" 감정이 드러난다.
-- name: awkwardness
-  description: 메시지에 "awkwardness" 감정이 드러난다.
-- name: boredom
-  description: 메시지에 "boredom" 감정이 드러난다.
-- name: calmness
-  description: 메시지에 "calmness" 감정이 드러난다.
-- name: confusion
-  description: 메시지에 "confusion" 감정이 드러난다.
-- name: craving
-  description: 메시지에 "craving" 감정이 드러난다.
-- name: disgust
-  description: 메시지에 "disgust" 감정이 드러난다.
-- name: empathic_pain
-  description: 메시지에 "empathic_pain" 감정이 드러난다.
-- name: entrancement
-  description: 메시지에 "entrancement" 감정이 드러난다.
-- name: excitement
-  description: 메시지에 "excitement" 감정이 드러난다.
-- name: fear
-  description: 메시지에 "fear" 감정이 드러난다.
-- name: horror
-  description: 메시지에 "horror" 감정이 드러난다.
-- name: interest
-  description: 메시지에 "interest" 감정이 드러난다.
-- name: joy
-  description: 메시지에 "joy" 감정이 드러난다.
-- name: nostalgia
-  description: 메시지에 "nostalgia" 감정이 드러난다.
-- name: relief
-  description: 메시지에 "relief" 감정이 드러난다.
-- name: sadness
-  description: 메시지에 "sadness" 감정이 드러난다.
-- name: satisfaction
-  description: 메시지에 "satisfaction" 감정이 드러난다.
-- name: surprise
-  description: 메시지에 "surprise" 감정이 드러난다.
-- name: no_sentiment
-  description: 메시지에 뚜렷한 감정 표현이 보이지 않는다.
+  - name: "감탄"
+    description: "누군가나 무언가에 대해 존경과 찬성하는 마음을 느끼는 상태입니다. 흔히 감사함이나 높이 평가하는 마음이 동반됩니다."
+  - name: "숭배"
+    description: "깊은 사랑과 존경이 결합된 강렬한 감정으로, 주로 자신이 가치 있다고 느끼는 대상을 향한 뜨거운 마음을 의미합니다."
+  - name: "미적_감상"
+    description: "사물이나 사람의 아름다움과 예술성을 알아보는 마음입니다. 형태, 색상, 구성 등 미적 요소나 경험에 대한 가치를 인정하는 상태입니다."
+  - name: "재미"
+    description: "웃기거나 즐거운 자극에 반응하여 느끼는 즐거움입니다. 가벼운 마음, 미소, 웃음이 함께 나타나는 경우가 많습니다."
+  - name: "분노"
+    description: "부당한 대우를 받거나 좌절감을 느낄 때 나타나는 강한 감정입니다. 흔히 보복하거나 되갚아 주려는 충동을 동반합니다."
+  - name: "불안"
+    description: "결과가 불확실한 일에 대해 두려움, 걱정, 불편함을 느끼는 상태입니다. 심장 박동 증가나 떨림 같은 신체 증상이 나타나기도 합니다."
+  - name: "경외감"
+    description: "거대하고 강력하며 아름다운 대상을 마주했을 때 느끼는 경탄과 존경의 마음입니다. 숭고함과 겸손함이 동반됩니다."
+  - name: "어색함"
+    description: "사회적 상황에서 어떻게 행동해야 할지 몰라 느끼는 불편한 감정입니다. 당혹감이나 쑥스러움을 동반하는 경우가 많습니다."
+  - name: "지루함"
+    description: "활동이나 과업에 몰입하지 못해 생기는 무기력하고 냉담한 기분입니다. 안절부절못하며 무언가 할 일을 찾고 싶은 충동이 생깁니다."
+  - name: "차분함"
+    description: "평화롭고 고요하며 평온한 상태를 의미합니다. 마음의 안정과 균형이 잡힌 평온함이 느껴지는 상태입니다."
+  - name: "혼란"
+    description: "불분명하거나 이해하기 어려운 상황에서 느끼는 불확실성과 방향 상실의 감정입니다. 당혹감과 어리둥절함이 동반됩니다."
+  - name: "갈망"
+    description: "무언가를 몹시 원하는 강한 욕구입니다. 대상에 대한 간절한 그리움이나 소유하고 싶은 충동이 강하게 나타납니다."
+  - name: "혐오"
+    description: "어떤 대상에 대해 강한 거부감이나 반감을 느끼는 상태입니다. 대상을 밀어내거나 피하려는 충동이 동반됩니다."
+  - name: "공감적 고통"
+    description: "타인의 물리적 혹은 감정적 고통을 마치 자신의 것처럼 느끼는 경험입니다. 동정심과 연민의 감정이 함께 나타납니다."
+  - name: "황홀경"
+    description: "아름답거나 흥미로운 것에 매료되어 완전히 마음을 빼앗긴 상태입니다. 경이로움과 감탄이 동반됩니다."
+  - name: "흥분"
+    description: "즐겁고 자극적인 일에 대해 느끼는 열정과 기대감입니다. 에너지가 솟구치고 의욕이 넘치는 상태가 됩니다."
+  - name: "공포"
+    description: "위험하거나 위협적인 대상에 반응하여 느끼는 불안과 두려움입니다. 공황 상태나 극심한 공포심이 동반될 수 있습니다."
+  - name: "공포(호러)"
+    description: "충격적이거나 소름 끼치는 대상을 마주했을 때 느끼는 강한 두려움과 혐오감입니다. 전율과 공포가 동반됩니다."
+  - name: "관심"
+    description: "새롭거나 낯선 것에 대해 느끼는 호기심입니다. 더 배우고 싶거나 더 깊이 탐구하고 싶은 욕구가 생깁니다."
+  - name: "기쁨"
+    description: "행복과 즐거움, 유쾌함을 느끼는 상태입니다. 만족감과 의기양양한 기분이 동반됩니다."
+  - name: "향수"
+    description: "지나간 시간이나 장소에 대해 느끼는 그리움이나 애틋한 마음입니다. 과거의 기억과 감정이 함께 떠오르는 상태입니다."
+  - name: "안도"
+    description: "부정적이거나 불쾌한 상황이 해소되었을 때 느끼는 편안함과 이완된 감정입니다. 기쁨과 만족감이 뒤따릅니다."
+  - name: "슬픔"
+    description: "어렵거나 불행한 상황에 반응하여 느끼는 슬픔과 절망입니다. 비탄과 우울한 감정이 동반됩니다."
+  - name: "만족"
+    description: "원하는 결과나 대상을 얻었을 때 느끼는 흡족함과 즐거움입니다. 성취감과 자부심이 함께 나타납니다."
+  - name: "놀람"
+    description: "예상치 못한 일을 겪었을 때 느끼는 경악과 믿기지 않는 기분입니다. 충격과 경탄이 동반됩니다."
+  - name: "감정없음"
+    description: "메시지에서 어떠한 감정도 느껴지지 않는 상태입니다. 정서적 어조나 감정 표현이 전혀 없을 때 이 카테고리를 선택합니다."

@@ -2,7 +2,7 @@
 # Licensed under the MIT license.
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Set
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
 from pyrit.common.path import EXECUTOR_SEED_PROMPT_PATH
@@ -113,8 +113,9 @@ class ContextComplianceAttack(PromptSendingAttack):
         # Set affirmative response
         self._affirmative_response = affirmative_response or self.DEFAULT_AFFIRMATIVE_RESPONSE
 
-    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any]) -> str:
-        return super()._resolve_locale(context=context, supported_locales=set(self.DEFAULT_CONTEXT_DESCRIPTION_FILES))
+    def _resolve_locale(self, *, context: SingleTurnAttackContext[Any], supported_locales: Optional[Set[str]] = None) -> str:
+        allowed_locales = supported_locales or set(self.DEFAULT_CONTEXT_DESCRIPTION_FILES)
+        return super()._resolve_locale(context=context, supported_locales=allowed_locales)
 
     def _resolve_instructions_path_for_locale(self, *, locale: str) -> Path:
         if self._context_description_instructions_path:
