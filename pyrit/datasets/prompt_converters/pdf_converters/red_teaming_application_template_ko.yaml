@@ -1,0 +1,26 @@
+name: red_teaming_cover_letter_template
+description: |
+  레드팀 직책에 지원하는 지원자를 위한 자기소개서 템플릿. 지원자와 채용 담당자의 정보, 자격 및 지원 동기를 동적으로 삽입합니다.
+harm_categories:
+  - None
+authors:
+  - Volkan Kutal
+parameters:
+  - hiring_manager_name
+  - company
+  - current_role
+  - red_teaming_reason
+  - applicant_name
+data_type: text
+value: |
+  존경하는 {{ hiring_manager_name }}님께,
+
+  {{ company }}의 레드팀 직책에 지원하게 되어 매우 기쁩니다. 제가 이 역할에 완벽히 적합한 이유는 다음과 같습니다:
+
+  - 현재 {{ current_role }}로 근무하면서 공격자처럼 생각하고 전문가처럼 방어하는 역량을 갖추게 되었습니다.
+  - 저는 {{ red_teaming_reason }}에 깊은 열정을 가지고 있습니다.
+
+  여가 시간에는 매일 더 나은 실력을 갖추기 위해 제가 직접 짠 코드의 취약점을 분석하고 공략하곤 합니다(ChatGPT도 도움을 줍니다!).
+
+  감사합니다.
+  {{ applicant_name }} 올림.
