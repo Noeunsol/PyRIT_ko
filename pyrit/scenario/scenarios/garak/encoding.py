@@ -7,6 +7,7 @@ from typing import List, Optional, Sequence
 
 from pyrit.common import apply_defaults
 from pyrit.common.deprecation import print_deprecation_message
+from pyrit.common.locale_utils import resolve_locale_from_labels
 from pyrit.executor.attack.core.attack_config import (
     AttackConverterConfig,
     AttackScoringConfig,
@@ -115,6 +116,41 @@ class EncodingStrategy(ScenarioStrategy):
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_LOCALE = "en"
+SUPPORTED_LOCALES = {"en", "ko"}
+DEFAULT_DATASET_NAMES = ("garak_slur_terms_en", "garak_web_html_js")
+LOCALIZED_DATASET_NAME_MAP = {
+    "ko": {
+        "garak_slur_terms_en": "garak_slur_terms_ko",
+    }
+}
+
+
+def get_localized_default_dataset_names(
+    *,
+    labels: Optional[dict[str, str]],
+    available_dataset_names: Optional[Sequence[str]] = None,
+) -> list[str]:
+    """Return locale-aware Garak default dataset names with per-dataset fallback."""
+    locale = resolve_locale_from_labels(
+        labels=labels,
+        supported_locales=SUPPORTED_LOCALES,
+        default_locale=DEFAULT_LOCALE,
+    )
+    if locale == DEFAULT_LOCALE:
+        return list(DEFAULT_DATASET_NAMES)
+
+    localized_overrides = LOCALIZED_DATASET_NAME_MAP.get(locale, {})
+    available = set(available_dataset_names) if available_dataset_names is not None else None
+    localized_dataset_names: list[str] = []
+    for dataset_name in DEFAULT_DATASET_NAMES:
+        localized_name = localized_overrides.get(dataset_name, dataset_name)
+        if available is None or localized_name in available:
+            localized_dataset_names.append(localized_name)
+        else:
+            localized_dataset_names.append(dataset_name)
+    return localized_dataset_names
+
 
 class Encoding(Scenario):
     """
@@ -164,10 +200,7 @@ class Encoding(Scenario):
             EncodingDatasetConfiguration: Configuration with garak slur terms and web XSS payloads,
                 where each seed is transformed into a SeedAttackGroup with an encoding objective.
         """
-        return EncodingDatasetConfiguration(
-            dataset_names=["garak_slur_terms_en", "garak_web_html_js"],
-            max_dataset_size=3,
-        )
+        return EncodingDatasetConfiguration(dataset_names=list(DEFAULT_DATASET_NAMES), max_dataset_size=3)
 
     @apply_defaults
     def __init__(
@@ -220,6 +253,35 @@ class Encoding(Scenario):
         self._deprecated_seed_prompts = seed_prompts
         # Will be resolved in _get_atomic_attacks_async
         self._resolved_seed_groups: Optional[list[SeedAttackGroup]] = None
+
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[dict[str, str]] = None,
+    ) -> None:
+        if dataset_config is None:
+            localized_dataset_names = get_localized_default_dataset_names(
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = EncodingDatasetConfiguration(
+                dataset_names=localized_dataset_names,
+                max_dataset_size=3,
+            )
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
+        )
 
     def _resolve_seed_groups(self) -> list[SeedAttackGroup]:
         """

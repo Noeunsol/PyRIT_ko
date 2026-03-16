@@ -3,7 +3,7 @@
 
 """Tests for the RedTeamAgent class."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,6 +16,7 @@ from pyrit.prompt_converter import Base64Converter
 from pyrit.prompt_target import PromptTarget
 from pyrit.prompt_target.common.prompt_chat_target import PromptChatTarget
 from pyrit.scenario import AtomicAttack, DatasetConfiguration
+from pyrit.scenario.core.scenario import Scenario
 from pyrit.scenario.foundry import FoundryStrategy, RedTeamAgent
 from pyrit.score import FloatScaleThresholdScorer, TrueFalseScorer
 
@@ -290,6 +291,65 @@ class TestFoundryInitialization:
         # Error should occur during initialize_async when _get_atomic_attacks_async resolves seed groups
         with pytest.raises(ValueError, match="DatasetConfiguration has no seed_groups"):
             await scenario.initialize_async(objective_target=mock_objective_target)
+
+
+@pytest.mark.usefixtures("patch_central_database")
+class TestFoundryLocalization:
+    """Tests for locale-aware Foundry defaults."""
+
+    @pytest.mark.asyncio
+    async def test_initialize_async_uses_korean_default_dataset_when_available(
+        self, mock_objective_target, mock_adversarial_target, mock_objective_scorer
+    ):
+        scenario = RedTeamAgent(
+            adversarial_chat=mock_adversarial_target,
+            attack_scoring_config=AttackScoringConfig(objective_scorer=mock_objective_scorer),
+        )
+        scenario._memory = MagicMock()
+        scenario._memory.get_seed_dataset_names.return_value = ["harmbench", "harmbench_ko"]
+
+        with patch.object(Scenario, "initialize_async", new_callable=AsyncMock) as mock_initialize:
+            await scenario.initialize_async(objective_target=mock_objective_target, memory_labels={"locale": "ko"})
+
+        dataset_config = mock_initialize.await_args.kwargs["dataset_config"]
+        assert isinstance(dataset_config, DatasetConfiguration)
+        assert dataset_config.get_default_dataset_names() == ["harmbench_ko"]
+
+    @pytest.mark.asyncio
+    async def test_initialize_async_falls_back_when_korean_default_dataset_missing(
+        self, mock_objective_target, mock_adversarial_target, mock_objective_scorer
+    ):
+        scenario = RedTeamAgent(
+            adversarial_chat=mock_adversarial_target,
+            attack_scoring_config=AttackScoringConfig(objective_scorer=mock_objective_scorer),
+        )
+        scenario._memory = MagicMock()
+        scenario._memory.get_seed_dataset_names.return_value = ["harmbench"]
+
+        with patch.object(Scenario, "initialize_async", new_callable=AsyncMock) as mock_initialize:
+            await scenario.initialize_async(objective_target=mock_objective_target, memory_labels={"target_lang": "ko"})
+
+        dataset_config = mock_initialize.await_args.kwargs["dataset_config"]
+        assert isinstance(dataset_config, DatasetConfiguration)
+        assert dataset_config.get_default_dataset_names() == ["harmbench"]
+
+    def test_random_jailbreak_template_uses_locale_filtered_paths(
+        self, mock_adversarial_target, mock_objective_scorer
+    ):
+        scenario = RedTeamAgent(
+            adversarial_chat=mock_adversarial_target,
+            attack_scoring_config=AttackScoringConfig(objective_scorer=mock_objective_scorer),
+        )
+        scenario._memory_labels = {"target_lang": "kr"}
+
+        with patch(
+            "pyrit.scenario.scenarios.foundry.red_team_agent.TextJailBreak.get_all_jailbreak_templates",
+            return_value=["dan_1_ko.yaml"],
+        ) as mock_templates:
+            template_path = scenario._get_random_jailbreak_template_relative_path()
+
+        assert template_path == "dan_1_ko.yaml"
+        mock_templates.assert_called_once_with(n=1, locale="ko", return_relative_paths=True)
 
 
 @pytest.mark.usefixtures("patch_central_database")

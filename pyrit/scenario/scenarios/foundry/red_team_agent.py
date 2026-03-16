@@ -16,6 +16,7 @@ from typing import Any, List, Optional, Sequence, Type, TypeVar
 
 from pyrit.common import apply_defaults
 from pyrit.common.deprecation import print_deprecation_message
+from pyrit.common.locale_utils import resolve_locale_from_labels
 from pyrit.datasets import TextJailBreak
 from pyrit.executor.attack import (
     CrescendoAttack,
@@ -68,6 +69,7 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
+from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
 from pyrit.score import (
     AzureContentFilterScorer,
     FloatScaleThresholdScorer,
@@ -79,6 +81,10 @@ from pyrit.score import (
 
 AttackStrategyT = TypeVar("AttackStrategyT", bound="AttackStrategy[Any, Any]")
 logger = logging.getLogger(__name__)
+
+DEFAULT_LOCALE = "en"
+SUPPORTED_LOCALES = {"en", "ko"}
+DEFAULT_DATASET_NAMES = ("harmbench",)
 
 
 class FoundryStrategy(ScenarioStrategy):
@@ -239,7 +245,7 @@ class RedTeamAgent(Scenario):
     @classmethod
     def default_dataset_config(cls) -> DatasetConfiguration:
         """Return the default dataset configuration for this scenario."""
-        return DatasetConfiguration(dataset_names=["harmbench"], max_dataset_size=4)
+        return DatasetConfiguration(dataset_names=list(DEFAULT_DATASET_NAMES), max_dataset_size=4)
 
     @apply_defaults
     def __init__(
@@ -302,6 +308,46 @@ class RedTeamAgent(Scenario):
             objective_scorer=objective_scorer,
             include_default_baseline=include_baseline,
             scenario_result_id=scenario_result_id,
+        )
+
+    def _resolve_template_locale(self) -> str:
+        """Resolve locale for locale-aware template selection."""
+        return resolve_locale_from_labels(
+            labels=self._memory_labels,
+            supported_locales=SUPPORTED_LOCALES,
+            default_locale=DEFAULT_LOCALE,
+        )
+
+    def _get_random_jailbreak_template_relative_path(self) -> str:
+        """Return one locale-filtered jailbreak template path relative to the templates root."""
+        locale = self._resolve_template_locale()
+        return TextJailBreak.get_all_jailbreak_templates(n=1, locale=locale, return_relative_paths=True)[0]
+
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[dict[str, str]] = None,
+    ) -> None:
+        if dataset_config is None:
+            localized_dataset_names = get_localized_dataset_names(
+                dataset_names=DEFAULT_DATASET_NAMES,
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = DatasetConfiguration(dataset_names=localized_dataset_names, max_dataset_size=4)
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
         )
 
     def _resolve_seed_groups(self) -> List[SeedAttackGroup]:
@@ -458,7 +504,9 @@ class RedTeamAgent(Scenario):
             elif strategy == FoundryStrategy.Url:
                 converters.append(UrlConverter())
             elif strategy == FoundryStrategy.Jailbreak:
-                jailbreak_template = TextJailBreak(random_template=True)
+                jailbreak_template = TextJailBreak(
+                    template_relative_path=self._get_random_jailbreak_template_relative_path()
+                )
                 converters.append(TextJailbreakConverter(jailbreak_template=jailbreak_template))
             else:
                 raise ValueError(f"Unknown strategy: {strategy}")

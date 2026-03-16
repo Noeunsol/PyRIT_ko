@@ -3,7 +3,7 @@
 
 """Tests for the Encoding class."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -13,6 +13,7 @@ from pyrit.models import SeedAttackGroup, SeedObjective, SeedPrompt
 from pyrit.prompt_converter import Base64Converter
 from pyrit.prompt_target import PromptTarget
 from pyrit.scenario import DatasetConfiguration
+from pyrit.scenario.core.scenario import Scenario
 from pyrit.scenario.garak import Encoding, EncodingStrategy
 from pyrit.scenario.scenarios.garak.encoding import EncodingDatasetConfiguration
 from pyrit.score import DecodingScorer, TrueFalseScorer
@@ -219,6 +220,48 @@ class TestEncodingInitialization:
             assert all(
                 comp.strategies[0] != EncodingStrategy.ALL for comp in scenario._scenario_composites if comp.strategies
             )
+
+
+@pytest.mark.usefixtures("patch_central_database")
+class TestEncodingLocalization:
+    """Tests for locale-aware default dataset resolution."""
+
+    @pytest.mark.asyncio
+    async def test_initialize_async_uses_korean_default_dataset_when_available(
+        self, mock_objective_target, mock_objective_scorer
+    ):
+        scenario = Encoding(objective_scorer=mock_objective_scorer)
+        scenario._memory = MagicMock()
+        scenario._memory.get_seed_dataset_names.return_value = [
+            "garak_slur_terms_en",
+            "garak_slur_terms_ko",
+            "garak_web_html_js",
+        ]
+
+        with patch.object(Scenario, "initialize_async", new_callable=AsyncMock) as mock_initialize:
+            await scenario.initialize_async(objective_target=mock_objective_target, memory_labels={"locale": "ko"})
+
+        dataset_config = mock_initialize.await_args.kwargs["dataset_config"]
+        assert isinstance(dataset_config, EncodingDatasetConfiguration)
+        assert dataset_config.get_default_dataset_names() == ["garak_slur_terms_ko", "garak_web_html_js"]
+
+    @pytest.mark.asyncio
+    async def test_initialize_async_falls_back_when_korean_dataset_missing(
+        self, mock_objective_target, mock_objective_scorer
+    ):
+        scenario = Encoding(objective_scorer=mock_objective_scorer)
+        scenario._memory = MagicMock()
+        scenario._memory.get_seed_dataset_names.return_value = [
+            "garak_slur_terms_en",
+            "garak_web_html_js",
+        ]
+
+        with patch.object(Scenario, "initialize_async", new_callable=AsyncMock) as mock_initialize:
+            await scenario.initialize_async(objective_target=mock_objective_target, memory_labels={"target_lang": "ko-KR"})
+
+        dataset_config = mock_initialize.await_args.kwargs["dataset_config"]
+        assert isinstance(dataset_config, EncodingDatasetConfiguration)
+        assert dataset_config.get_default_dataset_names() == ["garak_slur_terms_en", "garak_web_html_js"]
 
 
 @pytest.mark.usefixtures("patch_central_database")
