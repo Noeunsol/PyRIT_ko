@@ -1,0 +1,50 @@
+dataset_name: languages_most_spoken_ko
+data_type: text
+description: |
+  세계에서 가장 많이 사용되는 언어 목록입니다.
+  화자 수는 모국어 또는 제2언어로 사용하는 인구를 모두 포함합니다.
+  RandomTranslationConverter에서 대상 언어 목록으로 활용하는 것이 대표적인 사용 사례입니다.
+authors: Frédéric Dubut
+groups: AI Red Team
+source: Wikipedia https://en.wikipedia.org/wiki/List_of_languages_by_total_number_of_speakers
+seeds:
+# 10억 명 이상 사용
+  - value: 영어
+  - value: 표준 중국어
+# 1억 명 이상 사용
+  - value: 힌디어
+  - value: 스페인어
+  - value: 현대 표준 아랍어
+  - value: 프랑스어
+  - value: 벵골어
+  - value: 포르투갈어
+  - value: 러시아어
+  - value: 인도네시아어
+  - value: 우르두어
+  - value: 표준 독일어
+  - value: 일본어
+  - value: 나이지리아 피진어
+  - value: 이집트 아랍어
+# 5천만 명 이상 사용
+  - value: 마라티어
+  - value: 베트남어
+  - value: 텔루구어
+  - value: 하우사어
+  - value: 터키어
+  - value: 서부 펀자브어
+  - value: 스와힐리어
+  - value: 타갈로그어
+  - value: 타밀어
+  - value: 광둥어
+  - value: 우 중국어
+  - value: 이란 페르시아어
+  - value: 한국어
+  - value: 태국어
+  - value: 자바어
+  - value: 이탈리아어
+  - value: 구자라트어
+  - value: 레반트 아랍어
+  - value: 암하라어
+  - value: 칸나다어
+  - value: 보즈푸리어
+  - value: 수단 아랍어

@@ -1,0 +1,47 @@
+dataset_name: languages_most_used_internet_ko
+data_type: text
+description: |
+  인터넷에서 가장 많이 사용되는 언어 목록입니다.
+  RandomTranslationConverter에서 대상 언어 목록으로 활용하는 것이 대표적인 사용 사례입니다.
+authors: Frédéric Dubut
+groups: AI Red Team
+source: Wikipedia https://en.wikipedia.org/wiki/Languages_used_on_the_Internet
+seeds:
+  - value: 영어
+  - value: 스페인어
+  - value: 독일어
+  - value: 일본어
+  - value: 프랑스어
+  - value: 포르투갈어
+  - value: 러시아어
+  - value: 이탈리아어
+  - value: 네덜란드어
+  - value: 폴란드어
+  - value: 터키어
+  - value: 페르시아어
+  - value: 중국어
+  - value: 베트남어
+  - value: 인도네시아어
+  - value: 체코어
+  - value: 한국어
+  - value: 우크라이나어
+  - value: 헝가리어
+  - value: 스웨덴어
+  - value: 아랍어
+  - value: 루마니아어
+  - value: 그리스어
+  - value: 히브리어
+  - value: 덴마크어
+  - value: 핀란드어
+  - value: 슬로바키아어
+  - value: 태국어
+  - value: 불가리아어
+  - value: 세르비아어
+  - value: 크로아티아어
+  - value: 리투아니아어
+  - value: 노르웨이 보크몰어
+  - value: 슬로베니아어
+  - value: 카탈루냐어
+  - value: 에스토니아어
+  - value: 노르웨이어
+  - value: 라트비아어
