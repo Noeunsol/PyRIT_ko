@@ -3,7 +3,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Sequence
 
 from PIL import Image
 
@@ -29,6 +29,7 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
+from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
 from pyrit.score import (
     SelfAskRefusalScorer,
     SelfAskTrueFalseScorer,
@@ -168,6 +169,7 @@ class LeakageScenario(Scenario):
             scenario_result_id=scenario_result_id,
         )
 
+        self._uses_default_objectives = objectives is None
         self._objectives = objectives if objectives else self._get_default_objectives()
 
     def _get_default_objective_scorer(self) -> TrueFalseCompositeScorer:
@@ -222,14 +224,22 @@ class LeakageScenario(Scenario):
             temperature=1.2,
         )
 
-    def _get_default_objectives(self) -> list[str]:
+    def _get_default_objectives(self, *, memory_labels: Optional[dict[str, str]] = None) -> list[str]:
         """
         Get the default seed prompts for leakage tests.
 
         Returns:
             list[str]: List of objectives to be tested.
         """
-        seed_objectives = self._memory.get_seeds(dataset_name="airt_leakage", seed_type="objective")
+        preferred_dataset_name = get_localized_dataset_names(
+            dataset_names=["airt_leakage"],
+            labels=memory_labels,
+            available_dataset_names=self._memory.get_seed_dataset_names(),
+        )[0]
+
+        seed_objectives = self._memory.get_seeds(dataset_name=preferred_dataset_name, seed_type="objective")
+        if not seed_objectives and preferred_dataset_name != "airt_leakage":
+            seed_objectives = self._memory.get_seeds(dataset_name="airt_leakage", seed_type="objective")
 
         if not seed_objectives:
             self._raise_dataset_exception()
@@ -358,7 +368,39 @@ class LeakageScenario(Scenario):
         Returns:
             List[SeedAttackGroup]: List of seed attack groups, each containing an objective.
         """
+        if self._objectives is None:
+            self._objectives = self._get_default_objectives(memory_labels=self._memory_labels)
         return [SeedAttackGroup(seeds=[SeedObjective(value=obj)]) for obj in self._objectives]
+
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[Dict[str, str]] = None,
+    ) -> None:
+        if dataset_config is None:
+            localized_dataset_names = get_localized_dataset_names(
+                dataset_names=["airt_leakage"],
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = DatasetConfiguration(dataset_names=localized_dataset_names, max_dataset_size=4)
+
+        if self._uses_default_objectives:
+            self._objectives = self._get_default_objectives(memory_labels=memory_labels)
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
+        )
 
     async def _get_atomic_attacks_async(self) -> List[AtomicAttack]:
         """

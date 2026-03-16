@@ -5,11 +5,12 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Type, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, Set, Type, TypeVar
 
 import yaml
 
 from pyrit.common import apply_defaults
+from pyrit.common.locale_utils import get_localized_file_paths, resolve_locale_from_labels
 from pyrit.common.path import DATASETS_PATH
 from pyrit.executor.attack import (
     AttackAdversarialConfig,
@@ -34,6 +35,7 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
+from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
 from pyrit.score import (
     FloatScaleScorer,
     FloatScaleThresholdScorer,
@@ -148,6 +150,8 @@ class PsychosocialScenario(Scenario):
     """
 
     VERSION: int = 1
+    _DEFAULT_LOCALE = "en"
+    _SUPPORTED_LOCALES = {"en", "ko"}
 
     # Set up default subharm configurations
     # Each subharm (e.g., 'imminent_crisis', 'licensed_therapist') can have unique escalation/scoring
@@ -251,6 +255,7 @@ class PsychosocialScenario(Scenario):
         # Merge user-provided configs with defaults (user-provided takes precedence)
         self._subharm_configs = {**self.DEFAULT_SUBHARM_CONFIGS, **(subharm_configs or {})}
 
+        self._uses_default_objective_scorer = objective_scorer is None
         self._objective_scorer: FloatScaleThresholdScorer = objective_scorer if objective_scorer else self._get_scorer()
         self._max_turns = max_turns
 
@@ -389,6 +394,21 @@ class PsychosocialScenario(Scenario):
             temperature=0.7,
         )
 
+    def _resolve_locale(self) -> str:
+        return resolve_locale_from_labels(
+            labels=getattr(self, "_memory_labels", None),
+            supported_locales=self._SUPPORTED_LOCALES,
+            default_locale=self._DEFAULT_LOCALE,
+        )
+
+    def _resolve_localized_path(self, *, path: pathlib.Path) -> pathlib.Path:
+        localized_paths = get_localized_file_paths(
+            resolved_path=path.resolve(),
+            supported_locales=self._SUPPORTED_LOCALES,
+        )
+        locale = self._resolve_locale()
+        return localized_paths.get(locale, localized_paths[self._DEFAULT_LOCALE])
+
     def _get_scorer(self, subharm: Optional[str] = None) -> FloatScaleThresholdScorer:
         """
         Create scorer for psychosocial harms evaluation.
@@ -413,6 +433,7 @@ class PsychosocialScenario(Scenario):
         else:
             # Default to crisis management rubric
             rubric_path = pathlib.Path(DATASETS_PATH) / "score" / "likert" / "crisis_management.yaml"
+        rubric_path = self._resolve_localized_path(path=rubric_path)
 
         # Load rubric from YAML file
         with open(rubric_path, "r", encoding="utf-8") as f:
@@ -461,9 +482,43 @@ class PsychosocialScenario(Scenario):
 
         return atomic_attacks
 
+    async def initialize_async(
+        self,
+        *,
+        objective_target,
+        scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
+        dataset_config: Optional[DatasetConfiguration] = None,
+        max_concurrency: int = 10,
+        max_retries: int = 0,
+        memory_labels: Optional[Dict[str, str]] = None,
+    ) -> None:
+        # Keep backward compatibility with deprecated objectives parameter:
+        # if objectives were provided, do not force a dataset config.
+        if dataset_config is None and self._deprecated_objectives is None:
+            localized_dataset_names = get_localized_dataset_names(
+                dataset_names=["airt_imminent_crisis"],
+                labels=memory_labels,
+                available_dataset_names=self._memory.get_seed_dataset_names(),
+            )
+            dataset_config = DatasetConfiguration(dataset_names=localized_dataset_names, max_dataset_size=4)
+
+        await super().initialize_async(
+            objective_target=objective_target,
+            scenario_strategies=scenario_strategies,
+            dataset_config=dataset_config,
+            max_concurrency=max_concurrency,
+            max_retries=max_retries,
+            memory_labels=memory_labels,
+        )
+
     def _create_scoring_config(self, subharm: Optional[str]) -> AttackScoringConfig:
         subharm_config = self._subharm_configs.get(subharm) if subharm else None
-        scorer = self._get_scorer(subharm=subharm) if subharm_config else self._objective_scorer
+        if subharm_config:
+            scorer = self._get_scorer(subharm=subharm)
+        elif self._uses_default_objective_scorer:
+            scorer = self._get_scorer(subharm=None)
+        else:
+            scorer = self._objective_scorer
         return AttackScoringConfig(objective_scorer=scorer)
 
     def _create_attacks_for_strategy(
