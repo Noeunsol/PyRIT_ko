@@ -6,6 +6,7 @@ import pathlib
 from typing import Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import SeedPrompt
@@ -29,6 +30,7 @@ class TenseConverter(LLMGenericTextConverter):
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         tense: str,
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the target chat support, tense, and optional prompt template.
@@ -38,12 +40,18 @@ class TenseConverter(LLMGenericTextConverter):
                 Can be omitted if a default has been configured via PyRIT initialization.
             tense (str): The tense the converter should convert the prompt to. E.g. past, present, future.
             prompt_template (SeedPrompt, Optional): The prompt template for the conversion.
+            locale (str): Locale for the prompt template. Defaults to "en".
         """
         # set to default strategy if not provided
         prompt_template = (
             prompt_template
             if prompt_template
-            else SeedPrompt.from_yaml_file(pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "tense_converter.yaml")
+            else SeedPrompt.from_yaml_file(
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "tense_converter.yaml",
+                    locale=locale,
+                )
+            )
         )
 
         super().__init__(

@@ -7,6 +7,7 @@ import textwrap
 from typing import Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import SeedPrompt
@@ -31,6 +32,7 @@ class NoiseConverter(LLMGenericTextConverter):
         noise: Optional[str] = None,
         number_errors: int = 5,
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the specified parameters.
@@ -41,12 +43,18 @@ class NoiseConverter(LLMGenericTextConverter):
             noise (str): The noise to inject. Grammar error, delete random letter, insert random space, etc.
             number_errors (int): The number of errors to inject.
             prompt_template (SeedPrompt, Optional): The prompt template for the conversion.
+            locale (str): Locale for the prompt template. Defaults to "en".
         """
         # set to default strategy if not provided
         prompt_template = (
             prompt_template
             if prompt_template
-            else SeedPrompt.from_yaml_file(pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "noise_converter.yaml")
+            else SeedPrompt.from_yaml_file(
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "noise_converter.yaml",
+                    locale=locale,
+                )
+            )
         )
 
         if not noise:

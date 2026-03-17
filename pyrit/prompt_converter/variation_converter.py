@@ -9,6 +9,7 @@ from textwrap import dedent
 from typing import Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.exceptions import (
     InvalidJsonException,
@@ -42,6 +43,7 @@ class VariationConverter(PromptConverter):
         *,
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the specified target and prompt template.
@@ -51,6 +53,7 @@ class VariationConverter(PromptConverter):
                 Can be omitted if a default has been configured via PyRIT initialization.
             prompt_template (SeedPrompt, optional): The template used for generating the system prompt.
                 If not provided, a default template will be used.
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If converter_target is not provided and no default has been configured.
@@ -61,7 +64,7 @@ class VariationConverter(PromptConverter):
         prompt_template = (
             prompt_template
             if prompt_template
-            else SeedPrompt.from_yaml_file(pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "variation_converter.yaml")
+            else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "variation_converter.yaml", locale=locale))
         )
 
         self.number_variations = 1

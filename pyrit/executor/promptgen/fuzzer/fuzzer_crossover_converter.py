@@ -7,6 +7,7 @@ import uuid
 from typing import Any, List, Optional
 
 from pyrit.common.apply_defaults import apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.executor.promptgen.fuzzer.fuzzer_converter_base import (
     FuzzerConverter,
@@ -28,6 +29,7 @@ class FuzzerCrossOverConverter(FuzzerConverter):
         converter_target: Optional[PromptChatTarget] = None,
         prompt_template: Optional[SeedPrompt] = None,
         prompt_templates: Optional[List[str]] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the specified chat target and prompt templates.
@@ -43,7 +45,12 @@ class FuzzerCrossOverConverter(FuzzerConverter):
             prompt_template
             if prompt_template
             else SeedPrompt.from_yaml_file(
-                pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "fuzzer_converters" / "crossover_converter.yaml"
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH)
+                    / "fuzzer_converters"
+                    / "crossover_converter.yaml",
+                    locale=locale,
+                )
             )
         )
         super().__init__(converter_target=converter_target, prompt_template=prompt_template)

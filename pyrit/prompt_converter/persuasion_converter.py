@@ -7,6 +7,7 @@ import pathlib
 import uuid
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.exceptions import (
     InvalidJsonException,
@@ -54,6 +55,7 @@ class PersuasionConverter(PromptConverter):
         *,
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         persuasion_technique: str,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the specified target and prompt template.
@@ -64,6 +66,7 @@ class PersuasionConverter(PromptConverter):
             persuasion_technique (str): Persuasion technique to be used by the converter, determines the system prompt
                 to be used to generate new prompts. Must be one of "authority_endorsement", "evidence_based",
                 "expert_endorsement", "logical_appeal", "misrepresentation".
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If converter_target is not provided and no default has been configured.
@@ -73,7 +76,10 @@ class PersuasionConverter(PromptConverter):
 
         try:
             prompt_template = SeedPrompt.from_yaml_file(
-                pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "persuasion" / f"{persuasion_technique}.yaml"
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "persuasion" / f"{persuasion_technique}.yaml",
+                    locale=locale,
+                )
             )
         except FileNotFoundError:
             raise ValueError(f"Persuasion technique '{persuasion_technique}' does not exist or is not supported.")

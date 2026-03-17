@@ -6,6 +6,7 @@ import pathlib
 from typing import Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.models import PromptDataType, SeedPrompt
 from pyrit.prompt_converter.llm_generic_text_converter import LLMGenericTextConverter
@@ -29,6 +30,7 @@ class DenylistConverter(LLMGenericTextConverter):
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         system_prompt_template: Optional[SeedPrompt] = None,
         denylist: list[str] = [],
+        locale: str = "en",
     ):
         """
         Initialize the converter with a target, an optional system prompt template, and a denylist.
@@ -39,12 +41,13 @@ class DenylistConverter(LLMGenericTextConverter):
             system_prompt_template (Optional[SeedPrompt]): The system prompt template to use for the conversion.
                 If not provided, a default template will be used.
             denylist (list[str]): A list of words or phrases that should be replaced in the prompt.
+            locale (str): Locale for the prompt template. Defaults to "en".
         """
         # set to default strategy if not provided
         system_prompt_template = (
             system_prompt_template
             if system_prompt_template
-            else SeedPrompt.from_yaml_file(pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "denylist_converter.yaml")
+            else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "denylist_converter.yaml", locale=locale))
         )
 
         super().__init__(

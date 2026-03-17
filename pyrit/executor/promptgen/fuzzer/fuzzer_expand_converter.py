@@ -6,6 +6,7 @@ import uuid
 from typing import Optional
 
 from pyrit.common.apply_defaults import apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.executor.promptgen.fuzzer.fuzzer_converter_base import (
     FuzzerConverter,
@@ -26,13 +27,17 @@ class FuzzerExpandConverter(FuzzerConverter):
         *,
         converter_target: Optional[PromptChatTarget] = None,
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """Initialize the expand converter with optional chat target and prompt template."""
         prompt_template = (
             prompt_template
             if prompt_template
             else SeedPrompt.from_yaml_file(
-                pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "fuzzer_converters" / "expand_converter.yaml"
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "fuzzer_converters" / "expand_converter.yaml",
+                    locale=locale,
+                )
             )
         )
         super().__init__(converter_target=converter_target, prompt_template=prompt_template)

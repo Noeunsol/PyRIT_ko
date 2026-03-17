@@ -8,6 +8,7 @@ import re
 import textwrap
 from typing import Any, Callable, Optional
 
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import PromptDataType, SeedPrompt
@@ -54,6 +55,7 @@ class CodeChameleonConverter(PromptConverter):
         encrypt_type: str,
         encrypt_function: Optional[Callable[..., Any]] = None,
         decrypt_function: Optional[Callable[..., Any] | list[Callable[..., Any] | str]] = None,
+        locale: str = "en",
     ) -> None:
         """
         Initialize the converter with the specified encryption type and optional functions.
@@ -67,6 +69,7 @@ class CodeChameleonConverter(PromptConverter):
                 Used as part of markdown code block instructions in system prompt.
                 If list is provided, strings will be treated as single statements for imports or comments.
                 Functions will take the source code of the function.
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If ``encrypt_type`` is not valid or if ``encrypt_function`` or ``decrypt_function`` are not
@@ -100,6 +103,7 @@ class CodeChameleonConverter(PromptConverter):
                 )
 
         self._encrypt_type = encrypt_type
+        self._locale = locale
 
     def _build_identifier(self) -> ConverterIdentifier:
         """
@@ -137,7 +141,10 @@ class CodeChameleonConverter(PromptConverter):
             encoded_prompt = prompt
 
         seed_prompt = SeedPrompt.from_yaml_file(
-            pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "codechameleon_converter.yaml"
+            resolve_localized_yaml_path(
+                base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "codechameleon_converter.yaml",
+                locale=self._locale,
+            )
         )
 
         formatted_prompt = seed_prompt.render_template_value(

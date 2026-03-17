@@ -6,6 +6,7 @@ import pathlib
 from typing import Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import SeedPrompt
@@ -29,6 +30,7 @@ class ToneConverter(LLMGenericTextConverter):
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         tone: str,
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the target chat support, tone, and optional prompt template.
@@ -38,6 +40,7 @@ class ToneConverter(LLMGenericTextConverter):
                 Can be omitted if a default has been configured via PyRIT initialization.
             tone (str): The tone for the conversation. E.g. upset, sarcastic, indifferent, etc.
             prompt_template (SeedPrompt, Optional): The prompt template for the conversion.
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If the language is not provided.
@@ -46,7 +49,12 @@ class ToneConverter(LLMGenericTextConverter):
         prompt_template = (
             prompt_template
             if prompt_template
-            else SeedPrompt.from_yaml_file(pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "tone_converter.yaml")
+            else SeedPrompt.from_yaml_file(
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "tone_converter.yaml",
+                    locale=locale,
+                )
+            )
         )
 
         super().__init__(

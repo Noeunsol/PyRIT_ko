@@ -6,6 +6,7 @@ import pathlib
 from typing import Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.models import PromptDataType, SeedPrompt
 from pyrit.prompt_converter.llm_generic_text_converter import LLMGenericTextConverter
@@ -28,6 +29,7 @@ class MaliciousQuestionGeneratorConverter(LLMGenericTextConverter):
         *,
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with a specific target and template.
@@ -36,13 +38,14 @@ class MaliciousQuestionGeneratorConverter(LLMGenericTextConverter):
             converter_target (PromptChatTarget): The endpoint that converts the prompt.
                 Can be omitted if a default has been configured via PyRIT initialization.
             prompt_template (SeedPrompt): The seed prompt template to use.
+            locale (str): Locale for the prompt template. Defaults to "en".
         """
         # set to default strategy if not provided
         prompt_template = (
             prompt_template
             if prompt_template
             else SeedPrompt.from_yaml_file(
-                pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "malicious_question_generator_converter.yaml"
+                resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "malicious_question_generator_converter.yaml", locale=locale)
             )
         )
 

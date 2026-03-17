@@ -64,6 +64,17 @@ def infer_localized_path_pair(*, path: Path) -> tuple[Path, Path]:
     return path, path.with_name(f"{path.stem}_ko{path.suffix}")
 
 
+def resolve_localized_yaml_path(*, base_path: Path, locale: str = DEFAULT_LOCALE) -> Path:
+    """
+    Resolve a YAML path to its localized variant.
+
+    If a localized variant (e.g., ``name_ko.yaml``) exists, returns that path;
+    otherwise falls back to the original path.
+    """
+    paths = get_localized_file_paths(resolved_path=base_path.resolve())
+    return paths.get(locale, base_path.resolve())
+
+
 def get_localized_file_paths(
     *,
     resolved_path: Path,

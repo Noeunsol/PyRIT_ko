@@ -15,6 +15,7 @@ from tenacity import (
 )
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import (
@@ -46,6 +47,7 @@ class TranslationConverter(PromptConverter):
         prompt_template: Optional[SeedPrompt] = None,
         max_retries: int = 3,
         max_wait_time_in_seconds: int = 60,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the target chat support, language, and optional prompt template.
@@ -57,6 +59,7 @@ class TranslationConverter(PromptConverter):
             prompt_template (SeedPrompt, Optional): The prompt template for the conversion.
             max_retries (int): Maximum number of retries for the conversion.
             max_wait_time_in_seconds (int): Maximum wait time in seconds between retries.
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If converter_target is not provided and no default has been configured.
@@ -72,7 +75,7 @@ class TranslationConverter(PromptConverter):
         prompt_template = (
             prompt_template
             if prompt_template
-            else SeedPrompt.from_yaml_file(pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "translation_converter.yaml")
+            else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "translation_converter.yaml", locale=locale))
         )
 
         if not language:

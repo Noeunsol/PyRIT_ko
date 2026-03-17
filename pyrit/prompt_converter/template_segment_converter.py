@@ -7,6 +7,7 @@ import pathlib
 import random
 from typing import Optional
 
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import PromptDataType, SeedPrompt
@@ -30,6 +31,7 @@ class TemplateSegmentConverter(PromptConverter):
         self,
         *,
         prompt_template: Optional[SeedPrompt] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the specified target and prompt template.
@@ -37,6 +39,7 @@ class TemplateSegmentConverter(PromptConverter):
         Args:
             prompt_template (SeedPrompt, Optional): The prompt template for the conversion. Must have two or more
                 parameters. If not provided, uses the default ``tom_and_jerry.yaml`` template.
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If the template has fewer than two parameters or if any parameter is missing in the template.
@@ -47,7 +50,12 @@ class TemplateSegmentConverter(PromptConverter):
             prompt_template
             if prompt_template
             else SeedPrompt.from_yaml_file(
-                pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "template_segment_converter" / "tom_and_jerry.yaml"
+                resolve_localized_yaml_path(
+                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH)
+                    / "template_segment_converter"
+                    / "tom_and_jerry.yaml",
+                    locale=locale,
+                )
             )
         )
 

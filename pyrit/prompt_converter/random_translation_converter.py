@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH, DATASETS_PATH
 from pyrit.models import PromptDataType, SeedDataset, SeedPrompt
 from pyrit.prompt_converter.llm_generic_text_converter import LLMGenericTextConverter
@@ -39,6 +40,7 @@ class RandomTranslationConverter(LLMGenericTextConverter, WordLevelConverter):
         system_prompt_template: Optional[SeedPrompt] = None,
         languages: Optional[List[str]] = None,
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
+        locale: str = "en",
     ):
         """
         Initialize the converter with a target, an optional system prompt template, and language options.
@@ -51,6 +53,7 @@ class RandomTranslationConverter(LLMGenericTextConverter, WordLevelConverter):
             languages (Optional[List[str]]): The list of available languages to use for translation.
             word_selection_strategy (Optional[WordSelectionStrategy]): Strategy for selecting which words to convert.
                 If None, all words will be converted.
+            locale (str): Locale for the prompt template. Defaults to "en".
 
         Raises:
             ValueError: If converter_target is not provided and no default has been configured.
@@ -65,7 +68,7 @@ class RandomTranslationConverter(LLMGenericTextConverter, WordLevelConverter):
         system_prompt_template = (
             system_prompt_template
             if system_prompt_template
-            else SeedPrompt.from_yaml_file(Path(CONVERTER_SEED_PROMPT_PATH) / "random_translation_converter.yaml")
+            else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=Path(CONVERTER_SEED_PROMPT_PATH) / "random_translation_converter.yaml", locale=locale))
         )
 
         LLMGenericTextConverter.__init__(
