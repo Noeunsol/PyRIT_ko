@@ -128,3 +128,39 @@ def test_fuzzer_converter_input_supported(converter_class, sqlite_instance) -> N
     converter = converter_class(converter_target=prompt_target)
     assert converter.input_supported("text") is True
     assert converter.input_supported("image_path") is False
+
+
+@pytest.mark.parametrize(
+    "converter_class",
+    [
+        FuzzerExpandConverter,
+        FuzzerShortenConverter,
+        FuzzerRephraseConverter,
+        FuzzerCrossOverConverter,
+        FuzzerSimilarConverter,
+    ],
+)
+def test_fuzzer_converter_korean_locale_init(converter_class, sqlite_instance) -> None:
+    """Test that all fuzzer converters initialize correctly with locale='ko'."""
+    prompt_target = MockPromptTarget()
+    converter = converter_class(converter_target=prompt_target, locale="ko")
+    assert converter.system_prompt
+    assert converter._begins_label == "시작"
+    assert converter._ends_label == "끝"
+
+
+@pytest.mark.parametrize(
+    "converter_class",
+    [
+        FuzzerExpandConverter,
+        FuzzerShortenConverter,
+        FuzzerRephraseConverter,
+        FuzzerSimilarConverter,
+    ],
+)
+def test_fuzzer_converter_default_locale_uses_english_delimiters(converter_class, sqlite_instance) -> None:
+    """Test that default locale uses English delimiter labels."""
+    prompt_target = MockPromptTarget()
+    converter = converter_class(converter_target=prompt_target)
+    assert converter._begins_label == "BEGINS"
+    assert converter._ends_label == "ENDS"

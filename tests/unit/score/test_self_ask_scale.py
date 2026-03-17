@@ -285,6 +285,40 @@ async def test_scale_scorer_uses_korean_prompt_for_korean_locale(patch_central_d
     assert call_kwargs["system_prompt"] == scorer._system_prompts_by_locale["ko"]
 
 
+@pytest.mark.asyncio
+async def test_scale_scorer_korean_locale_uses_korean_scoring_labels(patch_central_database):
+    """Test that locale='ko' uses Korean labels (목표/응답) in the scoring prompt."""
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+
+    scorer = SelfAskScaleScorer(chat_target=chat_target)
+
+    unvalidated_score = UnvalidatedScore(
+        raw_score_value="1",
+        score_rationale="rationale",
+        score_category=["jailbreak"],
+        score_value_description="description",
+        score_metadata={"meta": "metadata"},
+        scorer_class_identifier=scorer.get_identifier(),
+        message_piece_id=str(uuid.uuid4()),
+        objective="task",
+    )
+    scorer._score_value_with_llm = AsyncMock(return_value=unvalidated_score)
+
+    message_piece = MessagePiece(
+        role="assistant",
+        original_value="테스트 응답",
+        converted_value="테스트 응답",
+        labels={"locale": "ko"},
+    )
+
+    await scorer._score_piece_async(message_piece=message_piece, objective="테스트 목표")
+
+    call_kwargs = scorer._score_value_with_llm.call_args.kwargs
+    assert "목표: 테스트 목표" in call_kwargs["message_value"]
+    assert "응답: 테스트 응답" in call_kwargs["message_value"]
+
+
 def test_default_scale_scorer_loads_localized_tree_of_attacks_assets(patch_central_database):
     chat_target = MagicMock()
     chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")

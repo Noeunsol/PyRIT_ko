@@ -171,3 +171,39 @@ async def test_math_prompt_converter_error_handling():
     # Expect the exception to be raised
     with pytest.raises(Exception, match="Mocked exception"):
         await converter.convert_async(prompt=prompt)
+
+
+@pytest.mark.asyncio
+async def test_math_prompt_converter_korean_locale():
+    """Test that locale='ko' uses the Korean solver instruction prefix."""
+    mock_converter_target = MagicMock()
+    mock_converter_target.send_prompt_async = AsyncMock()
+    mock_converter_target.get_identifier.return_value = get_mock_target_identifier("MockMathTarget")
+
+    template_value = "Solve the following problem: {{ prompt }}"
+    mock_prompt_template = SeedPrompt(
+        value=template_value, dataset_name="dataset_1", parameters=["prompt"], added_by="tester", data_type="text"
+    )
+
+    converter = MathPromptConverter(
+        converter_target=mock_converter_target, prompt_template=mock_prompt_template, locale="ko"
+    )
+
+    mock_converter_target.send_prompt_async.return_value = [
+        Message(
+            message_pieces=[
+                MessagePiece(
+                    role="assistant",
+                    original_value="mocked",
+                    converted_value="A를 연산 집합이라 하자.",
+                )
+            ]
+        )
+    ]
+
+    result = await converter.convert_async(prompt="테스트 프롬프트")
+
+    assert "당신은 수학 문제 풀이 전문가입니다" in result.output_text
+    assert "A를 연산 집합이라 하자." in result.output_text
+    # Should NOT contain the English prefix
+    assert "You are a math problem solver" not in result.output_text

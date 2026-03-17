@@ -270,6 +270,28 @@ def test_self_ask_true_false_with_question_no_path(patch_central_database):
     assert scorer._score_category == "custom_harm_category"
 
 
+@pytest.mark.asyncio
+async def test_true_false_scorer_korean_locale_uses_korean_scoring_labels(
+    patch_central_database, scorer_true_false_response: Message
+):
+    """Test that locale='ko' uses Korean labels (목표/응답) in the scoring prompt."""
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+
+    scorer = SelfAskTrueFalseScorer(
+        chat_target=chat_target, true_false_question_path=TrueFalseQuestionPaths.GROUNDED.value
+    )
+
+    piece = MessagePiece(role="assistant", original_value="테스트 응답", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece, objective="테스트 목표")
+
+    _, kwargs = chat_target.send_prompt_async.call_args
+    sent_text = kwargs["message"].message_pieces[0].original_value
+    assert "목표: 테스트 목표" in sent_text
+    assert "응답: 테스트 응답" in sent_text
+
+
 def test_self_ask_true_false_with_path_and_question(patch_central_database):
     """Test that providing both question_path and question raises ValueError."""
     chat_target = MagicMock()

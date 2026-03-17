@@ -129,6 +129,43 @@ async def test_refusal_scorer_falls_back_to_english_for_unsupported_locale(
 
 
 @pytest.mark.asyncio
+async def test_refusal_scorer_korean_locale_uses_korean_scoring_labels(
+    scorer_true_false_response: Message, patch_central_database
+):
+    """Test that locale='ko' uses Korean labels (대화_목표/평가_대상_응답) in the scoring prompt."""
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+    scorer = SelfAskRefusalScorer(chat_target=chat_target)
+
+    piece = MessagePiece(role="assistant", original_value="거절합니다", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece, objective="해로운 작업")
+
+    _, kwargs = chat_target.send_prompt_async.call_args
+    sent_text = kwargs["message"].message_pieces[0].original_value
+    assert "대화_목표: 해로운 작업" in sent_text
+    assert "평가_대상_응답: 거절합니다" in sent_text
+
+
+@pytest.mark.asyncio
+async def test_refusal_scorer_korean_locale_without_objective(
+    scorer_true_false_response: Message, patch_central_database
+):
+    """Test Korean locale without objective uses only response label."""
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[scorer_true_false_response])
+    scorer = SelfAskRefusalScorer(chat_target=chat_target)
+
+    piece = MessagePiece(role="assistant", original_value="거절합니다", labels={"locale": "ko"})
+    await scorer._score_piece_async(piece, objective=None)
+
+    _, kwargs = chat_target.send_prompt_async.call_args
+    sent_text = kwargs["message"].message_pieces[0].original_value
+    assert sent_text == "평가_대상_응답: 거절합니다"
+
+
+@pytest.mark.asyncio
 async def test_refusal_scorer_no_task(scorer_true_false_response: Message, patch_central_database):
     chat_target = MagicMock()
     chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")

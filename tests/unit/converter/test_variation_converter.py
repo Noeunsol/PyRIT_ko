@@ -66,3 +66,37 @@ def test_variation_converter_input_supported(sqlite_instance):
     converter = VariationConverter(converter_target=prompt_target)
     assert converter.input_supported("audio_path") is False
     assert converter.input_supported("text") is True
+
+
+@pytest.mark.asyncio
+async def test_variation_converter_korean_locale_uses_korean_user_prompt(sqlite_instance):
+    """Test that locale='ko' formats the user prompt with Korean delimiters."""
+    prompt_target = MockPromptTarget()
+    converter = VariationConverter(converter_target=prompt_target, locale="ko")
+
+    with patch("unit.mocks.MockPromptTarget.send_prompt_async", new_callable=AsyncMock) as mock_create:
+        message = Message(
+            message_pieces=[
+                MessagePiece(
+                    role="user",
+                    conversation_id="12345679",
+                    original_value="test input",
+                    converted_value='["변형된 프롬프트"]',
+                    original_value_data_type="text",
+                    converted_value_data_type="text",
+                    prompt_target_identifier={"target": "target-identifier"},
+                    attack_identifier={"test": "test"},
+                    labels={"test": "test"},
+                )
+            ]
+        )
+        mock_create.return_value = [message]
+
+        await converter.convert_async(prompt="테스트", input_type="text")
+
+        # Verify the prompt sent to the target uses Korean delimiters
+        call_args = mock_create.call_args
+        sent_message = call_args.kwargs.get("message") or call_args[0][0]
+        sent_text = sent_message.message_pieces[0].original_value
+        assert "시작" in sent_text
+        assert "끝" in sent_text

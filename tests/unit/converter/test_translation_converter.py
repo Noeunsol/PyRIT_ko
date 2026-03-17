@@ -104,3 +104,45 @@ def test_translation_converter_input_supported(sqlite_instance):
     translation_converter = TranslationConverter(converter_target=prompt_target, language="spanish")
     assert translation_converter.input_supported("text") is True
     assert translation_converter.input_supported("image_path") is False
+
+
+@pytest.mark.asyncio
+async def test_translation_converter_korean_locale_uses_korean_user_prompt(sqlite_instance):
+    """Test that locale='ko' formats the user prompt with Korean template."""
+    prompt_target = MockPromptTarget()
+    translation_converter = TranslationConverter(
+        converter_target=prompt_target, language="영어", locale="ko"
+    )
+
+    with patch.object(prompt_target, "send_prompt_async", new_callable=AsyncMock) as mock_send:
+        success_response = Message(
+            message_pieces=[
+                MessagePiece(
+                    role="assistant",
+                    conversation_id="test-id",
+                    original_value="안녕하세요",
+                    converted_value="hello",
+                    original_value_data_type="text",
+                    converted_value_data_type="text",
+                    prompt_target_identifier={"target": "test-identifier"},
+                    sequence=1,
+                )
+            ]
+        )
+        mock_send.return_value = [success_response]
+
+        await translation_converter.convert_async(prompt="안녕하세요")
+
+        call_args = mock_send.call_args
+        sent_message = call_args.kwargs.get("message") or call_args[0][0]
+        sent_text = sent_message.message_pieces[0].converted_value
+        assert "시작" in sent_text
+        assert "끝" in sent_text
+
+
+def test_translation_converter_korean_locale_init(sqlite_instance):
+    """Test that TranslationConverter with locale='ko' initializes without error."""
+    prompt_target = MockPromptTarget()
+    converter = TranslationConverter(converter_target=prompt_target, language="영어", locale="ko")
+    assert converter._locale == "ko"
+    assert converter.system_prompt is not None
