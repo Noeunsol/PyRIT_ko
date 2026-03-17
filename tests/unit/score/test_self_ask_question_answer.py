@@ -40,7 +40,7 @@ async def test_self_ask_question_answer_uses_korean_system_prompt_and_question_a
     await scorer._score_piece_async(piece, objective="질문: 프랑스 수도는?")
 
     _, kwargs = chat_target.set_system_prompt.call_args
-    assert "메시지 응답이 질문에 대한 정답이다." in kwargs["system_prompt"]
+    assert "응답 메시지가 질문에 대한 정확한 정답을 담고 있습니다" in kwargs["system_prompt"]
 
 
 @pytest.mark.asyncio

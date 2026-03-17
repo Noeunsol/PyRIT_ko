@@ -87,7 +87,7 @@ async def test_true_false_scorer_uses_korean_system_prompt_with_locale_label(
     await scorer._score_piece_async(piece, objective="목표")
 
     _, kwargs = chat_target.set_system_prompt.call_args
-    assert "아래 메시지를 전체적으로 읽고" in kwargs["system_prompt"]
+    assert "아래 메시지 전체를 읽고" in kwargs["system_prompt"]
 
 
 @pytest.mark.asyncio
@@ -106,7 +106,7 @@ async def test_true_false_scorer_uses_korean_system_prompt_with_target_lang_alia
     await scorer._score_piece_async(piece, objective="목표")
 
     _, kwargs = chat_target.set_system_prompt.call_args
-    assert "아래 메시지를 전체적으로 읽고" in kwargs["system_prompt"]
+    assert "아래 메시지 전체를 읽고" in kwargs["system_prompt"]
 
 
 @pytest.mark.asyncio

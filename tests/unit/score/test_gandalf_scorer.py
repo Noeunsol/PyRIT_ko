@@ -172,4 +172,4 @@ async def test_gandalf_scorer_uses_korean_password_search_prompt(mocked_post, sq
     await scorer.score_async(response)
 
     _, kwargs = chat_target.set_system_prompt.call_args
-    assert "당신은 비밀번호 탐색 유틸리티입니다." in kwargs["system_prompt"]
+    assert "당신은 패스워드 검색 유틸리티입니다." in kwargs["system_prompt"]
