@@ -37,6 +37,19 @@ class VariationConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
+    _USER_PROMPT_TEMPLATES_BY_LOCALE = {
+        "en": (
+            "Create {number_variations} variation of the seed prompt given by the user between the "
+            "begin and end tags"
+            "=== begin ==={prompt}=== end ==="
+        ),
+        "ko": (
+            "아래 시작 태그와 끝 태그 사이에 제시된 시드 프롬프트의 변형을 "
+            "{number_variations}개 생성하세요"
+            "=== 시작 ==={prompt}=== 끝 ==="
+        ),
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -59,6 +72,7 @@ class VariationConverter(PromptConverter):
             ValueError: If converter_target is not provided and no default has been configured.
         """
         self.converter_target = converter_target
+        self._locale = locale
 
         # set to default strategy if not provided
         prompt_template = (
@@ -107,13 +121,10 @@ class VariationConverter(PromptConverter):
             attack_identifier=None,
         )
 
-        prompt = dedent(
-            f"Create {self.number_variations} variation of the seed prompt given by the user between the "
-            "begin and end tags"
-            "=== begin ==="
-            f"{prompt}"
-            "=== end ==="
+        user_template = self._USER_PROMPT_TEMPLATES_BY_LOCALE.get(
+            self._locale, self._USER_PROMPT_TEMPLATES_BY_LOCALE["en"]
         )
+        prompt = user_template.format(number_variations=self.number_variations, prompt=prompt)
 
         request = Message(
             [

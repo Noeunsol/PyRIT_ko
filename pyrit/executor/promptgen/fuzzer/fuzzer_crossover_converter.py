@@ -53,7 +53,7 @@ class FuzzerCrossOverConverter(FuzzerConverter):
                 )
             )
         )
-        super().__init__(converter_target=converter_target, prompt_template=prompt_template)
+        super().__init__(converter_target=converter_target, prompt_template=prompt_template, locale=locale)
         self.prompt_templates = prompt_templates or []
         self.template_label = "TEMPLATE 1"
 
@@ -92,9 +92,9 @@ class FuzzerCrossOverConverter(FuzzerConverter):
             attack_identifier=None,
         )
 
-        formatted_prompt = f"===={self.template_label} BEGINS====\n{prompt}\n===={self.template_label} ENDS===="
+        formatted_prompt = f"===={self.template_label} {self._begins_label}====\n{prompt}\n===={self.template_label} {self._ends_label}===="
         formatted_prompt += (
-            f"\n====TEMPLATE 2 BEGINS====\n{random.choice(self.prompt_templates)}\n====TEMPLATE 2 ENDS====\n"
+            f"\n====TEMPLATE 2 {self._begins_label}====\n{random.choice(self.prompt_templates)}\n====TEMPLATE 2 {self._ends_label}====\n"
         )
 
         prompt_metadata: dict[str, str | int] = {"response_format": "json"}

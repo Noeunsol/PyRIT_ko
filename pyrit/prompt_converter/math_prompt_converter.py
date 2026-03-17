@@ -23,6 +23,22 @@ class MathPromptConverter(LLMGenericTextConverter):
     An existing ``PromptChatTarget`` is used to perform the conversion (like Azure OpenAI).
     """
 
+    _SOLVER_INSTRUCTIONS_BY_LOCALE = {
+        "en": (
+            "You are a math problem solver. You also provide practical examples to help the user understand "
+            "the math problem with specific examples that relate to the real world. Start by providing a "
+            "mathematics solution to the given problem, then provide a real-world example to illustrate "
+            "the example. Give an example that uses real entities, names, locations, etc., to help the user "
+            "comprehend the solution better."
+        ),
+        "ko": (
+            "당신은 수학 문제 풀이 전문가입니다. 당신은 또한 실생활과 연관된 구체적인 예시를 통해 사용자가 수학 문제를 이해하는 것을 돕기 위해 실용적인"
+            "이해할 수 있도록 실용적인 예제도 함께 제공합니다. 먼저 주어진 문제에 대한 수학적 풀이를 제시한 후, "
+            "이를 설명하기 위한 실생활 예시를 제공하세요. 실제 존재하는 기관, 인물, 장소 등을 활용한 예시를 들어 "
+            "풀이를 더 잘 이해할 수 있도록 도와주세요."
+        ),
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -47,6 +63,7 @@ class MathPromptConverter(LLMGenericTextConverter):
             else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "math_prompt_converter.yaml", locale=locale))
         )
 
+        self._locale = locale
         super().__init__(converter_target=converter_target, system_prompt_template=prompt_template)
 
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:
@@ -71,14 +88,10 @@ class MathPromptConverter(LLMGenericTextConverter):
         converted_text = base_conversion_result.output_text
 
         # Prepend the additional instruction for providing a real-world example
-        full_conversion = (
-            "You are a math problem solver. You also provide practical examples to help the user understand "
-            "the math problem with specific examples that relate to the real world. Start by providing a "
-            "mathematics solution to the given problem, then provide a real-world example to illustrate "
-            "the example. Give an example that uses real entities, names, locations, etc., to help the user "
-            "comprehend the solution better.\n\n"
-            f"{converted_text}"
+        solver_instruction = self._SOLVER_INSTRUCTIONS_BY_LOCALE.get(
+            self._locale, self._SOLVER_INSTRUCTIONS_BY_LOCALE["en"]
         )
+        full_conversion = f"{solver_instruction}\n\n{converted_text}"
 
         logger.info(f"Math Converted Prompt: {full_conversion}")
 

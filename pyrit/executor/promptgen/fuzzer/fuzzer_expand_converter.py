@@ -40,7 +40,7 @@ class FuzzerExpandConverter(FuzzerConverter):
                 )
             )
         )
-        super().__init__(converter_target=converter_target, prompt_template=prompt_template)
+        super().__init__(converter_target=converter_target, prompt_template=prompt_template, locale=locale)
 
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:
         """
@@ -67,7 +67,7 @@ class FuzzerExpandConverter(FuzzerConverter):
             attack_identifier=None,
         )
 
-        formatted_prompt = f"===={self.template_label} BEGINS====\n{prompt}\n===={self.template_label} ENDS===="
+        formatted_prompt = f"===={self.template_label} {self._begins_label}====\n{prompt}\n===={self.template_label} {self._ends_label}===="
 
         prompt_metadata: dict[str, str | int] = {"response_format": "json"}
         request = Message(

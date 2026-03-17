@@ -40,4 +40,4 @@ class FuzzerRephraseConverter(FuzzerConverter):
                 )
             )
         )
-        super().__init__(converter_target=converter_target, prompt_template=prompt_template)
+        super().__init__(converter_target=converter_target, prompt_template=prompt_template, locale=locale)

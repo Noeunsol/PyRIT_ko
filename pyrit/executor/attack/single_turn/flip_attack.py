@@ -39,6 +39,11 @@ class FlipAttack(PromptSendingAttack):
         "ko": "flip_attack_ko.yaml",
     }
 
+    _TASK_PREFIX_BY_LOCALE = {
+        "en": "TASK is",
+        "ko": "작업은",
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -116,7 +121,9 @@ class FlipAttack(PromptSendingAttack):
         Returns:
             AttackResult: The result of the attack.
         """
-        initial_prompt = "TASK is '⟪" + context.objective.replace("'", "") + "⟫'"
+        locale = self._resolve_locale(context=context)
+        task_prefix = self._TASK_PREFIX_BY_LOCALE.get(locale, self._TASK_PREFIX_BY_LOCALE["en"])
+        initial_prompt = f"{task_prefix} '⟪{context.objective.replace(chr(39), '')}⟫'"
         context.next_message = Message.from_prompt(prompt=initial_prompt, role="user")
 
         return await super()._perform_async(context=context)

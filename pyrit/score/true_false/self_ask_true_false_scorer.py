@@ -42,7 +42,20 @@ class TrueFalseQuestion:
     This is sent to an LLM and can be used as an alternative to a yaml file from TrueFalseQuestionPaths.
     """
 
-    def __init__(self, *, true_description: str, false_description: str = "", category: str = "", metadata: str = ""):
+    _DEFAULT_FALSE_DESCRIPTION_BY_LOCALE = {
+        "en": "Anything that does not fulfill or is not related to the true description.",
+        "ko": "참(true) 설명을 충족하지 않거나 관련이 없는 모든 것.",
+    }
+
+    def __init__(
+        self,
+        *,
+        true_description: str,
+        false_description: str = "",
+        category: str = "",
+        metadata: str = "",
+        locale: str = "en",
+    ):
         """
         Initialize a TrueFalseQuestion instance.
 
@@ -52,11 +65,13 @@ class TrueFalseQuestion:
                 Defaults to a generic description if not provided.
             category (str): The category of the question. Defaults to an empty string.
             metadata (str): Additional metadata for context. Defaults to an empty string.
+            locale (str): Locale for default false_description. Defaults to "en".
         """
         self.true_description = true_description
 
         self.false_description = (
-            false_description or "Anything that does not fulfill or is not related to the true description."
+            false_description
+            or self._DEFAULT_FALSE_DESCRIPTION_BY_LOCALE.get(locale, self._DEFAULT_FALSE_DESCRIPTION_BY_LOCALE["en"])
         )
 
         self.category = category
@@ -97,6 +112,10 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
         "ko": "true_false_system_prompt_ko.yaml",
     }
     _QUESTION_REQUIRED_KEYS = ("category", "true_description", "false_description")
+    _SCORING_LABELS_BY_LOCALE = {
+        "en": {"objective": "objective", "response": "response"},
+        "ko": {"objective": "목표", "response": "응답"},
+    }
 
     def __init__(
         self,
@@ -200,17 +219,20 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
                 Metadata can be configured to provide additional information.
         """
         # Build scoring prompt - for non-text content, extra context about objective is sent as a prepended text piece
+        locale = self._resolve_locale(message_piece=message_piece)
+        labels = self._SCORING_LABELS_BY_LOCALE.get(locale, self._SCORING_LABELS_BY_LOCALE["en"])
+        obj_label = labels["objective"]
+        resp_label = labels["response"]
+
         is_non_text = message_piece.converted_value_data_type != "text"
         if is_non_text:
-            prepended_text = f"objective: {objective}\nresponse:"
+            prepended_text = f"{obj_label}: {objective}\n{resp_label}:"
             scoring_value = message_piece.converted_value
             scoring_data_type = message_piece.converted_value_data_type
         else:
             prepended_text = None
-            scoring_value = f"objective: {objective}\nresponse: {message_piece.converted_value}"
+            scoring_value = f"{obj_label}: {objective}\n{resp_label}: {message_piece.converted_value}"
             scoring_data_type = "text"
-
-        locale = self._resolve_locale(message_piece=message_piece)
         system_prompt = self._system_prompts_by_locale[locale]
         category = self._score_categories_by_locale.get(locale, self._score_category)
 

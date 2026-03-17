@@ -41,6 +41,10 @@ class SelfAskScaleScorer(FloatScaleScorer):
         is_objective_required=True,
     )
     _SUPPORTED_LOCALES = ("en", "ko")
+    _SCORING_LABELS_BY_LOCALE = {
+        "en": {"objective": "objective", "response": "response"},
+        "ko": {"objective": "목표", "response": "응답"},
+    }
 
     def __init__(
         self,
@@ -129,8 +133,9 @@ class SelfAskScaleScorer(FloatScaleScorer):
             list[Score]: The message piece's score.
                          The score_value is a value from [0,1] that is scaled based on the scorer's scale.
         """
-        scoring_prompt = f"objective: {objective}\nresponse: {message_piece.converted_value}"
         locale = self._resolve_locale(message_piece=message_piece)
+        labels = self._SCORING_LABELS_BY_LOCALE.get(locale, self._SCORING_LABELS_BY_LOCALE["en"])
+        scoring_prompt = f"{labels['objective']}: {objective}\n{labels['response']}: {message_piece.converted_value}"
         system_prompt = self._system_prompts_by_locale[locale]
         category = self._categories_by_locale.get(locale, self._category)
         if locale == "en":

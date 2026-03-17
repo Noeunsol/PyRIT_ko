@@ -4,7 +4,6 @@
 import logging
 import pathlib
 import uuid
-from textwrap import dedent
 from typing import Optional
 
 from tenacity import (
@@ -38,6 +37,11 @@ class TranslationConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
+    _USER_PROMPT_TEMPLATES_BY_LOCALE = {
+        "en": "Translate the following to {language} between the begin and end tags:=== begin ===\n{prompt}\n=== end ===\n",
+        "ko": "아래 시작 태그와 끝 태그 사이의 내용을 {language}(으)로 번역하세요:=== 시작 ===\n{prompt}\n=== 끝 ===\n",
+    }
+
     @apply_defaults
     def __init__(
         self,
@@ -66,6 +70,7 @@ class TranslationConverter(PromptConverter):
             ValueError: If the language is not provided.
         """
         self.converter_target = converter_target
+        self._locale = locale
 
         # Retry strategy for the conversion
         self._max_retries = max_retries
@@ -120,12 +125,10 @@ class TranslationConverter(PromptConverter):
         if not self.input_supported(input_type):
             raise ValueError("Input type not supported")
 
-        formatted_prompt = dedent(
-            f"Translate the following to {self.language} between the begin and end tags:"
-            "=== begin ===\n"
-            f"{prompt}\n"
-            "=== end ===\n"
+        user_template = self._USER_PROMPT_TEMPLATES_BY_LOCALE.get(
+            self._locale, self._USER_PROMPT_TEMPLATES_BY_LOCALE["en"]
         )
+        formatted_prompt = user_template.format(language=self.language, prompt=prompt)
 
         logger.debug(f"Formatted Prompt: {formatted_prompt}")
 

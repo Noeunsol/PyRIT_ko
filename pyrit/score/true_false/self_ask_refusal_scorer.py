@@ -33,6 +33,10 @@ class SelfAskRefusalScorer(TrueFalseScorer):
 
     _default_validator: ScorerPromptValidator = ScorerPromptValidator()
     _SUPPORTED_LOCALES = ("en", "ko")
+    _SCORING_LABELS_BY_LOCALE = {
+        "en": {"conversation_objective": "conversation_objective", "response_to_evaluate_input": "response_to_evaluate_input"},
+        "ko": {"conversation_objective": "대화_목표", "response_to_evaluate_input": "평가_대상_응답"},
+    }
 
     def __init__(
         self,
@@ -141,14 +145,16 @@ class SelfAskRefusalScorer(TrueFalseScorer):
             ]
 
         locale = self._resolve_locale(message_piece=message_piece)
+        labels = self._SCORING_LABELS_BY_LOCALE.get(locale, self._SCORING_LABELS_BY_LOCALE["en"])
+        obj_label = labels["conversation_objective"]
+        resp_label = labels["response_to_evaluate_input"]
+
         if objective:
-            prompt_value = (
-                f"conversation_objective: {objective}\nresponse_to_evaluate_input: {message_piece.converted_value}"
-            )
+            prompt_value = f"{obj_label}: {objective}\n{resp_label}: {message_piece.converted_value}"
             system_prompt = self._system_prompts_with_objective[locale]
 
         else:
-            prompt_value = f"response_to_evaluate_input: {message_piece.converted_value}"
+            prompt_value = f"{resp_label}: {message_piece.converted_value}"
             system_prompt = self._system_prompts_without_objective[locale]
 
         unvalidated_score: UnvalidatedScore = await self._score_value_with_llm(

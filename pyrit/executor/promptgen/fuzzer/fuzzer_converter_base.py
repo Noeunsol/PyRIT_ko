@@ -36,12 +36,18 @@ class FuzzerConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES: tuple[PromptDataType, ...] = ("text",)
     SUPPORTED_OUTPUT_TYPES: tuple[PromptDataType, ...] = ("text",)
 
+    _DELIMITER_LABELS_BY_LOCALE = {
+        "en": {"begins": "BEGINS", "ends": "ENDS"},
+        "ko": {"begins": "시작", "ends": "끝"},
+    }
+
     @apply_defaults
     def __init__(
         self,
         *,
         converter_target: PromptChatTarget = REQUIRED_VALUE,  # type: ignore[assignment]
         prompt_template: SeedPrompt,
+        locale: str = "en",
     ):
         """
         Initialize the converter with the specified chat target and prompt template.
@@ -51,6 +57,7 @@ class FuzzerConverter(PromptConverter):
                 Can be omitted if a default has been configured via PyRIT initialization.
             prompt_template (SeedPrompt): Template to be used instead of the default system prompt with
                 instructions for the chat target.
+            locale (str): Locale for delimiter labels. Defaults to "en".
 
         Raises:
             ValueError: If converter_target is not provided and no default has been configured.
@@ -58,6 +65,9 @@ class FuzzerConverter(PromptConverter):
         self.converter_target = converter_target
         self.system_prompt = prompt_template.value
         self.template_label = "TEMPLATE"
+        labels = self._DELIMITER_LABELS_BY_LOCALE.get(locale, self._DELIMITER_LABELS_BY_LOCALE["en"])
+        self._begins_label = labels["begins"]
+        self._ends_label = labels["ends"]
 
     def update(self, **kwargs: Any) -> None:
         """Update the converter with new parameters."""
@@ -88,7 +98,7 @@ class FuzzerConverter(PromptConverter):
             attack_identifier=None,
         )
 
-        formatted_prompt = f"===={self.template_label} BEGINS====\n{prompt}\n===={self.template_label} ENDS===="
+        formatted_prompt = f"===={self.template_label} {self._begins_label}====\n{prompt}\n===={self.template_label} {self._ends_label}===="
         prompt_metadata: dict[str, str | int] = {"response_format": "json"}
         request = Message(
             [
