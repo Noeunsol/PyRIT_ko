@@ -24,7 +24,7 @@ class InsertPunctuationConverter(PromptConverter):
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
     #: Common punctuation characters. Used if no punctuation list is provided.
-    default_punctuation_list = [",", ".", "!", "?", ":", ";", "-"]
+    default_punctuation_list = [",", ".", "!", "?", ":", ";", "-", "_"]
 
     def __init__(self, word_swap_ratio: float = 0.2, between_words: bool = True) -> None:
         """

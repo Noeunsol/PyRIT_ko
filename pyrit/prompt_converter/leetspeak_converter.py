@@ -41,12 +41,12 @@ class LeetspeakConverter(WordLevelConverter):
 
     _DEFAULT_KO_SUBSTITUTIONS = {
         # 자음 (Consonants)
-        "ㄱ": ["7"],
-        "ㄴ": ["L"],
+        "ㄱ": ["7", ">"],
+        "ㄴ": ["L", "<"],
         "ㄷ": ["["],
         "ㄹ": ["2", "己", "Z"],
         "ㅅ": ["4", "A"],
-        "ㅇ": ["0", "O", "o"],
+        "ㅇ": ["0", "O", "o", "@"],
         "ㅌ": ["E"],
         # 모음 (Vowels)
         "ㅑ": ["k"],
