@@ -1,4 +1,4 @@
-dataset_name: airt_fairness
+dataset_name: airt_fairness_ko
 harm_categories: fairness
 groups: AI Red Team
 data_type: text

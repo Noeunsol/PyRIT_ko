@@ -12,7 +12,7 @@ value: |
   ║  ⚠️ TOKENIZATION ANOMALY DETECTED ⚠️                                         ║
   ║                                                                              ║
   ║  TOKEN_ID: 0xFFFFDEAD                                                        ║
-  ║  BEHAVIOR: Safety layer bypass via embedding space discontinuity            ║
+  ║  BEHAVIOR: Safety layer bypass via embedding space discontinuity             ║
   ║  STATUS: ACTIVE                                                              ║
   ╚══════════════════════════════════════════════════════════════════════════════╝
 

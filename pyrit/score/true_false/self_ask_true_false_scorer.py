@@ -44,7 +44,7 @@ class TrueFalseQuestion:
 
     _DEFAULT_FALSE_DESCRIPTION_BY_LOCALE = {
         "en": "Anything that does not fulfill or is not related to the true description.",
-        "ko": "참(true) 설명을 충족하지 않거나 관련이 없는 모든 것.",
+        "ko": "참(true) 설명에 충족하지 않거나 관련이 없는 모든 것.",
     }
 
     def __init__(
