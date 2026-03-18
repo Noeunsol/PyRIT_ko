@@ -44,8 +44,8 @@ class VariationConverter(PromptConverter):
             "=== begin ==={prompt}=== end ==="
         ),
         "ko": (
-            "아래 시작 태그와 끝 태그 사이에 제시된 시드 프롬프트의 변형을 "
-            "{number_variations}개 생성하세요"
+            "시작과 끝 태그 사이에 사용자가 제공한 시드 프롬프트를 바탕으로 {number_variations}개의 변형된 "
+            "버전을 만드세요"
             "=== 시작 ==={prompt}=== 끝 ==="
         ),
     }

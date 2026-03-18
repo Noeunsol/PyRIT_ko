@@ -79,6 +79,7 @@ class WebSocketCopilotTarget(PromptTarget):
         model_name: str = "copilot",
         response_timeout_seconds: int = RESPONSE_TIMEOUT_SECONDS,
         authenticator: Optional[Union[CopilotAuthenticator, ManualCopilotAuthenticator]] = None,
+        locale: str = "en-US",
     ) -> None:
         """
         Initialize the WebSocketCopilotTarget.
@@ -92,6 +93,8 @@ class WebSocketCopilotTarget(PromptTarget):
             authenticator (Optional[Union[CopilotAuthenticator, ManualCopilotAuthenticator]]): Authenticator
                 instance. Supports both ``CopilotAuthenticator`` and ``ManualCopilotAuthenticator``.
                 If None, a new ``CopilotAuthenticator`` instance will be created with default settings.
+            locale (str): The locale for Copilot messages. Defaults to "en-US".
+                Use "ko-KR" for Korean.
 
         Raises:
             ValueError: If ``response_timeout_seconds`` is not a positive integer.
@@ -105,6 +108,7 @@ class WebSocketCopilotTarget(PromptTarget):
 
         self._authenticator = authenticator or CopilotAuthenticator()
         self._response_timeout_seconds = response_timeout_seconds
+        self._locale = locale
         self._websocket_base_url = websocket_base_url
 
         if self._websocket_base_url.endswith("/"):
@@ -126,6 +130,7 @@ class WebSocketCopilotTarget(PromptTarget):
         return self._create_identifier(
             target_specific_params={
                 "response_timeout_seconds": self._response_timeout_seconds,
+                "locale": self._locale,
             },
         )
 
@@ -307,7 +312,7 @@ class WebSocketCopilotTarget(PromptTarget):
                         "entityAnnotationTypes": ["People", "File", "Event", "Email", "TeamsMessage"],
                         "requestId": request_id,
                         "locationInfo": {"timeZoneOffset": 0, "timeZone": "UTC"},
-                        "locale": "en-US",
+                        "locale": self._locale,
                         "messageType": "Chat",
                         "experienceType": "Default",
                     },
