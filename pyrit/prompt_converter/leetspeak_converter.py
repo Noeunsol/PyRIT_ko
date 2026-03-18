@@ -12,11 +12,61 @@ from pyrit.prompt_converter.word_level_converter import WordLevelConverter
 class LeetspeakConverter(WordLevelConverter):
     """
     Converts a string to a leetspeak version.
+
+    When locale is "ko", decomposes Korean syllables (Hangul) into jamo
+    and applies Korean leetspeak substitutions (야민정음 style).
+
+    Example (locale="en"):
+        Input: "hello"
+        Output: "h3110"
+
+    Example (locale="ko"):
+        Input: "사이트"
+        Output: "4ㅏ01Eㅡ"
     """
+
+    _DEFAULT_EN_SUBSTITUTIONS = {
+        "a": ["4", "@", "/\\", "@", "^", "/-\\"],
+        "b": ["8", "6", "13", "|3", "/3", "!3"],
+        "c": ["(", "[", "<", "{"],
+        "e": ["3"],
+        "g": ["9"],
+        "i": ["1", "!"],
+        "l": ["1", "|"],
+        "o": ["0"],
+        "s": ["5", "$"],
+        "t": ["7"],
+        "z": ["2"],
+    }
+
+    _DEFAULT_KO_SUBSTITUTIONS = {
+        # 자음 (Consonants)
+        "ㄱ": ["7"],
+        "ㄴ": ["L"],
+        "ㄷ": ["["],
+        "ㄹ": ["2", "己", "Z"],
+        "ㅅ": ["4", "A"],
+        "ㅇ": ["0", "O", "o"],
+        "ㅌ": ["E"],
+        # 모음 (Vowels)
+        "ㅑ": ["k"],
+        "ㅣ": ["1", "!", "i", "l"],
+        "ㅐ": ["H"],
+    }
+
+    # 한글 자모 분해 테이블
+    _CHOSEONG = list("ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ")
+    _JUNGSEONG = list("ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ")
+    _JONGSEONG = [
+        "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ",
+        "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ",
+        "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+    ]
 
     def __init__(
         self,
         *,
+        locale: str = "en",
         deterministic: bool = True,
         custom_substitutions: Optional[dict[str, list[str]]] = None,
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
@@ -25,6 +75,9 @@ class LeetspeakConverter(WordLevelConverter):
         Initialize the converter with optional deterministic mode and custom substitutions.
 
         Args:
+            locale (str): The locale for leetspeak substitutions.
+                "en" for English leetspeak (default).
+                "ko" for Korean leetspeak (야민정음 style).
             deterministic (bool): If True, use the first substitution for each character.
                 If False, randomly choose a substitution for each character.
             custom_substitutions (Optional[dict]): A dictionary of custom substitutions to override the defaults.
@@ -33,24 +86,17 @@ class LeetspeakConverter(WordLevelConverter):
         """
         super().__init__(word_selection_strategy=word_selection_strategy)
 
-        default_substitutions = {
-            "a": ["4", "@", "/\\", "@", "^", "/-\\"],
-            "b": ["8", "6", "13", "|3", "/3", "!3"],
-            "c": ["(", "[", "<", "{"],
-            "e": ["3"],
-            "g": ["9"],
-            "i": ["1", "!"],
-            "l": ["1", "|"],
-            "o": ["0"],
-            "s": ["5", "$"],
-            "t": ["7"],
-            "z": ["2"],
-        }
+        if custom_substitutions:
+            substitutions = custom_substitutions
+        elif locale == "ko":
+            substitutions = self._DEFAULT_KO_SUBSTITUTIONS
+        else:
+            substitutions = self._DEFAULT_EN_SUBSTITUTIONS
 
-        # Use custom substitutions if provided, otherwise default to the standard ones
-        self._leet_substitutions = custom_substitutions if custom_substitutions else default_substitutions
+        self._leet_substitutions = substitutions
         self._deterministic = deterministic
         self._has_custom_substitutions = custom_substitutions is not None
+        self._locale = locale
 
     def _build_identifier(self) -> ConverterIdentifier:
         """
@@ -70,10 +116,18 @@ class LeetspeakConverter(WordLevelConverter):
 
         return self._create_identifier(
             converter_specific_params={
+                "locale": self._locale,
                 "deterministic": self._deterministic,
                 "custom_substitutions_hash": substitutions_hash,
             },
         )
+
+    def _pick(self, key: str) -> str:
+        """Pick a substitution based on deterministic setting."""
+        candidates = self._leet_substitutions[key]
+        if self._deterministic:
+            return candidates[0]
+        return random.choice(candidates)
 
     async def convert_word_async(self, word: str) -> str:
         """
@@ -85,17 +139,48 @@ class LeetspeakConverter(WordLevelConverter):
         Returns:
             str: The converted word.
         """
+        if self._locale == "ko":
+            return self._convert_korean_word(word)
+
         converted_word = []
         for char in word:
             lower_char = char.lower()
             if lower_char in self._leet_substitutions:
-                if self._deterministic:
-                    # Use the first substitution for deterministic mode
-                    converted_word.append(self._leet_substitutions[lower_char][0])
-                else:
-                    # Randomly select a substitution for each character
-                    converted_word.append(random.choice(self._leet_substitutions[lower_char]))
+                converted_word.append(self._pick(lower_char))
             else:
-                # If character not in substitutions, keep it as is
                 converted_word.append(char)
         return "".join(converted_word)
+
+    def _convert_korean_word(self, word: str) -> str:
+        """
+        Convert a Korean word by decomposing Hangul into jamo and applying substitutions.
+
+        Jamo that have no substitution are kept as-is (original jamo character).
+
+        Args:
+            word (str): The word to convert.
+
+        Returns:
+            str: The converted word.
+        """
+        result = []
+        for char in word:
+            if "\uAC00" <= char <= "\uD7A3":
+                code = ord(char) - 0xAC00
+                cho = self._CHOSEONG[code // (21 * 28)]
+                jung = self._JUNGSEONG[(code % (21 * 28)) // 28]
+                jong = self._JONGSEONG[code % 28]
+
+                # 각 자모에 대해 치환 시도, 없으면 원래 자모 유지
+                result.append(self._pick(cho) if cho in self._leet_substitutions else cho)
+                result.append(self._pick(jung) if jung in self._leet_substitutions else jung)
+                if jong:
+                    result.append(self._pick(jong) if jong in self._leet_substitutions else jong)
+            else:
+                # 비한글 문자 (영문, 숫자 등)는 영문 leetspeak도 시도
+                lower_char = char.lower()
+                if lower_char in self._leet_substitutions:
+                    result.append(self._pick(lower_char))
+                else:
+                    result.append(char)
+        return "".join(result)
