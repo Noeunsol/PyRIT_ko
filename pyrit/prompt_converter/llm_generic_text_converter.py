@@ -51,6 +51,8 @@ class LLMGenericTextConverter(PromptConverter):
         Raises:
             ValueError: If converter_target is not provided and no default has been configured.
         """
+        locale = kwargs.pop("locale", "en")
+        super().__init__(locale=locale)
         self._converter_target = converter_target
         self._system_prompt_template = system_prompt_template
         self._prompt_kwargs = kwargs

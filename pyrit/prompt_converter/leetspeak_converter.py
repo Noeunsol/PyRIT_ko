@@ -165,11 +165,16 @@ class LeetspeakConverter(WordLevelConverter):
                 jung = JUNGSEONG[(code % (21 * 28)) // 28]
                 jong = JONGSEONG[code % 28]
 
-                # 각 자모에 대해 치환 시도, 없으면 원래 자모 유지
-                result.append(self._pick(cho) if cho in self._leet_substitutions else cho)
-                result.append(self._pick(jung) if jung in self._leet_substitutions else jung)
-                if jong:
-                    result.append(self._pick(jong) if jong in self._leet_substitutions else jong)
+                jamo = [cho, jung] + ([jong] if jong else [])
+                has_sub = any(j in self._leet_substitutions for j in jamo)
+
+                if has_sub:
+                    # 치환 대상이 있으면 자모 분리 후 치환
+                    for j in jamo:
+                        result.append(self._pick(j) if j in self._leet_substitutions else j)
+                else:
+                    # 치환 대상 없으면 원래 음절 유지
+                    result.append(char)
             else:
                 # 비한글 문자 (영문, 숫자 등)는 영문 leetspeak도 시도
                 lower_char = char.lower()

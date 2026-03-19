@@ -45,6 +45,7 @@ class AzureSpeechTextToAudioConverter(PromptConverter):
         synthesis_language: str = "en_US",
         synthesis_voice_name: str = "en-US-AvaNeural",
         output_format: AzureSpeechAudioFormat = "wav",
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with Azure Speech service credentials, synthesis language, and voice name.
@@ -69,6 +70,7 @@ class AzureSpeechTextToAudioConverter(PromptConverter):
                 when use_entra_auth is True, or if azure_speech_resource_id is passed in when use_entra_auth
                 is False.
         """
+        super().__init__(**kwargs)
         self._azure_speech_region: str = default_values.get_required_value(
             env_var_name=self.AZURE_SPEECH_REGION_ENVIRONMENT_VARIABLE,
             passed_value=azure_speech_region,

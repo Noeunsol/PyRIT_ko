@@ -14,13 +14,14 @@ class UnicodeSubstitutionConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, *, start_value: int = 0xE0000) -> None:
+    def __init__(self, *, start_value: int = 0xE0000, **kwargs) -> None:
         """
         Initialize the converter with a specified unicode starting point.
 
         Args:
             start_value (int): The unicode starting point to use for encoding.
         """
+        super().__init__(**kwargs)
         self.startValue = start_value
 
     def _build_identifier(self) -> ConverterIdentifier:

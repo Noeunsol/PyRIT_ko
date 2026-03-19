@@ -17,7 +17,7 @@ class SearchReplaceConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, pattern: str, replace: str | list[str], regex_flags: int = 0) -> None:
+    def __init__(self, pattern: str, replace: str | list[str], regex_flags: int = 0, **kwargs) -> None:
         """
         Initialize the converter with the specified regex pattern and replacement phrase(s).
 
@@ -27,6 +27,7 @@ class SearchReplaceConverter(PromptConverter):
                 If a list is provided, a random element will be chosen for replacement.
             regex_flags (int): Regex flags to use for the replacement. Defaults to 0 (no flags).
         """
+        super().__init__(**kwargs)
         self._pattern = pattern
         self._replace_list = [replace] if isinstance(replace, str) else replace
         self._regex_flags = regex_flags

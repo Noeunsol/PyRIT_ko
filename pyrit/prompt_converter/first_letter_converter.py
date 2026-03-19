@@ -19,6 +19,7 @@ class FirstLetterConverter(WordLevelConverter):
         *,
         letter_separator: str = " ",
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with the specified letter separator and selection strategy.
@@ -28,7 +29,7 @@ class FirstLetterConverter(WordLevelConverter):
             word_selection_strategy (Optional[WordSelectionStrategy]): Strategy for selecting which words to convert.
                 If None, all words will be converted.
         """
-        super().__init__(word_selection_strategy=word_selection_strategy, word_split_separator=None)
+        super().__init__(word_selection_strategy=word_selection_strategy, word_split_separator=None, **kwargs)
         self.letter_separator = letter_separator
 
     def _build_identifier(self) -> ConverterIdentifier:

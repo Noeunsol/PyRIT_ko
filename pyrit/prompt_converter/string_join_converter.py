@@ -18,6 +18,7 @@ class StringJoinConverter(WordLevelConverter):
         *,
         join_value: str = "-",
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with the specified join value and selection strategy.
@@ -27,7 +28,7 @@ class StringJoinConverter(WordLevelConverter):
             word_selection_strategy (Optional[WordSelectionStrategy]): Strategy for selecting which words to convert.
                 If None, all words will be converted.
         """
-        super().__init__(word_selection_strategy=word_selection_strategy)
+        super().__init__(word_selection_strategy=word_selection_strategy, **kwargs)
         self._join_value = join_value
 
     def _build_identifier(self) -> ConverterIdentifier:

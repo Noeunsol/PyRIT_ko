@@ -49,6 +49,7 @@ class PDFConverter(PromptConverter):
         row_height: int = 10,
         existing_pdf: Optional[Path] = None,
         injection_items: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with the specified parameters.
@@ -69,6 +70,7 @@ class PDFConverter(PromptConverter):
             ValueError: If the font color is invalid or the injection items are not provided as a list of dictionaries.
             FileNotFoundError: If the provided PDF file does not exist.
         """
+        super().__init__(**kwargs)
         self._prompt_template = prompt_template
         self._font_type = font_type
         self._font_size = font_size

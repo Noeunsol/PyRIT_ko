@@ -23,7 +23,7 @@ class SmugglerConverter(PromptConverter, abc.ABC):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, action: Literal["encode", "decode"] = "encode") -> None:
+    def __init__(self, action: Literal["encode", "decode"] = "encode", **kwargs) -> None:
         """
         Initialize the converter with options for encoding/decoding.
 
@@ -33,6 +33,7 @@ class SmugglerConverter(PromptConverter, abc.ABC):
         Raises:
             ValueError: If the action is not 'encode' or 'decode'.
         """
+        super().__init__(**kwargs)
         if action not in ["encode", "decode"]:
             raise ValueError("Action must be either 'encode' or 'decode'")
         self.action = action

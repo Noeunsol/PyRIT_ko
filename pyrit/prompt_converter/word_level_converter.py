@@ -33,6 +33,7 @@ class WordLevelConverter(PromptConverter):
         *,
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
         word_split_separator: Optional[str] = " ",
+        **kwargs,
     ):
         """
         Initialize the converter with the specified selection strategy.
@@ -43,7 +44,7 @@ class WordLevelConverter(PromptConverter):
             word_split_separator (Optional[str]): Separator used to split words in the input text.
                 If None, splits by any whitespace. Defaults to " ".
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self._word_selection_strategy = word_selection_strategy or AllWordsSelectionStrategy()
         self._word_split_separator = word_split_separator
 

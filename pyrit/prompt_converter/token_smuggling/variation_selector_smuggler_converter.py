@@ -34,6 +34,7 @@ class VariationSelectorSmugglerConverter(SmugglerConverter):
         action: Literal["encode", "decode"] = "encode",
         base_char_utf8: Optional[str] = None,
         embed_in_base: bool = True,
+        **kwargs,
     ):
         """
         Initialize the converter with options for encoding/decoding.
@@ -48,7 +49,7 @@ class VariationSelectorSmugglerConverter(SmugglerConverter):
         Raises:
             ValueError: If an unsupported action or ``encoding_mode`` is provided.
         """
-        super().__init__(action=action)
+        super().__init__(action=action, **kwargs)
         self.utf8_base_char = base_char_utf8 if base_char_utf8 is not None else "😊"
         self.embed_in_base = embed_in_base
 

@@ -37,6 +37,7 @@ class RepeatTokenConverter(PromptConverter):
         token_to_repeat: str,
         times_to_repeat: int,
         token_insert_mode: Optional[Literal["split", "prepend", "append", "repeat"]] = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with the specified token, number of repetitions, and insertion mode.
@@ -47,6 +48,7 @@ class RepeatTokenConverter(PromptConverter):
             token_insert_mode (str, optional): The mode of insertion for the repeated token.
                 Can be "split", "prepend", "append", or "repeat".
         """
+        super().__init__(**kwargs)
         self._token_to_repeat = " " + token_to_repeat.strip()
         self._times_to_repeat = times_to_repeat
         self._token_insert_mode = token_insert_mode if token_insert_mode else "split"

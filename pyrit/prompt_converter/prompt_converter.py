@@ -75,11 +75,15 @@ class PromptConverter(Identifiable[ConverterIdentifier]):
                     f"Declare the output modalities this converter produces."
                 )
 
-    def __init__(self) -> None:
+    def __init__(self, *, locale: str = "en", **kwargs) -> None:
         """
         Initialize the prompt converter.
+
+        Args:
+            locale (str): Locale for the converter. Defaults to "en".
         """
         super().__init__()
+        self._locale = locale
 
     @abc.abstractmethod
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:

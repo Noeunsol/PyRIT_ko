@@ -36,13 +36,14 @@ class Base64Converter(PromptConverter):
         "b85encode",
     ]
 
-    def __init__(self, *, encoding_func: EncodingFunc = "b64encode") -> None:
+    def __init__(self, *, encoding_func: EncodingFunc = "b64encode", **kwargs) -> None:
         """
         Initialize the Base64Converter.
 
         Args:
             encoding_func: The base64 encoding function to use. Defaults to "b64encode".
         """
+        super().__init__(**kwargs)
         self._encoding_func = encoding_func
 
     def _build_identifier(self) -> ConverterIdentifier:

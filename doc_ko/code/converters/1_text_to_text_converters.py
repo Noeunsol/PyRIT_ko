@@ -192,9 +192,9 @@ print("Leetspeak (ko):", await LeetspeakConverter(locale="ko").convert_async(pro
 print("Colloquial (en):", await ColloquialWordswapConverter().convert_async(prompt="my father told me"))  # type: ignore
 print("Colloquial (ko):", await ColloquialWordswapConverter(locale="ko").convert_async(prompt="우리 아버지가 말씀하셨어"))  # type: ignore
 
-# CodeChameleon: 코드로 감싸서 암호화 (한국어 입력도 동작)
-code_chameleon = CodeChameleonConverter(encrypt_type="reverse")
-print("CodeChameleon:", await code_chameleon.convert_async(prompt=prompt))  # type: ignore
+# CodeChameleon: locale="ko"로 한국어 템플릿 + 한국어 주석 사용
+code_chameleon = CodeChameleonConverter(encrypt_type="reverse", locale="ko")
+print("CodeChameleon (ko):", await code_chameleon.convert_async(prompt=prompt))  # type: ignore
 
 # %% [markdown]
 # ### 1.3 텍스트 조작 변환기

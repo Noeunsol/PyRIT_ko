@@ -25,6 +25,7 @@ class HumanInTheLoopConverter(PromptConverter):
     def __init__(
         self,
         converters: Optional[list[PromptConverter]] = None,
+        **kwargs,
     ):
         """
         Initialize the converter with a list of possible converters to run input through.
@@ -32,6 +33,7 @@ class HumanInTheLoopConverter(PromptConverter):
         Args:
             converters (List[PromptConverter], Optional): List of possible converters to run input through.
         """
+        super().__init__(**kwargs)
         self._converters = converters or []
 
     def _build_identifier(self) -> ConverterIdentifier:

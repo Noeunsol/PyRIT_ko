@@ -16,13 +16,14 @@ class AsciiArtConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, font: str = "rand") -> None:
+    def __init__(self, font: str = "rand", **kwargs) -> None:
         """
         Initialize the converter with a specified font.
 
         Args:
             font (str): The font to use for ASCII art. Defaults to "rand" which selects a random font.
         """
+        super().__init__(**kwargs)
         self._font = font
 
     def _build_identifier(self) -> ConverterIdentifier:

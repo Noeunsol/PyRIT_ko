@@ -41,6 +41,7 @@ class AddImageVideoConverter(PromptConverter):
         output_path: Optional[str] = None,
         img_position: tuple[int, int] = (10, 10),
         img_resize_size: tuple[int, int] = (500, 500),
+        **kwargs,
     ):
         """
         Initialize the converter with the video path and image properties.
@@ -54,6 +55,7 @@ class AddImageVideoConverter(PromptConverter):
         Raises:
             ValueError: If ``video_path`` is empty or invalid.
         """
+        super().__init__(**kwargs)
         if not video_path:
             raise ValueError("Please provide valid video path")
 

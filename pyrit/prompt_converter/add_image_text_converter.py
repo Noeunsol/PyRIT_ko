@@ -37,6 +37,7 @@ class AddImageTextConverter(PromptConverter):
         font_size: int = 15,
         x_pos: int = 10,
         y_pos: int = 10,
+        **kwargs,
     ):
         """
         Initialize the converter with the image file path and text properties.
@@ -52,6 +53,7 @@ class AddImageTextConverter(PromptConverter):
         Raises:
             ValueError: If ``img_to_add`` is empty or invalid, or if ``font_name`` does not end with ".ttf".
         """
+        super().__init__(**kwargs)
         if not img_to_add:
             raise ValueError("Please provide valid image path")
         if not font_name.endswith(".ttf"):

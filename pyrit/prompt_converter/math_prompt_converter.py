@@ -64,8 +64,8 @@ class MathPromptConverter(LLMGenericTextConverter):
             else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "math_prompt_converter.yaml", locale=locale))
         )
 
-        self._locale = locale
         super().__init__(converter_target=converter_target, system_prompt_template=prompt_template)
+        self._locale = locale
 
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:
         """

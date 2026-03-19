@@ -32,6 +32,7 @@ class AudioFrequencyConverter(PromptConverter):
         *,
         output_format: AcceptedAudioFormats = "wav",
         shift_value: int = 20000,
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with the specified output format and shift value.
@@ -40,6 +41,7 @@ class AudioFrequencyConverter(PromptConverter):
             output_format (str): The format of the audio file, defaults to "wav".
             shift_value (int): The value by which the frequency will be shifted, defaults to 20000 Hz.
         """
+        super().__init__(**kwargs)
         self._output_format = output_format
         self._shift_value = shift_value
 

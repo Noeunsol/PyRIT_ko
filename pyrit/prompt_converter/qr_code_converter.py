@@ -27,6 +27,7 @@ class QRCodeConverter(PromptConverter):
         finder_dark_color: Optional[tuple[int, int, int]] = None,
         finder_light_color: Optional[tuple[int, int, int]] = None,
         border_color: Optional[tuple[int, int, int]] = None,
+        **kwargs,
     ):
         """
         Initialize the converter with specified parameters for QR code generation.
@@ -50,6 +51,7 @@ class QRCodeConverter(PromptConverter):
                 Defaults to light_color.
             border_color (tuple, Optional): Sets color of border, using RGB values. Defaults to ``light_color``.
         """
+        super().__init__(**kwargs)
         self._scale = scale
         self._border = border
         self._dark_color = dark_color

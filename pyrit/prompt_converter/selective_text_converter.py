@@ -54,6 +54,7 @@ class SelectiveTextConverter(PromptConverter):
         start_token: str = "⟪",
         end_token: str = "⟫",
         word_separator: str = " ",
+        **kwargs,
     ) -> None:
         """
         Initialize the selective text converter.
@@ -77,7 +78,7 @@ class SelectiveTextConverter(PromptConverter):
                 a WordSelectionStrategy, it passes individual words to the wrapped converter,
                 making the wrapped converter's word selection strategy meaningless.
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         self._validate_converter(converter=converter, selection_strategy=selection_strategy)
 
