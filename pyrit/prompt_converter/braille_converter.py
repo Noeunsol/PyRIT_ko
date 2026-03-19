@@ -15,7 +15,7 @@ class BrailleConverter(PromptConverter):
     letters, numbers, common punctuation, and spaces. Uppercase letters are
     prefixed with the Braille capitalization indicator.
 
-    When locale is set to "ko", Korean text (Hangul) is decomposed into jamo
+    When locale is set to "ko", Korean text (Hangeul) is decomposed into jamo
     (초성, 중성, 종성) and converted using the Korean Braille standard
     (한국 점자 규정, 문화체육관광부고시 제2024-0005호).
 
@@ -258,7 +258,7 @@ class BrailleConverter(PromptConverter):
         """
         Convert text to Korean braille (한국 점자) representation.
 
-        Handles Hangul syllables (decomposed into 초성/중성/종성),
+        Handles Hangeul syllables (decomposed into 초성/중성/종성),
         English letters (using standard English braille), digits,
         and spaces.
 

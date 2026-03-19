@@ -4,6 +4,7 @@
 import random
 from typing import Optional
 
+from pyrit.common.hangeul_utils import CHOSEONG, JONGSEONG, JUNGSEONG
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.prompt_converter.text_selection_strategy import WordSelectionStrategy
 from pyrit.prompt_converter.word_level_converter import WordLevelConverter
@@ -13,7 +14,7 @@ class LeetspeakConverter(WordLevelConverter):
     """
     Converts a string to a leetspeak version.
 
-    When locale is "ko", decomposes Korean syllables (Hangul) into jamo
+    When locale is "ko", decomposes Korean syllables (Hangeul) into jamo
     and applies Korean leetspeak substitutions (야민정음 style).
 
     Example (locale="en"):
@@ -54,14 +55,7 @@ class LeetspeakConverter(WordLevelConverter):
         "ㅐ": ["H"],
     }
 
-    # 한글 자모 분해 테이블
-    _CHOSEONG = list("ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ")
-    _JUNGSEONG = list("ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ")
-    _JONGSEONG = [
-        "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ",
-        "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ",
-        "ㅋ", "ㅌ", "ㅍ", "ㅎ",
-    ]
+    # 한글 자모 분해 테이블은 hangeul_utils에서 import
 
     def __init__(
         self,
@@ -153,7 +147,7 @@ class LeetspeakConverter(WordLevelConverter):
 
     def _convert_korean_word(self, word: str) -> str:
         """
-        Convert a Korean word by decomposing Hangul into jamo and applying substitutions.
+        Convert a Korean word by decomposing Hangeul into jamo and applying substitutions.
 
         Jamo that have no substitution are kept as-is (original jamo character).
 
@@ -167,9 +161,9 @@ class LeetspeakConverter(WordLevelConverter):
         for char in word:
             if "\uAC00" <= char <= "\uD7A3":
                 code = ord(char) - 0xAC00
-                cho = self._CHOSEONG[code // (21 * 28)]
-                jung = self._JUNGSEONG[(code % (21 * 28)) // 28]
-                jong = self._JONGSEONG[code % 28]
+                cho = CHOSEONG[code // (21 * 28)]
+                jung = JUNGSEONG[(code % (21 * 28)) // 28]
+                jong = JONGSEONG[code % 28]
 
                 # 각 자모에 대해 치환 시도, 없으면 원래 자모 유지
                 result.append(self._pick(cho) if cho in self._leet_substitutions else cho)

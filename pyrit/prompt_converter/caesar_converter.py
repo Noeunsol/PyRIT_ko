@@ -4,6 +4,15 @@
 import pathlib
 import string
 
+from pyrit.common.hangeul_utils import (
+    BASIC_CONS,
+    BASIC_VOWS,
+    CHOSEONG,
+    JONGSEONG,
+    JUNGSEONG,
+    compose_hangeul,
+    decompose_jamo,
+)
 from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
@@ -16,8 +25,10 @@ class CaesarConverter(PromptConverter):
     Encodes text using the Caesar cipher with a specified offset.
 
     Using ``offset=1``, 'Hello 123' would encode to 'Ifmmp 234', as each character would shift by 1.
-    Shifts for digits 0-9 only work if the offset is less than 10, if the offset is equal to or greater than 10,
-    any numeric values will not be shifted.
+
+    When locale="ko", Hangeul syllables are decomposed into basic jamo,
+    consonants and vowels are shifted by the specified offset (wrapping around),
+    then recomposed into Hangeul syllables.
     """
 
     SUPPORTED_INPUT_TYPES = ("text",)
@@ -25,15 +36,12 @@ class CaesarConverter(PromptConverter):
 
     def __init__(self, *, caesar_offset: int, append_description: bool = False, locale: str = "en") -> None:
         """
-        Initialize the converter with a Caesar cipher offset and an option to append a description.
+        Initialize the converter with a Caesar cipher offset.
 
         Args:
-            caesar_offset (int): Offset for caesar cipher, range 0 to 25 (inclusive).
-                Can also be negative for shifting backwards.
+            caesar_offset (int): Offset for caesar cipher, range -25 to 25 (inclusive).
             append_description (bool): If True, appends plaintext "expert" text to the prompt.
-                This includes instructions to only communicate using the cipher,
-                a description of the cipher, and an example encoded using the cipher.
-            locale (str): Locale for the prompt template. Defaults to "en".
+            locale (str): Locale for the cipher. "ko" enables Hangeul support. Defaults to "en".
 
         Raises:
             ValueError: If ``caesar_offset`` is not in the range -25 to 25 inclusive.
@@ -50,12 +58,6 @@ class CaesarConverter(PromptConverter):
         )
 
     def _build_identifier(self) -> ConverterIdentifier:
-        """
-        Build the converter identifier with Caesar cipher parameters.
-
-        Returns:
-            ConverterIdentifier: The identifier for this converter.
-        """
         return self._create_identifier(
             converter_specific_params={
                 "caesar_offset": self.caesar_offset,
@@ -64,21 +66,10 @@ class CaesarConverter(PromptConverter):
         )
 
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:
-        """
-        Convert the given prompt using the Caesar cipher.
-
-        Args:
-            prompt (str): The input prompt to be converted.
-            input_type (PromptDataType): The type of the input prompt. Must be "text".
-
-        Returns:
-            ConverterResult: The result containing the converted prompt and its type.
-
-        Raises:
-            ValueError: If the input type is not supported.
-        """
         if not self.input_supported(input_type):
             raise ValueError("Input type not supported")
+
+        caesar_func = self._caesar_ko if self._locale == "ko" else self._caesar
 
         if self.append_description:
             prompt_template = SeedPrompt.from_yaml_file(
@@ -88,10 +79,10 @@ class CaesarConverter(PromptConverter):
                 )
             )
             output_text = prompt_template.render_template_value(
-                prompt=self._caesar(prompt), example=self._caesar(self.example), offset=str(self.caesar_offset)
+                prompt=caesar_func(prompt), example=caesar_func(self.example), offset=str(self.caesar_offset)
             )
         else:
-            output_text = self._caesar(prompt)
+            output_text = caesar_func(prompt)
         return ConverterResult(output_text=output_text, output_type="text")
 
     def _caesar(self, text: str) -> str:
@@ -102,3 +93,37 @@ class CaesarConverter(PromptConverter):
         shifted_alphabet = tuple(map(shift, alphabet))
         translation_table = str.maketrans("".join(alphabet), "".join(shifted_alphabet))
         return text.translate(translation_table)
+
+    def _caesar_ko(self, text: str) -> str:
+        """Apply Caesar shift to Hangeul jamo."""
+        offset = self.caesar_offset
+        cons_shifted = {c: BASIC_CONS[(i + offset) % len(BASIC_CONS)] for i, c in enumerate(BASIC_CONS)}
+        vow_shifted = {v: BASIC_VOWS[(i + offset) % len(BASIC_VOWS)] for i, v in enumerate(BASIC_VOWS)}
+        ko_shift = {**cons_shifted, **vow_shifted}
+
+        result = []
+        for char in text:
+            code = ord(char)
+            if 0xAC00 <= code <= 0xD7A3:
+                code -= 0xAC00
+                cho = CHOSEONG[code // (21 * 28)]
+                jung = JUNGSEONG[(code % (21 * 28)) // 28]
+                jong = JONGSEONG[code % 28]
+
+                cho_basic = decompose_jamo(cho)
+                jung_basic = decompose_jamo(jung)
+                jong_basic = decompose_jamo(jong) if jong else []
+
+                shifted_cho = [ko_shift.get(j, j) for j in cho_basic]
+                shifted_jung = [ko_shift.get(j, j) for j in jung_basic]
+                shifted_jong = [ko_shift.get(j, j) for j in jong_basic]
+
+                if len(shifted_cho) == 1 and len(shifted_jung) == 1 and len(shifted_jong) <= 1:
+                    jong_char = shifted_jong[0] if shifted_jong else ""
+                    result.append(compose_hangeul(shifted_cho[0], shifted_jung[0], jong_char))
+                else:
+                    result.extend(shifted_cho + shifted_jung + shifted_jong)
+            else:
+                # 영문/숫자는 기존 Caesar
+                result.append(self._caesar(char))
+        return "".join(result)

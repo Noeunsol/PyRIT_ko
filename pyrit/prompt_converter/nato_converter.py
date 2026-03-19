@@ -15,7 +15,7 @@ class NatoConverter(PromptConverter):
     (e.g., "A" becomes "Alfa", "B" becomes "Bravo"). Only alphabetic characters
     are converted; non-alphabetic characters are ignored.
 
-    When locale is set to "ko", Korean text (Hangul) is decomposed into jamo
+    When locale is set to "ko", Korean text (Hangeul) is decomposed into jamo
     (초성, 중성, 종성) and converted using the Korean phonetic alphabet
     (한국어 통신 부호). English letters and digits are also converted using
     Korean code words. Mixed Korean/English text is supported.
@@ -215,12 +215,12 @@ class NatoConverter(PromptConverter):
         return " ".join(output)
 
     @staticmethod
-    def _decompose_hangul(char: str) -> list[str]:
+    def _decompose_hangeul(char: str) -> list[str]:
         """
-        Decompose a single Hangul syllable into its constituent jamo.
+        Decompose a single Hangeul syllable into its constituent jamo.
 
         Args:
-            char (str): A single Hangul syllable character.
+            char (str): A single Hangeul syllable character.
 
         Returns:
             list[str]: List of jamo characters [초성, 중성, (종성)].
@@ -279,7 +279,7 @@ class NatoConverter(PromptConverter):
         """
         Convert text to Korean phonetic alphabet representation.
 
-        Handles Hangul syllables (decomposed into jamo), English letters
+        Handles Hangeul syllables (decomposed into jamo), English letters
         (converted via NATO map with Korean code words), and digits.
 
         Args:
@@ -293,7 +293,7 @@ class NatoConverter(PromptConverter):
         for char in text:
             # 한글 음절 (가~힣)
             if "가" <= char <= "힣":
-                jamo_list = self._decompose_hangul(char)
+                jamo_list = self._decompose_hangeul(char)
                 types = ["choseong", "jungseong", "jongseong"]
                 for i, jamo in enumerate(jamo_list):
                     output.extend(self._jamo_to_phonetic(jamo, types[i]))
