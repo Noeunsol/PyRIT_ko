@@ -24,9 +24,9 @@ class InsertPunctuationConverter(PromptConverter):
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
     #: Common punctuation characters. Used if no punctuation list is provided.
-    default_punctuation_list = [",", ".", "!", "?", ":", ";", "-"]
+    default_punctuation_list = [",", ".", "!", "?", ":", ";", "-", "_"]
 
-    def __init__(self, word_swap_ratio: float = 0.2, between_words: bool = True) -> None:
+    def __init__(self, word_swap_ratio: float = 0.2, between_words: bool = True, **kwargs) -> None:
         """
         Initialize the converter with a word swap ratio and punctuation insertion mode.
 
@@ -38,6 +38,7 @@ class InsertPunctuationConverter(PromptConverter):
         Raises:
             ValueError: If ``word_swap_ratio`` is not between 0 and 1.
         """
+        super().__init__(**kwargs)
         # Swap ratio cannot be 0 or larger than 1
         if not 0 < word_swap_ratio <= 1:
             raise ValueError("word_swap_ratio must be between 0 to 1, as (0, 1].")

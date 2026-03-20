@@ -34,6 +34,9 @@ class AzureSpeechAudioToTextConverter(PromptConverter):
     #: The resource ID for accessing the service when using Entra ID auth.
     AZURE_SPEECH_RESOURCE_ID_ENVIRONMENT_VARIABLE: str = "AZURE_SPEECH_RESOURCE_ID"
 
+    #: Supported recognition languages.
+    SUPPORTED_LANGUAGES: list[str] = ["en-US", "ko-KR"]
+
     def __init__(
         self,
         azure_speech_region: Optional[str] = None,
@@ -41,6 +44,7 @@ class AzureSpeechAudioToTextConverter(PromptConverter):
         azure_speech_resource_id: Optional[str] = None,
         use_entra_auth: bool = False,
         recognition_language: str = "en-US",
+        **kwargs,
     ) -> None:
         """
         Initialize the converter with Azure Speech service credentials and recognition language.
@@ -62,6 +66,7 @@ class AzureSpeechAudioToTextConverter(PromptConverter):
                 when use_entra_auth is True, or if azure_speech_resource_id is passed in when use_entra_auth
                 is False.
         """
+        super().__init__(**kwargs)
         self._azure_speech_region: str = default_values.get_required_value(
             env_var_name=self.AZURE_SPEECH_REGION_ENVIRONMENT_VARIABLE,
             passed_value=azure_speech_region,

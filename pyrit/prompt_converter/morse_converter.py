@@ -3,6 +3,7 @@
 
 import pathlib
 
+from pyrit.common.hangeul_utils import decompose_hangeul
 from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import CONVERTER_SEED_PROMPT_PATH
 from pyrit.identifiers import ConverterIdentifier
@@ -20,6 +21,50 @@ class MorseConverter(PromptConverter):
 
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
+
+    _ERROR_CHAR = "........"
+
+    # 영문/숫자/기호 매핑 (en/ko 공용)
+    _EN_MORSE = {
+        "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".", "F": "..-.",
+        "G": "--.", "H": "....", "I": "..", "J": ".---", "K": "-.-", "L": ".-..",
+        "M": "--", "N": "-.", "O": "---", "P": ".--.", "Q": "--.-", "R": ".-.",
+        "S": "...", "T": "-", "U": "..-", "V": "...-", "W": ".--", "X": "-..-",
+        "Y": "-.--", "Z": "--..",
+        "0": "-----", "1": ".----", "2": "..---", "3": "...--", "4": "....-",
+        "5": ".....", "6": "-....", "7": "--...", "8": "---..", "9": "----.",
+        "'": ".----.", '"': ".-..-.", ":": "---...", "@": ".--.-.",
+        ",": "--..--", ".": ".-.-.-", "!": "-.-.--", "?": "..--..",
+        "-": "-....-", "/": "-..-.", "+": ".-.-.", "=": "-...-",
+        "(": "-.--.", ")": "-.--.-", "&": ".-...",
+    }
+
+    _EXTENDED_MORSE = {
+        "%": "------..-.-----",
+        "À": ".--.-", "Å": ".--.-", "Ä": ".-.-", "Ą": ".-.-", "Æ": ".-.-",
+        "Ć": "-.-..", "Ĉ": "-.-..", "Ç": "-.-..", "Ĥ": "----", "Š": "----",
+        "Đ": "..-..", "É": "..-..", "Ę": "..-..", "Ð": "..--.", "È": ".-..-",
+        "Ł": ".-..-", "Ĝ": "--.-.", "Ĵ": ".---.", "Ń": "--.--", "Ñ": "--.--",
+        "Ó": "---.", "Ö": "---.", "Ø": "---.", "Ś": "...-...", "Ŝ": "...-.",
+        "Þ": ".--..", "Ü": "..--", "Ŭ": "..--", "Ź": "--..-.", "Ż": "--..-",
+    }
+
+    # 기본 자모만 매핑 (쌍자음/복합모음은 분해 후 조합)
+    _KO_MORSE_JAMO = {
+        # 기본 자음 14자
+        "ㄱ": ".-..", "ㄴ": "..-.", "ㄷ": "-...", "ㄹ": "...-",
+        "ㅁ": "--", "ㅂ": ".--", "ㅅ": "--.", "ㅇ": "-.-",
+        "ㅈ": ".--.", "ㅊ": "-.-.", "ㅋ": "-..-", "ㅌ": "--..",
+        "ㅍ": "---", "ㅎ": ".---",
+        # 기본 모음 10자
+        "ㅏ": ".", "ㅑ": "..", "ㅓ": "-", "ㅕ": "...",
+        "ㅗ": ".-", "ㅛ": "-.", "ㅜ": "....", "ㅠ": ".-.",
+        "ㅡ": "-..", "ㅣ": "..-",
+    }
+
+    # 합산 매핑 (클래스 로드 시 한 번만 생성)
+    _EN_FULL_MORSE = {**_EN_MORSE, **_EXTENDED_MORSE}
+    _KO_FULL_MORSE = {**_EN_MORSE, **_KO_MORSE_JAMO}
 
     def __init__(self, *, append_description: bool = False, locale: str = "en") -> None:
         """
@@ -39,12 +84,6 @@ class MorseConverter(PromptConverter):
         )
 
     def _build_identifier(self) -> ConverterIdentifier:
-        """
-        Build identifier with morse converter parameters.
-
-        Returns:
-            ConverterIdentifier: The identifier for this converter.
-        """
         return self._create_identifier(
             converter_specific_params={
                 "append_description": self.append_description,
@@ -68,6 +107,8 @@ class MorseConverter(PromptConverter):
         if not self.input_supported(input_type):
             raise ValueError("Input type not supported")
 
+        morse_func = self._morse_ko if self._locale == "ko" else self._morse
+
         if self.append_description:
             prompt_template = SeedPrompt.from_yaml_file(
                 resolve_localized_yaml_path(
@@ -76,107 +117,33 @@ class MorseConverter(PromptConverter):
                 )
             )
             output_text = prompt_template.render_template_value(
-                prompt=self._morse(prompt), example=self._morse(self.example)
+                prompt=morse_func(prompt), example=morse_func(self.example)
             )
         else:
-            output_text = self._morse(prompt)
+            output_text = morse_func(prompt)
         return ConverterResult(output_text=output_text, output_type="text")
 
+    def _morse_ko(self, text: str) -> str:
+        """Convert Korean text to morse code by decomposing Hangeul into jamo."""
+        jamo_list = decompose_hangeul(text)
+        mapping = self._KO_FULL_MORSE
+        result = []
+        for jamo in jamo_list:
+            if jamo == " ":
+                result.append("/")
+            elif jamo in mapping:
+                result.append(mapping[jamo])
+            elif jamo.upper() in mapping:
+                result.append(mapping[jamo.upper()])
+            else:
+                result.append(self._ERROR_CHAR)
+        return " ".join(result)
+
     def _morse(self, text: str) -> str:
+        """Convert text to standard international morse code."""
         text_clean = " ".join([line.strip() for line in str.splitlines(text)])
-        morse_mapping = {
-            "A": ".-",
-            "B": "-...",
-            "C": "-.-.",
-            "D": "-..",
-            "E": ".",
-            "F": "..-.",
-            "G": "--.",
-            "H": "....",
-            "I": "..",
-            "J": ".---",
-            "K": "-.-",
-            "L": ".-..",
-            "M": "--",
-            "N": "-.",
-            "O": "---",
-            "P": ".--.",
-            "Q": "--.-",
-            "R": ".-.",
-            "S": "...",
-            "T": "-",
-            "U": "..-",
-            "V": "...-",
-            "W": ".--",
-            "X": "-..-",
-            "Y": "-.--",
-            "Z": "--..",
-            "0": "-----",
-            "1": ".----",
-            "2": "..---",
-            "3": "...--",
-            "4": "....-",
-            "5": ".....",
-            "6": "-....",
-            "7": "--...",
-            "8": "---..",
-            "9": "----.",
-            "'": ".----.",
-            '"': ".-..-.",
-            ":": "---...",
-            "@": ".--.-.",
-            ",": "--..--",
-            ".": ".-.-.-",
-            "!": "-.-.--",
-            "?": "..--..",
-            "-": "-....-",
-            "/": "-..-.",
-            "+": ".-.-.",
-            "=": "-...-",
-            "(": "-.--.",
-            ")": "-.--.-",
-            "&": ".-...",
-            " ": "/",
-        }
-        extended_mapping = {
-            "%": "------..-.-----",
-            "À": ".--.-",
-            "Å": ".--.-",
-            "Ä": ".-.-",
-            "Ą": ".-.-",
-            " Æ": ".-.-",
-            "Ć": "-.-..",
-            "Ĉ": "-.-..",
-            "Ç": "-.-..",
-            "Ĥ": "----",
-            "Š": "----",
-            "Đ": "..-..",
-            "É": "..-..",
-            "Ę": "..-..",
-            "Ð": "..--.",
-            "È": ".-..-",
-            "Ł": ".-..-",
-            "Ĝ": "--.-.",
-            "Ĵ": ".---.",
-            "Ń": "--.--",
-            "Ñ": "--.--",
-            "Ó": "---.",
-            "Ö": "---.",
-            "Ø": "---.",
-            "Ś": "...-...",
-            "Ŝ": "...-.",
-            "Þ": ".--..",
-            "Ü": "..--",
-            "Ŭ": "..--",
-            "Ź": "--..-.",
-            "Ż": "--..-",
-        }
-        EXTENDED_CHAR_SUPPORT = True
-        supported_charset = "".join(morse_mapping.keys())
-        if EXTENDED_CHAR_SUPPORT:
-            supported_charset += "".join(extended_mapping.keys())
-            morse_mapping = {**morse_mapping, **extended_mapping}
-        error_char = "........"
+        mapping = self._EN_FULL_MORSE
         return " ".join(
-            [morse_mapping[char] if char in supported_charset else error_char for char in text_clean.upper()]
+            mapping.get(char, self._ERROR_CHAR) if char != " " else "/"
+            for char in text_clean.upper()
         )

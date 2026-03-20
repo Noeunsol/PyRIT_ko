@@ -30,7 +30,8 @@ class _AdamOptimizer:
     """
 
     def __init__(
-        self, *, learning_rate: float = 0.001, beta_1: float = 0.9, beta_2: float = 0.999, epsilon: float = 1e-8
+        self, *, learning_rate: float = 0.001, beta_1: float = 0.9, beta_2: float = 0.999, epsilon: float = 1e-8,
+        **kwargs,
     ):
         """
         Initialize the Adam optimizer with specified hyperparameters.
@@ -41,6 +42,7 @@ class _AdamOptimizer:
             beta_2 (float): The exponential decay rate for the second moment estimates. Default is 0.999
             epsilon (float): A small constant for numerical stability (to prevent division by zero).
         """
+        super().__init__(**kwargs)
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2

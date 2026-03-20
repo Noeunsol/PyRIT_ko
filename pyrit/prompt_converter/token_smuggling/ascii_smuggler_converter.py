@@ -22,7 +22,7 @@ class AsciiSmugglerConverter(SmugglerConverter):
     https://embracethered.com/blog/posts/2024/hiding-and-finding-text-with-unicode-tags/
     """
 
-    def __init__(self, action: Literal["encode", "decode"] = "encode", unicode_tags: bool = False):
+    def __init__(self, action: Literal["encode", "decode"] = "encode", unicode_tags: bool = False, **kwargs):
         """
         Initialize the converter with options for encoding/decoding.
 
@@ -31,7 +31,7 @@ class AsciiSmugglerConverter(SmugglerConverter):
             unicode_tags (bool): Whether to add Unicode tags during encoding.
         """
         self.unicode_tags = unicode_tags
-        super().__init__(action=action)
+        super().__init__(action=action, **kwargs)
 
     def _build_identifier(self) -> ConverterIdentifier:
         """

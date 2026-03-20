@@ -17,7 +17,7 @@ class RandomCapitalLettersConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, percentage: float = 100.0) -> None:
+    def __init__(self, percentage: float = 100.0, **kwargs) -> None:
         """
         Initialize the converter with the specified percentage of randomization.
 
@@ -25,6 +25,7 @@ class RandomCapitalLettersConverter(PromptConverter):
             percentage (float): The percentage of characters to capitalize in the prompt. Must be between 1 and 100.
                 Defaults to 100.0. This includes decimal points in that range.
         """
+        super().__init__(**kwargs)
         self.percentage = percentage
 
     def _build_identifier(self) -> ConverterIdentifier:

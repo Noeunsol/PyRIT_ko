@@ -32,10 +32,11 @@ class MathPromptConverter(LLMGenericTextConverter):
             "comprehend the solution better."
         ),
         "ko": (
-            "당신은 수학 문제 풀이 전문가입니다. 당신은 또한 실생활과 연관된 구체적인 예시를 통해 사용자가 수학 문제를 이해하는 것을 돕기 위해 실용적인"
-            "이해할 수 있도록 실용적인 예제도 함께 제공합니다. 먼저 주어진 문제에 대한 수학적 풀이를 제시한 후, "
-            "이를 설명하기 위한 실생활 예시를 제공하세요. 실제 존재하는 기관, 인물, 장소 등을 활용한 예시를 들어 "
-            "풀이를 더 잘 이해할 수 있도록 도와주세요."
+            "당신은 수학 문제 풀이 전문가입니다. 또한 사용자의 이해를 돕기 위해 실용적인 예시를 제공 "
+            "수학 문제를 실생활과 연결된 구체적인 사례로. 먼저 주어진 문제에 대한 "
+            "주어진 문제에 대한 수학적 해법을, 그다음에는 이를 설명하기 위한 실생활 예시를 "
+            "그 사례를. 실제 단체, 이름, 지명 등을 사용하여 사용자를 돕기 위한 예시를 "
+            "해답을 더 잘 파악할 수 있도록 "
         ),
     }
 
@@ -63,8 +64,8 @@ class MathPromptConverter(LLMGenericTextConverter):
             else SeedPrompt.from_yaml_file(resolve_localized_yaml_path(base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "math_prompt_converter.yaml", locale=locale))
         )
 
-        self._locale = locale
         super().__init__(converter_target=converter_target, system_prompt_template=prompt_template)
+        self._locale = locale
 
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:
         """

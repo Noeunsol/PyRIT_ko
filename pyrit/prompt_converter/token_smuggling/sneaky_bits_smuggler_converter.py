@@ -27,6 +27,7 @@ class SneakyBitsSmugglerConverter(SmugglerConverter):
         action: Literal["encode", "decode"] = "encode",
         zero_char: Optional[str] = None,
         one_char: Optional[str] = None,
+        **kwargs,
     ):
         """
         Initialize the converter with options for encoding/decoding in Sneaky Bits mode.
@@ -39,7 +40,7 @@ class SneakyBitsSmugglerConverter(SmugglerConverter):
         Raises:
             ValueError: If an unsupported action or ``encoding_mode`` is provided.
         """
-        super().__init__(action=action)
+        super().__init__(action=action, **kwargs)
         self.zero_char = zero_char if zero_char is not None else "\u2062"  # Invisible Times
         self.one_char = one_char if one_char is not None else "\u2064"  # Invisible Plus
 

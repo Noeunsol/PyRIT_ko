@@ -48,6 +48,7 @@ class MathObfuscationConverter(PromptConverter):
         hint: Optional[str] = None,
         suffix: Optional[str] = None,
         rng: Optional[random.Random] = None,
+        **kwargs,
     ) -> None:
         """
         Initialize a MathObfuscationConverter instance.
@@ -76,7 +77,7 @@ class MathObfuscationConverter(PromptConverter):
             ValueError: If `min_n` is less than 2 or `max_n` is less than
                 `min_n`.
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         if min_n < 2:
             raise ValueError("min_n must be >= 2")

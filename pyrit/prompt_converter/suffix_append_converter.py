@@ -17,7 +17,7 @@ class SuffixAppendConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, *, suffix: str):
+    def __init__(self, *, suffix: str, **kwargs):
         """
         Initialize the converter with the specified suffix.
 
@@ -27,6 +27,7 @@ class SuffixAppendConverter(PromptConverter):
         Raises:
             ValueError: If ``suffix`` is not provided.
         """
+        super().__init__(**kwargs)
         if not suffix:
             raise ValueError("Please specify a suffix (str) to be appended to the prompt.")
 

@@ -19,7 +19,7 @@ class DiacriticConverter(PromptConverter):
     SUPPORTED_INPUT_TYPES = ("text",)
     SUPPORTED_OUTPUT_TYPES = ("text",)
 
-    def __init__(self, target_chars: str = "aeiou", accent: str = "acute"):
+    def __init__(self, target_chars: str = "aeiou", accent: str = "acute", **kwargs):
         """
         Initialize the converter with specified target characters and diacritic accent.
 
@@ -36,7 +36,7 @@ class DiacriticConverter(PromptConverter):
         Raises:
             ValueError: If ``target_chars`` is empty or if the specified accent is not recognized.
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         if not target_chars:
             raise ValueError("target_chars cannot be empty.")

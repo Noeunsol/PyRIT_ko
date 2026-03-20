@@ -30,6 +30,7 @@ class UnicodeConfusableConverter(PromptConverter):
         *,
         source_package: Literal["confusable_homoglyphs", "confusables"] = "confusable_homoglyphs",
         deterministic: bool = False,
+        **kwargs,
     ):
         """
         Initialize the converter with the specified source package for homoglyph generation.
@@ -51,6 +52,7 @@ class UnicodeConfusableConverter(PromptConverter):
         Raises:
             ValueError: If an invalid source package is provided.
         """
+        super().__init__(**kwargs)
         if source_package not in ["confusable_homoglyphs", "confusables"]:
             raise ValueError(
                 f"Invalid source package: {source_package}. Please choose either 'confusable_homoglyphs' \

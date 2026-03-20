@@ -121,6 +121,7 @@ class OpenAITTSTarget(OpenAITarget):
             "input": message_piece.converted_value,
             "voice": self._voice,
             "response_format": self._response_format,
+            "language": self._language,
         }
 
         # Add optional parameters
@@ -135,6 +136,7 @@ class OpenAITTSTarget(OpenAITarget):
                 input=body_parameters["input"],  # type: ignore[arg-type]
                 response_format=body_parameters.get("response_format"),  # type: ignore[arg-type]
                 speed=body_parameters.get("speed"),  # type: ignore[arg-type]
+                language=body_parameters.get("language"),  # type: ignore[arg-type]
             ),
             request=message,
         )

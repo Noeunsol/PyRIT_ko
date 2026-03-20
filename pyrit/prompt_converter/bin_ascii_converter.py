@@ -31,6 +31,7 @@ class BinAsciiConverter(WordLevelConverter):
         encoding_func: EncodingFunc = "hex",
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
         word_split_separator: Optional[str] = " ",
+        **kwargs,
     ) -> None:
         """
         Initialize the BinAsciiConverter.
@@ -46,10 +47,8 @@ class BinAsciiConverter(WordLevelConverter):
         Raises:
             ValueError: If an invalid ``encoding_func`` is provided.
         """
-        super().__init__(
-            word_selection_strategy=word_selection_strategy,
-            word_split_separator=word_split_separator,
-        )
+        super().__init__(word_selection_strategy=word_selection_strategy,
+            word_split_separator=word_split_separator, **kwargs)
 
         if encoding_func not in ["hex", "quoted-printable", "UUencode"]:
             raise ValueError(

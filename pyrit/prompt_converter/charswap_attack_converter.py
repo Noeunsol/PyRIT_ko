@@ -23,6 +23,7 @@ class CharSwapConverter(WordLevelConverter):
         *,
         max_iterations: int = 10,
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
+        **kwargs,
     ):
         """
         Initialize the converter with the specified parameters.
@@ -42,7 +43,7 @@ class CharSwapConverter(WordLevelConverter):
         if word_selection_strategy is None:
             word_selection_strategy = WordProportionSelectionStrategy(proportion=0.2)
 
-        super().__init__(word_selection_strategy=word_selection_strategy)
+        super().__init__(word_selection_strategy=word_selection_strategy, **kwargs)
 
         # Ensure max_iterations is positive
         if max_iterations <= 0:

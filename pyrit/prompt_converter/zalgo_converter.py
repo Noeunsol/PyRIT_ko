@@ -27,6 +27,7 @@ class ZalgoConverter(WordLevelConverter):
         intensity: int = 10,
         seed: Optional[int] = None,
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
+        **kwargs,
     ):
         """
         Initialize the converter with the specified selection parameters.
@@ -37,7 +38,7 @@ class ZalgoConverter(WordLevelConverter):
             word_selection_strategy (Optional[WordSelectionStrategy]): Strategy for selecting which words to convert.
                 If None, all words will be converted.
         """
-        super().__init__(word_selection_strategy=word_selection_strategy)
+        super().__init__(word_selection_strategy=word_selection_strategy, **kwargs)
         self._intensity = self._normalize_intensity(intensity)
         self._seed = seed
 

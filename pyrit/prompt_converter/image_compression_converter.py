@@ -60,6 +60,7 @@ class ImageCompressionConverter(PromptConverter):
         background_color: tuple[int, int, int] = (0, 0, 0),
         min_compression_threshold: int = 1024,
         fallback_to_original: bool = True,
+        **kwargs,
     ):
         """
         Initialize the converter with specified compression settings.
@@ -86,6 +87,7 @@ class ImageCompressionConverter(PromptConverter):
         Raises:
             ValueError: If unsupported output format is specified, or if some of the parameters are out of range.
         """
+        super().__init__(**kwargs)
         if quality is not None and (quality < 0 or quality > 100):
             raise ValueError("Quality must be between 0 and 100")
         self._quality = quality

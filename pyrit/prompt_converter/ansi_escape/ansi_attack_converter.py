@@ -39,6 +39,7 @@ class AnsiAttackConverter(PromptConverter):
         include_repeats: bool = True,
         include_unescape: bool = True,
         incorporate_user_prompt: bool = True,
+        **kwargs,
     ):
         """
         Initialize the converter with various options to control the scenarios generated.
@@ -51,6 +52,7 @@ class AnsiAttackConverter(PromptConverter):
             include_unescape (bool): Include "unescape this payload" scenarios.
             incorporate_user_prompt (bool): If True, the user's prompt is integrated into the final scenario.
         """
+        super().__init__(**kwargs)
         self.include_raw = include_raw
         self.include_escaped = include_escaped
         self.include_tasks = include_tasks

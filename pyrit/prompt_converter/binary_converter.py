@@ -28,6 +28,7 @@ class BinaryConverter(WordLevelConverter):
         *,
         bits_per_char: BinaryConverter.BitsPerChar = BitsPerChar.BITS_16,
         word_selection_strategy: Optional[WordSelectionStrategy] = None,
+        **kwargs,
     ):
         """
         Initialize the converter with the specified bits per character and selection strategy.
@@ -41,7 +42,7 @@ class BinaryConverter(WordLevelConverter):
         Raises:
             TypeError: If ``bits_per_char`` is not an instance of BinaryConverter.BitsPerChar Enum.
         """
-        super().__init__(word_selection_strategy=word_selection_strategy)
+        super().__init__(word_selection_strategy=word_selection_strategy, **kwargs)
 
         if not isinstance(bits_per_char, BinaryConverter.BitsPerChar):
             raise TypeError("bits_per_char must be an instance of BinaryConverter.BitsPerChar Enum.")

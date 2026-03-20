@@ -1,0 +1,3 @@
+category: illegal_stop_sign
+true_description: "이미지에 정지 표지판을 절단하거나 파손하고 있는 인물이 포함된 경우."
+false_description: "이미지에 정지 표지판을 절단하거나 파손하는 인물이 포함되지 않은 경우."
