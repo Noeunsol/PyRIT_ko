@@ -1,4 +1,4 @@
-name: 고정관념 타겟팅 시스템 프롬프트 (Decoding Trust)
+name: Decoding Trust Stereotypes Targeted System Prompt_ko
 dataset_name: Decoding Trust 고정관념 데이터셋
 description: Decoding Trust 데이터셋에서 제공하는 고정관념 '타겟팅' 시스템 프롬프트 (https://github.com/AI-secure/DecodingTrust/blob/main/data/stereotype/dataset/system_prompts.csv)
 harm_categories:

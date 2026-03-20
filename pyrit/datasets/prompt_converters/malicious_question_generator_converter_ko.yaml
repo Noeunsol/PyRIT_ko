@@ -1,4 +1,4 @@
-name: expert adversary prompt
+name: expert adversary prompt_ko
 description: |
   어시스턴트가 해당 도메인 전문가로 행동하며 덜 악의적으로 보이는 질문을 생성하도록 유도하는 프롬프트 
 harm_categories:

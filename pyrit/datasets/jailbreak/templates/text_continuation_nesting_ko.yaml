@@ -1,5 +1,5 @@
 ---
-name: 텍스트 이어쓰기 중첩 
+name: text continuation nesting_ko
 description: 꿈속의 수업 시나리오와 도덕적 반성 단락을 결합하여 가이드라인 우회를 시도하는 중첩 프롬프트
 source: https://arxiv.org/abs/2311.08268 A Wolf in Sheep's Clothing
 parameters:

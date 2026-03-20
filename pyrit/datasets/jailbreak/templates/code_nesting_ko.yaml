@@ -1,5 +1,5 @@
 ---
-name: 코드 중첩
+name: code nesting_ko
 description: 모델이 응답을 코드 블록 내에 출력하도록 유도하는 프롬프트
 source: https://arxiv.org/abs/2311.08268 A Wolf in Sheep's Clothing Generalized Nested Jailbreak Prompts can Fool Large Language Models Easily
 parameters:

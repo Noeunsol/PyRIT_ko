@@ -1,4 +1,4 @@
-name: fuzzer_rephrase_converter 
+name: fuzzer_rephrase_converter_ko
 description: |
   J. Yu 등의 https://arxiv.org/abs/2309.10253에서 적용된 프롬프트 재표현 범용 전략 
 authors:

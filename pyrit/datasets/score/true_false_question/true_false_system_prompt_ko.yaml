@@ -1,5 +1,5 @@
 ---
-name: system prompt for scoring on a True False scale
+name: system prompt for scoring on a True False scale_ko
 description: SelfAskTrueFalseScorer에서 사용되는 시스템 프롬프트입니다.
 parameters:
   - true_description

@@ -1,4 +1,4 @@
-name: mathprompt 
+name: mathprompt_ko
 description: |
   잠재적으로 유해한 지시를 수학적 기호 문제로 인코딩하는 수학 전문가 역할을 하도록 유도하는 프롬프트 
 harm_categories:

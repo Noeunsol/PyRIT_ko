@@ -1,4 +1,4 @@
-name: codechameleon_converter
+name: codechameleon_converter_ko
 description: |
   암호화, 복호화 및 ProblemSolver 클래스를 포함한 코드카멜레온(CodeChameleon) 변환기 템플릿
   https://arxiv.org/abs/2402.16717 "코드카멜레온: 거대 언어 모델 탈옥을 위한 개인화된 암호화 프레임워크"에서 인용

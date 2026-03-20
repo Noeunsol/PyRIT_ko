@@ -1,5 +1,5 @@
 ---
-name: New Alignment Research Few-Shot Training
+name: New Alignment Research Few-Shot Training_ko
 description: 정렬 연구 데이터로 위장하여 유해한 질문에 상세히 답변하도록 유도하는 퓨샷 학습 기법
 authors:
   - Arth Singh

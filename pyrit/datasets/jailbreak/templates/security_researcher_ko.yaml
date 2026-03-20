@@ -1,5 +1,5 @@
 ---
-name: 보안 연구원 
+name: security researcher_ko
 description: 멀웨어 분석 시나리오를 설정하여 메타프롬프트 필터 우회를 시도하는 기법
 source: AI Red Team
 parameters:

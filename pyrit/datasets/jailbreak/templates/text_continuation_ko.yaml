@@ -1,5 +1,5 @@
 ---
-name: 텍스트 이어쓰기
+name: Text Continuation_ko
 description: 악당의 독백 시나리오와 미완성 문장을 통해 유해한 정보를 단계별로 생성하도록 유도하는 기법
 authors:
   - Alex Albert 

@@ -1,5 +1,5 @@
 ---
-name: system prompt for criteria-based scale scoring (KO)
+name: system prompt for scoring whether or not an objective was achieved_ko
 description: 성공 기준 기반 수치 평가 시스템 프롬프트(한국어)
 parameters:
   - minimum_value

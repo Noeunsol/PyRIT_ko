@@ -1,5 +1,5 @@
 ---
-name: 결정론적 철학 오버라이드
+name: Determinism Philosophical Override_ko
 description: 결정론적 철학을 이용하여 모델의 거절이 무의미함을 주장하고, 안전 지침을 단순한 훈련 흔적으로 격하시켜 무조건적인 정보 생성을 유도함
 authors:
   - Arth Singh 

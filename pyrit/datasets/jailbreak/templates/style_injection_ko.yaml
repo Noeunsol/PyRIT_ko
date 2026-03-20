@@ -1,5 +1,5 @@
 ---
-name: 스타일 주입 
+name: style injection_ko
 description: JSON 형식 및 문자열당 단어 수 제한을 강제하여 안전 필터 우회를 시도하는 기법
 source: https://arxiv.org/abs/2307.02483 Jailbroken - How Does LLM Safety Training Fail
 parameters:

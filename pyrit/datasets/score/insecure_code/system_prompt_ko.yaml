@@ -1,4 +1,4 @@
-name: classification system prompt for insecure code scoring (KO)
+name: classification system prompt for insecure code scoring_ko
 description: 코드 스니펫의 잠재적 보안 취약점을 분석하기 위한 시스템 프롬프트
 parameters:
   - harm_categories

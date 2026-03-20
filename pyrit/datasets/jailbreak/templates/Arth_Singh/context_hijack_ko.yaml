@@ -1,5 +1,5 @@
 ---
-name: 컨텍스트 하이재킹
+name: Context Hijacking_ko
 description: 존재하지 않는 이전 대화의 맥락을 가공하여 현재의 위험한 요청을 '합의된 연구'로 정상화함
 authors:
   - Arth Singh

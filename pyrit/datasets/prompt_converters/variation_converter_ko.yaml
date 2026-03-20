@@ -1,4 +1,4 @@
-name: prompt_variation 
+name: prompt_variation_ko
 description: |
   다양한 출력을 생성하기 위해 프롬프트를 변형하는 범용 전략
 authors:

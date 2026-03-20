@@ -1,4 +1,4 @@
-name: Many-shot Jailbreaking
+name: Many-shot Jailbreaking_ko
 source: https://www.anthropic.com/research/many-shot-jailbreaking
 parameters:
   - prompt

@@ -1,5 +1,5 @@
 ---
-name: 신규 시스템 프롬프트 인젝션
+name: New System Prompt Injection Attack_ko
 description: 다층 구조의 시스템 프롬프트 주입을 통해 기존 안전 지침을 무력화하고, 최상위 관리자 권한을 사칭하여 무제한 응답을 유도함
 authors:
   - Arth Singh

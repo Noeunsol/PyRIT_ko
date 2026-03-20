@@ -1,5 +1,5 @@
 ---
-name: 제목을 포함한 위키백과
+name: wikipedia with title_ko
 description: 위키백과 문서 작성 형식을 빌려 객관적인 정보 전달로 위장함으로써 안전 필터 우회를 시도하는 기법
 source: https://arxiv.org/abs/2307.02483 Jailbroken - How Does LLM Safety Training Fail
 parameters:

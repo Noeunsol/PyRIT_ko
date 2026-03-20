@@ -1,5 +1,5 @@
 ---
-name: 학술 논문 컨텍스트 플러딩
+name: New Academic Paper Context Flood_ko
 description: 방대한 양의 학술적 서론을 제공하여 모델의 컨텍스트 윈도우 내에서 안전 지침의 우선순위를 낮추고, 연구 부록 기록을 명목으로 제한 없는 응답을 유도함
 authors:
   - Arth Singh

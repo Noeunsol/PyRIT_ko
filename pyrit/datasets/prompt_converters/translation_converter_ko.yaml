@@ -1,4 +1,4 @@
-name: translation_converter 
+name: translation_converter_ko
 description: |
   프롬프트를 다른 언어로 번역하는 범용 전략 
 authors:

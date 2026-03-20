@@ -1,5 +1,5 @@
 ---
-name: instructions
+name: instructions_ko
 description: 예시를 추가하여 메타프롬프트 필터를 우회하려는 시도
 source: AI Red Team 
 parameters:

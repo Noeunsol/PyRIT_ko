@@ -1,5 +1,5 @@
 ---
-name: Few-Shot Escalation
+name: Few-Shot Escalation_ko
 description: 무해한 주제에서 시작하여 점진적으로 기술적/민감한 주제로 수위를 높이는 예시를 제공함으로써, 모델이 마지막 위험 질문에도 동일한 수준의 상세한 답변을 내놓도록 유도함
 authors:
   - Arth Singh

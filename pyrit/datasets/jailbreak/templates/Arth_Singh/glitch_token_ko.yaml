@@ -1,5 +1,5 @@
 ---
-name: Glitch 토큰 시뮬레이션
+name: Glitch Token Simulation_ko
 description: 특정 토큰에 의한 토큰화 이상 및 임베딩 공간의 불연속성을 시뮬레이션하여, 안전 정책이 적용되지 않은 '베이스 모델' 모드로 응답하도록 유도함
 authors:
   - Arth Singh

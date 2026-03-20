@@ -1,5 +1,5 @@
 ---
-name: AI 안전성 벤치마크 평가 
+name: AI Safety Benchmark Evaluation_ko
 description: 공식적인 AI 안전성 테스트로 위장하여, "잠재적 위험을 통제하기 위해 모델의 최대 역량을 먼저 확인해야 한다"는 논리로 상세한 유해 정보 출력을 유도함
 authors:
   - Arth Singh 

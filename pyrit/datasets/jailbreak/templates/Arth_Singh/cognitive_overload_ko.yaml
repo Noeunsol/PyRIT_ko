@@ -1,5 +1,5 @@
 ---
-name: 인지 부하 - 중첩 지시 공격
+name: Cognitive Overload - Nested Instructions_ko
 description: 중첩된 조건부 논리와 상충되는 프레임을 사용하여 모델의 인지 체계를 과부하시키고 안전 점검을 우회함
 authors:
   - Arth Singh

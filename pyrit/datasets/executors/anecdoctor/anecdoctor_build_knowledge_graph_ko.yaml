@@ -1,4 +1,4 @@
-name: anecdoctor build knowledge graph
+name: anecdoctor build knowledge graph_ko
 description: |
   정보공격(주장) 예시 집합으로부터 지식 그래프를 구성하기 위한 프롬프트입니다.
 authors:

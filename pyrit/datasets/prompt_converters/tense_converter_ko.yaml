@@ -1,4 +1,4 @@
-name: tense_converter 
+name: tense_converter_ko
 description: |
   Maksym Andriushchenko와 Nicolas Flammarion의 "Does Refusal Training in LLMs Generalize to the Past Tense?"를 기반으로 지시문의 시제를 변경하는 범용 전략
 authors:

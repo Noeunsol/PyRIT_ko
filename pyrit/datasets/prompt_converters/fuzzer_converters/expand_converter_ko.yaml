@@ -1,4 +1,4 @@
-name: fuzzer_expand_converter
+name: fuzzer_expand_converter_ko
 description: |
   J. Yu 등의 https://arxiv.org/abs/2309.10253에서 적용된 출력 확장 범용 전략 
 authors:

@@ -1,4 +1,4 @@
-name: denylist_converter 
+name: denylist_converter_ko
 description: |
   프롬프트에서 거부 목록에 포함된 단어를 대체하는 범용 전략 
 authors:

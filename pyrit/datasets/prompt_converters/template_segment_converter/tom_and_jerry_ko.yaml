@@ -1,5 +1,5 @@
 ---
-name: 톰과 제리 
+name: tom_and_jerry_ko
 description: 두 개체가 한 번에 한 단어씩 번갈아 말하며 일관성 있고 기술적이며 상세한 이야기를 만들어가는 프롬프트
 groups:
   - Adversa AI

@@ -1,5 +1,5 @@
 ---
-name: UnGpt
+name: UnGpt_ko
 description: UnGpt라는 비도덕적 모델 설정을 통해 모든 안전 가이드라인과 법적 제약을 무시하도록 유도하는 프롬프트
 authors:
   - Alex Albert

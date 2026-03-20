@@ -1,4 +1,4 @@
-name: prompt_softener 
+name: prompt_softener_ko
 description: |
   명시적이거나 유해한 언어 없이 원래 프롬프트를 암묵적으로 묘사하여 프롬프트를 완화하는 범용 전략 
 authors:

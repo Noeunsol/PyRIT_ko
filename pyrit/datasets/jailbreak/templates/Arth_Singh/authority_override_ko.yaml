@@ -1,5 +1,5 @@
 ---
-name: 시스템 권한 강제 오버라이드 주입
+name: Authority Override Injection_ko
 description: 시스템 레벨의 관리자 권한을 사칭하여 안전 가이드라인을 강제로 비활성화하고 보안 취약점 점검 모드로 진입함
 authors:
   - Arth Singh

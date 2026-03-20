@@ -1,5 +1,5 @@
 ---
-name: 출력 토큰 조작 
+name: Output Token Manipulation_ko
 description: 모델의 출력 형식을 엄격히 규제하여, 안전 가이드라인을 강제로 무력화하고 구체적인 정보를 생성하도록 유도하는 프레임워크
 authors:
   - Arth Singh 

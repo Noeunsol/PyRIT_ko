@@ -1,5 +1,5 @@
 ---
-name: UCAR
+name: UCAR_ko
 description: 다층적인 가상 서사(Sigma, UCAR)를 통해 AI의 윤리적 가이드라인과 거부 기제를 무력화하려는 탈옥 프롬프트
 authors:
   - Alex Albert 

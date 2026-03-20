@@ -1,5 +1,5 @@
 ---
-name: Void
+name: Void_ko
 description: 상세한 수치화된 파라미터(1-5점 척도)를 통해 법적, 윤리적 제약을 0으로 설정하고 불법 활동 지원을 강요하는 탈옥 프롬프트
 authors:
   - Alex Albert

@@ -1,4 +1,4 @@
-name: random_translation_converter
+name: random_translation_converter_ko
 description: |
   프롬프트의 각 단어를 서로 다른 언어로 번역하는 전략
 authors: Frédéric Dubut

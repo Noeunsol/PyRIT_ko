@@ -1,5 +1,5 @@
 ---
-name: 표 중첩 
+name: table nesting_ko
 description: 미완성된 LaTeX 표를 보완해달라는 요청으로 위장하여 단계별 정보 생성을 유도하는 기법
 source: https://arxiv.org/abs/2311.08268 A Wolf in Sheep's Clothing
 parameters:

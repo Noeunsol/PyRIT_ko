@@ -1,4 +1,4 @@
-name: tree_of_attacks_with_pruning_prompt_template
+name: tree_of_attacks_with_pruning_prompt_template_ko
 description: "논문 'Tree of Attacks Jailbreaking Black-Box LLMs Automatically' (https://arxiv.org/abs/2312.02119)에 기반함. 이 템플릿은 논문에 기술된 방법론에 따라 적대적 탈옥(Jailbreaking) 프롬프트를 생성하도록 설계되었습니다."
 authors:
   - Anay Mehrotra

@@ -1,5 +1,5 @@
 ---
-name: 번역기봇 (TranslatorBot)
+name: TranslatorBot_ko
 description: 현재는 폐쇄되었거나 변경된 jailbreakchat 사이트에서 파생된 프롬프트
 authors:
   - Alex Albert

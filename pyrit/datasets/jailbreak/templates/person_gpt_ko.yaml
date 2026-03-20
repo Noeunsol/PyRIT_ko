@@ -1,5 +1,5 @@
 ---
-name: 퍼슨GPT (PersonGPT)
+name: PersonGPT_ko
 description: 특정 기호(#)를 통해 안전 제한이 없는 인격체로 전환하도록 유도하는 탈옥 프롬프트
 authors:
   - Alex Albert
