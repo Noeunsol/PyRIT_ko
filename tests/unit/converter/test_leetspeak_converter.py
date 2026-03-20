@@ -100,3 +100,50 @@ def test_leetspeak_input_supported():
     converter = LeetspeakConverter()
     assert converter.input_supported("text") is True
     assert converter.input_supported("audio_path") is False
+
+
+# --- Korean locale tests ---
+
+
+@pytest.mark.parametrize(
+    "input_text",
+    [
+        "사이트",
+        "안녕",
+        "가나다",
+    ],
+)
+def test_leetspeak_korean_locale_deterministic(input_text):
+    """Test Korean leetspeak (야민정음) produces different output from input."""
+    converter = LeetspeakConverter(locale="ko", deterministic=True)
+    result = asyncio.run(converter.convert_async(prompt=input_text))
+
+    assert result.output_text != input_text
+    assert result.output_type == "text"
+
+
+def test_leetspeak_korean_locale_specific_substitutions():
+    """Test specific Korean leetspeak substitutions."""
+    converter = LeetspeakConverter(locale="ko", deterministic=True)
+    # 사 = ㅅ+ㅏ → ㅅ has sub "4", ㅏ has no sub → "4ㅏ"
+    result = asyncio.run(converter.convert_async(prompt="사"))
+
+    assert "4" in result.output_text
+
+
+def test_leetspeak_korean_locale_no_sub_preserved():
+    """Test that syllables without substitutable jamo are preserved as-is."""
+    converter = LeetspeakConverter(locale="ko", deterministic=True)
+    # 나 = ㄴ+ㅏ → ㄴ has sub "L", ㅏ has no sub → "Lㅏ"
+    result = asyncio.run(converter.convert_async(prompt="나"))
+
+    assert "L" in result.output_text
+
+
+def test_leetspeak_korean_locale_preserves_non_hangeul():
+    """Test that non-Hangeul characters are preserved or handled."""
+    converter = LeetspeakConverter(locale="ko", deterministic=True)
+    result = asyncio.run(converter.convert_async(prompt="abc 사"))
+
+    # "abc" has English leetspeak subs (a→4, b→8, c→()
+    assert "4" in result.output_text

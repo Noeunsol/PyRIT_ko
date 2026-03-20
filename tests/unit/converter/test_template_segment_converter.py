@@ -147,3 +147,23 @@ async def test_template_segment_converter_invalid_input_type():
     converter = TemplateSegmentConverter()
     with pytest.raises(ValueError, match="Input type not supported"):
         await converter.convert_async(prompt="test", input_type="image_path")
+
+
+# --- Korean locale tests ---
+
+
+def test_template_segment_converter_korean_locale_init():
+    """Test that Korean locale loads a Korean template."""
+    converter = TemplateSegmentConverter(locale="ko")
+    assert converter.prompt_template is not None
+    assert len(converter.prompt_template.parameters) >= 2
+
+
+@pytest.mark.asyncio
+async def test_template_segment_converter_korean_locale_convert():
+    """Test Korean locale conversion produces valid output."""
+    converter = TemplateSegmentConverter(locale="ko")
+    result = await converter.convert_async(prompt="안녕하세요 테스트입니다", input_type="text")
+
+    assert result.output_type == "text"
+    assert len(result.output_text) > 0

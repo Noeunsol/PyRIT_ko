@@ -156,3 +156,74 @@ def test_nato_converter_output_supported():
     assert converter.output_supported("text") is True
     assert converter.output_supported("image_path") is False
     assert converter.output_supported("audio_path") is False
+
+
+# --- Korean locale tests ---
+
+
+@pytest.mark.asyncio
+async def test_nato_converter_korean_locale_basic():
+    """Test Korean phonetic alphabet conversion for a simple syllable."""
+    converter = NatoConverter(locale="ko")
+    # 안 = ㅇ(잉어) + ㅏ(아버지) + ㄴ(나폴리)
+    result = await converter.convert_async(prompt="안", input_type="text")
+
+    assert isinstance(result, ConverterResult)
+    assert result.output_type == "text"
+    assert "잉어" in result.output_text
+    assert "아버지" in result.output_text
+    assert "나폴리" in result.output_text
+
+
+@pytest.mark.asyncio
+async def test_nato_converter_korean_locale_full_example():
+    """Test docstring example: 안녕 → 잉어 아버지 나폴리 나폴리 연못 잉어."""
+    converter = NatoConverter(locale="ko")
+    result = await converter.convert_async(prompt="안녕", input_type="text")
+
+    assert result.output_text == "잉어 아버지 나폴리 나폴리 연못 잉어"
+
+
+@pytest.mark.asyncio
+async def test_nato_converter_korean_locale_digits():
+    """Test Korean digit conversion."""
+    converter = NatoConverter(locale="ko")
+    result = await converter.convert_async(prompt="123", input_type="text")
+
+    assert "하나" in result.output_text
+    assert "둘" in result.output_text
+    assert "삼" in result.output_text
+
+
+@pytest.mark.asyncio
+async def test_nato_converter_korean_locale_ssang_jamo():
+    """Test double consonant decomposition: 까 = ㄲ → ㄱ+ㄱ."""
+    converter = NatoConverter(locale="ko")
+    result = await converter.convert_async(prompt="까", input_type="text")
+
+    # ㄲ decomposes to ㄱ+ㄱ → 기러기 기러기, then ㅏ → 아버지
+    assert "기러기" in result.output_text
+    assert "아버지" in result.output_text
+
+
+@pytest.mark.asyncio
+async def test_nato_converter_korean_locale_compound_vowel():
+    """Test compound vowel decomposition: 와 = ㅇ+ㅘ → ㅗ+ㅏ."""
+    converter = NatoConverter(locale="ko")
+    result = await converter.convert_async(prompt="와", input_type="text")
+
+    # ㅘ decomposes to ㅗ+ㅏ → 오징어 아버지
+    assert "오징어" in result.output_text
+    assert "아버지" in result.output_text
+
+
+@pytest.mark.asyncio
+async def test_nato_converter_korean_locale_mixed_text():
+    """Test mixed Korean and English in Korean locale."""
+    converter = NatoConverter(locale="ko")
+    result = await converter.convert_async(prompt="A가", input_type="text")
+
+    # A → Alfa (NATO map reused), 가 = ㄱ(기러기) + ㅏ(아버지)
+    assert "Alfa" in result.output_text
+    assert "기러기" in result.output_text
+    assert "아버지" in result.output_text

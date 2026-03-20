@@ -1,8 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
+import logging
 from pathlib import Path
 from typing import Any, Collection, Mapping, Optional
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_LOCALE = "en"
 SUPPORTED_LOCALES: tuple[str, ...] = ("en", "ko")
@@ -71,8 +74,19 @@ def resolve_localized_yaml_path(*, base_path: Path, locale: str = DEFAULT_LOCALE
     If a localized variant (e.g., ``name_ko.yaml``) exists, returns that path;
     otherwise falls back to the original path.
     """
-    paths = get_localized_file_paths(resolved_path=base_path.resolve())
-    return paths.get(locale, base_path.resolve())
+    resolved = base_path.resolve()
+    paths = get_localized_file_paths(resolved_path=resolved)
+    result = paths.get(locale, resolved)
+
+    if locale != DEFAULT_LOCALE and result == resolved:
+        logger.warning(
+            "Localized YAML for locale '%s' not found: %s — falling back to default '%s'",
+            locale,
+            base_path.name,
+            DEFAULT_LOCALE,
+        )
+
+    return result
 
 
 def get_localized_file_paths(

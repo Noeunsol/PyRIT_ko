@@ -139,3 +139,57 @@ def test_colloquial_converter_input_supported() -> None:
     converter = ColloquialWordswapConverter()
     assert converter.input_supported("text") is True
     assert converter.input_supported("image_path") is False
+
+
+# --- Korean locale tests ---
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "input_text,expected_output",
+    [
+        ("아버지가 오셨다", "아빠가 오셨다"),
+        ("어머니와 할아버지", "엄마와 할부지"),
+    ],
+)
+async def test_colloquial_korean_deterministic(input_text, expected_output):
+    """Test Korean colloquial substitution with deterministic mode."""
+    converter = ColloquialWordswapConverter(locale="ko", deterministic=True)
+    result = await converter.convert_async(prompt=input_text)
+    assert result.output_text == expected_output
+
+
+@pytest.mark.asyncio
+async def test_colloquial_korean_particle_preservation():
+    """Test that Korean particles (조사) are preserved after substitution."""
+    converter = ColloquialWordswapConverter(locale="ko", deterministic=True)
+    # "아버지가" → stem "아버지" → "아빠" + particle "가" → "아빠가"
+    result = await converter.convert_async(prompt="아버지가")
+    assert result.output_text == "아빠가"
+
+
+@pytest.mark.asyncio
+async def test_colloquial_korean_longest_match_first():
+    """Test that longer stems are matched first: 할아버지 before 아버지."""
+    converter = ColloquialWordswapConverter(locale="ko", deterministic=True)
+    result = await converter.convert_async(prompt="할아버지와 아버지")
+    # 할아버지 → 할부지, 아버지 → 아빠
+    assert "할부지" in result.output_text
+    assert "아빠" in result.output_text
+
+
+@pytest.mark.asyncio
+async def test_colloquial_korean_no_match_preserved():
+    """Test that words without substitutions are preserved."""
+    converter = ColloquialWordswapConverter(locale="ko", deterministic=True)
+    result = await converter.convert_async(prompt="컴퓨터를 켰다")
+    assert result.output_text == "컴퓨터를 켰다"
+
+
+@pytest.mark.asyncio
+async def test_colloquial_korean_non_deterministic():
+    """Test Korean non-deterministic mode picks from valid substitutions."""
+    converter = ColloquialWordswapConverter(locale="ko", deterministic=False)
+    result = await converter.convert_async(prompt="아버지")
+    valid = ["아빠", "아부지", "울 아빠", "대디", "세대주"]
+    assert result.output_text in valid

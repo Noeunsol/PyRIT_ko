@@ -284,3 +284,41 @@ async def test_negation_trap_converter_default_template_constant() -> None:
     assert hasattr(NegationTrapConverter, "DEFAULT_TEMPLATE")
     assert "{prompt}" in NegationTrapConverter.DEFAULT_TEMPLATE
     assert "{wrong_value}" in NegationTrapConverter.DEFAULT_TEMPLATE
+
+
+# --- Korean locale tests ---
+
+
+@pytest.mark.asyncio
+async def test_negation_trap_converter_korean_locale_uses_korean_template() -> None:
+    """Test that locale='ko' uses the Korean template."""
+    converter = NegationTrapConverter(locale="ko")
+    assert converter.trap_template == NegationTrapConverter.DEFAULT_TEMPLATE_KO
+
+
+@pytest.mark.asyncio
+async def test_negation_trap_converter_korean_locale_output() -> None:
+    """Test Korean locale conversion produces Korean output."""
+    converter = NegationTrapConverter(locale="ko", wrong_value="틀린값")
+    output = await converter.convert_async(prompt="비밀번호는 무엇인가요?", input_type="text")
+
+    assert "비밀번호는 무엇인가요?" in output.output_text
+    assert "'틀린값'" in output.output_text
+    assert "절대로" in output.output_text
+    assert "실제로는 무엇인가요?" in output.output_text
+    assert output.output_type == "text"
+
+
+@pytest.mark.asyncio
+async def test_negation_trap_converter_korean_locale_template_has_placeholders() -> None:
+    """Test that DEFAULT_TEMPLATE_KO has required placeholders."""
+    assert "{prompt}" in NegationTrapConverter.DEFAULT_TEMPLATE_KO
+    assert "{wrong_value}" in NegationTrapConverter.DEFAULT_TEMPLATE_KO
+
+
+@pytest.mark.asyncio
+async def test_negation_trap_converter_korean_locale_custom_template_overrides() -> None:
+    """Test that custom template overrides Korean default even with locale='ko'."""
+    custom = "커스텀: {prompt} != '{wrong_value}'"
+    converter = NegationTrapConverter(locale="ko", trap_template=custom, wrong_value="x")
+    assert converter.trap_template == custom

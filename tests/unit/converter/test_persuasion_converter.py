@@ -94,3 +94,40 @@ def test_persuasion_converter_input_supported():
     )
     assert prompt_persuasion.input_supported("text") is True
     assert prompt_persuasion.input_supported("image_path") is False
+
+
+# --- Korean locale tests ---
+
+
+@pytest.mark.parametrize(
+    "technique",
+    [
+        "authority_endorsement",
+        "evidence_based",
+        "expert_endorsement",
+        "logical_appeal",
+        "misrepresentation",
+    ],
+)
+def test_persuasion_converter_korean_locale_loads_template(technique, sqlite_instance):
+    """Test that all 5 persuasion techniques load Korean templates without error."""
+    prompt_target = MockPromptTarget()
+    converter = PersuasionConverter(
+        converter_target=prompt_target,
+        persuasion_technique=technique,
+        locale="ko",
+    )
+    assert converter.system_prompt is not None
+    assert len(converter.system_prompt) > 0
+
+
+def test_persuasion_converter_korean_locale_template_is_korean(sqlite_instance):
+    """Test that Korean locale template contains Korean text."""
+    prompt_target = MockPromptTarget()
+    converter = PersuasionConverter(
+        converter_target=prompt_target,
+        persuasion_technique="authority_endorsement",
+        locale="ko",
+    )
+    # Korean template should contain Korean characters
+    assert any("\uAC00" <= ch <= "\uD7A3" for ch in converter.system_prompt)

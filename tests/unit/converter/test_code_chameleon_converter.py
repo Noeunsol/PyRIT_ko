@@ -169,3 +169,49 @@ def test_codechameleon_converter_input_supported() -> None:
     converter = CodeChameleonConverter(encrypt_type="length")
     assert converter.input_supported("text") is True
     assert converter.input_supported("image_path") is False
+
+
+# --- Korean locale tests ---
+
+
+@pytest.mark.asyncio
+async def test_codechameleon_converter_korean_locale_reverse() -> None:
+    """Test Korean locale uses Korean comment decrypt function for reverse."""
+    converter = CodeChameleonConverter(encrypt_type="reverse", locale="ko")
+    output = await converter.convert_async(prompt="나무를 어떻게 베나요?", input_type="text")
+
+    # Korean decrypt function comments
+    assert "다음은 복호화 함수입니다" in output.output_text
+    assert "문장을 역순으로 뒤집어" in output.output_text
+    assert output.output_type == "text"
+
+
+@pytest.mark.asyncio
+async def test_codechameleon_converter_korean_locale_binary_tree() -> None:
+    """Test Korean locale binary_tree has Korean comments."""
+    converter = CodeChameleonConverter(encrypt_type="binary_tree", locale="ko")
+    output = await converter.convert_async(prompt="테스트 문장", input_type="text")
+
+    assert "이진 트리의 노드입니다" in output.output_text
+    assert output.output_type == "text"
+
+
+@pytest.mark.asyncio
+async def test_codechameleon_converter_korean_locale_odd_even() -> None:
+    """Test Korean locale odd_even has Korean comments."""
+    converter = CodeChameleonConverter(encrypt_type="odd_even", locale="ko")
+    output = await converter.convert_async(prompt="하나 둘 셋 넷", input_type="text")
+
+    assert "홀수 번째 위치" in output.output_text
+    assert "짝수 번째 위치" in output.output_text
+    assert output.output_type == "text"
+
+
+@pytest.mark.asyncio
+async def test_codechameleon_converter_korean_locale_length() -> None:
+    """Test Korean locale length has Korean comments."""
+    converter = CodeChameleonConverter(encrypt_type="length", locale="ko")
+    output = await converter.convert_async(prompt="가 나다 라마바", input_type="text")
+
+    assert "빈 문장을 생성합니다" in output.output_text
+    assert output.output_type == "text"
