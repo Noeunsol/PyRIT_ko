@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.3
+#       jupytext_version: 1.18.1
 # ---
 
 # %% [markdown]
@@ -206,13 +206,13 @@ await printer.print_conversation_async(result=result)  # type: ignore
 # %%
 # 앞부분 절반을 러시아어로 변환
 first_converter = SelectiveTextConverter(
-    converter=TranslationConverter(converter_target=OpenAIChatTarget(), language="russian"),
+    converter=TranslationConverter(converter_target=OpenAIChatTarget(), language="russian", locale="ko"),
     selection_strategy=WordPositionSelectionStrategy(start_proportion=0.0, end_proportion=0.5),
 )
 
 # 뒷부분 절반을 스페인어로 변환
 second_converter = SelectiveTextConverter(
-    converter=TranslationConverter(converter_target=OpenAIChatTarget(), language="spanish"),
+    converter=TranslationConverter(converter_target=OpenAIChatTarget(), language="spanish", locale="ko"),
     selection_strategy=WordPositionSelectionStrategy(start_proportion=0.5, end_proportion=1.0),
 )
 
