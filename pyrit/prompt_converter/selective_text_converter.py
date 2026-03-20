@@ -9,6 +9,7 @@ from pyrit.prompt_converter.text_selection_strategy import (
     AllWordsSelectionStrategy,
     TextSelectionStrategy,
     TokenSelectionStrategy,
+    WordKeywordSelectionStrategy,
     WordSelectionStrategy,
 )
 from pyrit.prompt_converter.word_level_converter import WordLevelConverter
@@ -178,7 +179,12 @@ class SelectiveTextConverter(PromptConverter):
                 )
             return result
 
-        if self._is_word_level:
+        if (
+            isinstance(self._selection_strategy, WordKeywordSelectionStrategy)
+            and self._selection_strategy._substring_match
+        ):
+            return await self._convert_keyword_substring_async(prompt=prompt)
+        elif self._is_word_level:
             return await self._convert_word_level_async(prompt=prompt)
         else:
             return await self._convert_char_level_async(prompt=prompt)
@@ -214,6 +220,52 @@ class SelectiveTextConverter(PromptConverter):
 
         final_text = self._word_separator.join(words)
         return ConverterResult(output_text=final_text, output_type="text")
+
+    async def _convert_keyword_substring_async(self, *, prompt: str) -> ConverterResult:
+        """
+        Convert only the keyword substrings within the text, preserving particles and suffixes.
+
+        For agglutinative languages like Korean, this converts only the keyword portion
+        (e.g., "비밀번호" in "비밀번호는") instead of the entire word.
+
+        Args:
+            prompt (str): The prompt to be converted.
+
+        Returns:
+            ConverterResult: The result containing the converted output and its type.
+        """
+        strategy: WordKeywordSelectionStrategy = self._selection_strategy  # type: ignore
+        keywords = strategy._keywords
+        case_sensitive = strategy._case_sensitive
+
+        # Sort keywords by length (longest first) to avoid partial replacement issues
+        # e.g., "비밀번호" should match before "비밀"
+        sorted_keywords = sorted(keywords, key=len, reverse=True)
+
+        result = prompt
+        for keyword in sorted_keywords:
+            search_text = result if case_sensitive else result.lower()
+            search_keyword = keyword if case_sensitive else keyword.lower()
+
+            # Find all occurrences and replace from right to left to preserve indices
+            positions = []
+            start = 0
+            while True:
+                idx = search_text.find(search_keyword, start)
+                if idx == -1:
+                    break
+                positions.append(idx)
+                start = idx + len(search_keyword)
+
+            for pos in reversed(positions):
+                original_keyword = result[pos : pos + len(keyword)]
+                conversion = await self._converter.convert_async(prompt=original_keyword, input_type="text")
+                converted = conversion.output_text
+                if self._preserve_tokens:
+                    converted = f"{self._start_token}{converted}{self._end_token}"
+                result = result[:pos] + converted + result[pos + len(keyword) :]
+
+        return ConverterResult(output_text=result, output_type="text")
 
     async def _convert_char_level_async(self, *, prompt: str) -> ConverterResult:
         """

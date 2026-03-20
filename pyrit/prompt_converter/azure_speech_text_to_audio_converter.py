@@ -36,14 +36,20 @@ class AzureSpeechTextToAudioConverter(PromptConverter):
     #: Supported audio formats for output.
     AzureSpeechAudioFormat = Literal["wav", "mp3"]
 
+    #: Default voice names per language.
+    DEFAULT_VOICE_MAP: dict[str, str] = {
+        "en-US": "en-US-AvaNeural",
+        "ko-KR": "ko-KR-SunHiNeural",
+    }
+
     def __init__(
         self,
         azure_speech_region: Optional[str] = None,
         azure_speech_key: Optional[str] = None,
         azure_speech_resource_id: Optional[str] = None,
         use_entra_auth: bool = False,
-        synthesis_language: str = "en_US",
-        synthesis_voice_name: str = "en-US-AvaNeural",
+        synthesis_language: str = "en-US",
+        synthesis_voice_name: Optional[str] = None,
         output_format: AzureSpeechAudioFormat = "wav",
         **kwargs,
     ) -> None:
@@ -93,7 +99,11 @@ class AzureSpeechTextToAudioConverter(PromptConverter):
             self._azure_speech_resource_id = None
 
         self._synthesis_language = synthesis_language
-        self._synthesis_voice_name = synthesis_voice_name
+        self._synthesis_voice_name = (
+            synthesis_voice_name
+            if synthesis_voice_name
+            else self.DEFAULT_VOICE_MAP.get(synthesis_language, "en-US-AvaNeural")
+        )
         self._output_format = output_format
 
     def _build_identifier(self) -> ConverterIdentifier:

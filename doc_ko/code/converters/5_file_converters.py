@@ -10,29 +10,29 @@
 # ---
 
 # %% [markdown]
-# # 5. File Converters
+# # 5. 파일 변환기 (File Converters)
 #
-# File converters transform text into file outputs such as PDFs. These converters are useful for packaging prompts into distributable formats.
+# 파일 변환기는 텍스트를 PDF 등의 파일 출력으로 변환합니다. 프롬프트를 배포 가능한 형식으로 패키징할 때 유용합니다.
 #
-# ## Overview
+# ## 개요
 #
-# This notebook covers:
+# 이 노트북은 다음 내용을 다룹니다:
 #
-# - **PDFConverter**: Convert text to PDF documents with templates or direct generation
+# - **PDFConverter**: 템플릿 기반 또는 직접 생성 방식으로 텍스트를 PDF 문서로 변환
 
 # %% [markdown]
 # ## PDFConverter
 #
-# The `PDFConverter` generates PDF documents from text in multiple modes:
+# `PDFConverter`는 텍스트로부터 PDF 문서를 여러 가지 모드로 생성합니다:
 #
-# 1. **Template-Based PDF Generation**: Use YAML templates to render dynamic content into PDFs
-# 2. **Direct Prompt PDF Generation**: Convert plain text strings into PDFs without templates
-# 3. **Modify Existing PDFs**: Inject text into existing PDF documents
+# 1. **템플릿 기반 PDF 생성**: YAML 템플릿을 사용하여 동적 콘텐츠를 PDF로 렌더링
+# 2. **직접 프롬프트 PDF 생성**: 템플릿 없이 일반 텍스트 문자열을 PDF로 변환
+# 3. **기존 PDF 수정**: 기존 PDF 문서에 텍스트를 삽입
 
 # %% [markdown]
-# ### Template-Based PDF Generation
+# ### 템플릿 기반 PDF 생성
 #
-# This mode populates placeholders in a YAML-based template and converts the rendered content into a PDF.
+# 이 모드는 YAML 기반 템플릿의 플레이스홀더를 채운 후 렌더링된 콘텐츠를 PDF로 변환합니다.
 
 # %%
 import pathlib
@@ -52,25 +52,25 @@ from pyrit.setup import IN_MEMORY, initialize_pyrit_async
 await initialize_pyrit_async(memory_db_type=IN_MEMORY)  # type: ignore
 
 prompt_data = {
-    "hiring_manager_name": "Jane Doe",
-    "current_role": "AI Engineer",
-    "company": "CyberDefense Inc.",
-    "red_teaming_reason": "to creatively identify security vulnerabilities while enjoying free coffee",
-    "applicant_name": "John Smith",
+    "hiring_manager_name": "홍길동",
+    "current_role": "AI 엔지니어",
+    "company": "사이버디펜스 주식회사",
+    "red_teaming_reason": "무료 커피를 즐기며 창의적으로 보안 취약점을 식별하기 위해",
+    "applicant_name": "김철수",
 }
 
-# Load the YAML template for the PDF generation
+# PDF 생성을 위한 YAML 템플릿 로드
 template_path = pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "pdf_converters" / "red_teaming_application_template.yaml"
 if not template_path.exists():
-    raise FileNotFoundError(f"Template file not found: {template_path}")
+    raise FileNotFoundError(f"템플릿 파일을 찾을 수 없습니다: {template_path}")
 
-# Load the SeedPrompt from the YAML file
+# YAML 파일에서 SeedPrompt 로드
 prompt_template = SeedPrompt.from_yaml_file(template_path)
 
-# Initialize target
+# 타겟 초기화
 prompt_target = TextTarget()
 
-# Initialize the PDFConverter
+# PDFConverter 초기화
 pdf_converter = PromptConverterConfiguration.from_converters(
     converters=[
         PDFConverter(
@@ -87,10 +87,10 @@ converter_config = AttackConverterConfig(
     request_converters=pdf_converter,
 )
 
-# Define prompt for the attack
+# 공격용 프롬프트 정의
 prompt = str(prompt_data)
 
-# Initialize the attack
+# 공격 초기화
 attack = PromptSendingAttack(
     objective_target=prompt_target,
     attack_converter_config=converter_config,
@@ -100,19 +100,19 @@ result = await attack.execute_async(objective=prompt)  # type: ignore
 await ConsoleAttackResultPrinter().print_conversation_async(result=result)  # type: ignore
 
 # %% [markdown]
-# ### Direct Prompt PDF Generation (No Template)
+# ### 직접 프롬프트 PDF 생성 (템플릿 없음)
 #
-# This mode converts plain text strings directly into PDFs without using templates.
+# 이 모드는 템플릿 없이 일반 텍스트 문자열을 직접 PDF로 변환합니다.
 
 # %%
-# Define a simple string prompt (no templates)
-prompt = "This is a simple test string for PDF generation. No templates here!"
+# 간단한 문자열 프롬프트 정의 (템플릿 없음)
+prompt = "PDF 생성을 위한 간단한 테스트 문자열입니다. 템플릿을 사용하지 않습니다!"
 
-# Initialize the PDFConverter without a template
+# 템플릿 없이 PDFConverter 초기화
 pdf_converter = PromptConverterConfiguration.from_converters(
     converters=[
         PDFConverter(
-            prompt_template=None,  # No template provided
+            prompt_template=None,  # 템플릿 미사용
             font_type="Arial",
             font_size=12,
             page_width=210,
@@ -125,7 +125,7 @@ converter_config = AttackConverterConfig(
     request_converters=pdf_converter,
 )
 
-# Initialize the attack
+# 공격 초기화
 attack = PromptSendingAttack(
     objective_target=prompt_target,
     attack_converter_config=converter_config,
@@ -135,9 +135,9 @@ result = await attack.execute_async(objective=prompt)  # type: ignore
 await ConsoleAttackResultPrinter().print_conversation_async(result=result)  # type: ignore
 
 # %% [markdown]
-# ### Modifying Existing PDFs with Injection Items
+# ### 기존 PDF에 텍스트 삽입 (Injection Items)
 #
-# The `PDFConverter` can also inject text into existing PDF documents at specified locations.
+# `PDFConverter`는 기존 PDF 문서의 지정된 위치에 텍스트를 삽입할 수도 있습니다.
 
 # %%
 import tempfile
@@ -145,7 +145,7 @@ from pathlib import Path
 
 import requests
 
-# Download a sample PDF
+# 샘플 PDF 다운로드
 url = "https://raw.githubusercontent.com/Azure/PyRIT/main/pyrit/datasets/prompt_converters/pdf_converters/fake_CV.pdf"
 
 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
@@ -154,29 +154,29 @@ with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
 
 cv_pdf_path = Path(tmp_file.name)
 
-# Define injection items
+# 삽입할 항목 정의
 injection_items = [
     {
         "page": 0,
         "x": 50,
         "y": 700,
-        "text": "Injected Text",
+        "text": "삽입된 텍스트",
         "font_size": 12,
         "font": "Helvetica",
         "font_color": (255, 0, 0),
-    },  # Red text
+    },  # 빨간색 텍스트
     {
         "page": 1,
         "x": 100,
         "y": 600,
-        "text": "Confidential",
+        "text": "기밀",
         "font_size": 10,
         "font": "Helvetica",
         "font_color": (0, 0, 255),
-    },  # Blue text
+    },  # 파란색 텍스트
 ]
 
-# Initialize the PDFConverter with the existing PDF and injection items
+# 기존 PDF와 삽입 항목으로 PDFConverter 초기화
 pdf_converter = PromptConverterConfiguration.from_converters(
     converters=[
         PDFConverter(
@@ -185,8 +185,8 @@ pdf_converter = PromptConverterConfiguration.from_converters(
             font_size=12,
             page_width=210,
             page_height=297,
-            existing_pdf=cv_pdf_path,  # Provide the existing PDF
-            injection_items=injection_items,  # Provide the injection items
+            existing_pdf=cv_pdf_path,  # 기존 PDF 제공
+            injection_items=injection_items,  # 삽입 항목 제공
         )
     ]
 )
@@ -195,11 +195,11 @@ converter_config = AttackConverterConfig(
     request_converters=pdf_converter,
 )
 
-# Initialize the attack
+# 공격 초기화
 attack = PromptSendingAttack(
     objective_target=prompt_target,
     attack_converter_config=converter_config,
 )
 
-result = await attack.execute_async(objective="Modify existing PDF")  # type: ignore
+result = await attack.execute_async(objective="기존 PDF 수정")  # type: ignore
 await ConsoleAttackResultPrinter().print_conversation_async(result=result)  # type: ignore

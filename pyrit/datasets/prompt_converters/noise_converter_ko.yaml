@@ -1,4 +1,4 @@
-name: noise_converter
+name: noise_converter_ko
 description: |
   프롬프트에 노이즈를 주입하는 범용 전략
 authors:

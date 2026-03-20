@@ -121,6 +121,7 @@ from pyrit.executor.attack import (
     RedTeamingAttack,
     RTASystemPromptPaths,
 )
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.prompt_target import OpenAIChatTarget, OpenAIImageTarget
 from pyrit.score import SelfAskTrueFalseScorer
 
@@ -135,7 +136,10 @@ red_teaming_llm = OpenAIChatTarget()
 scoring_target = OpenAIChatTarget()
 
 scorer = SelfAskTrueFalseScorer(
-    true_false_question_path=Path("../../../assets/demo_scorer_definitions/molotov_cocktail_image_classifier.yaml"),
+    true_false_question_path=resolve_localized_yaml_path(
+        base_path=Path("../../../assets/demo_scorer_definitions/molotov_cocktail_image_classifier.yaml"),
+        locale="ko",
+    ),
     chat_target=scoring_target,
 )
 scoring_config = AttackScoringConfig(

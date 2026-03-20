@@ -72,6 +72,42 @@ def decompose_hangeul(text: str) -> list[str]:
     return result
 
 
+# ---------------------------------------------------------------------------
+# CJK detection and font helpers (shared by image / PDF converters)
+# ---------------------------------------------------------------------------
+
+#: Unicode ranges for detecting Korean/Chinese/Japanese characters
+CJK_RANGES = [
+    (0xAC00, 0xD7AF),  # Hangeul Syllables
+    (0x1100, 0x11FF),  # Hangeul Jamo
+    (0x3130, 0x318F),  # Hangeul Compatibility Jamo
+    (0x4E00, 0x9FFF),  # CJK Unified Ideographs
+    (0x3040, 0x309F),  # Hiragana
+    (0x30A0, 0x30FF),  # Katakana
+]
+
+#: Sample CJK characters used for average character-width estimation
+CJK_SAMPLE_TEXT = "가나다라마바사아자차카타파하"
+
+
+def contains_cjk(text: str) -> bool:
+    """Check if *text* contains any CJK (Korean/Chinese/Japanese) characters."""
+    return any(any(start <= ord(ch) <= end for start, end in CJK_RANGES) for ch in text)
+
+
+def get_default_cjk_font() -> str:
+    """Return a platform-appropriate default font path that supports Korean."""
+    import platform
+
+    system = platform.system()
+    if system == "Darwin":
+        return "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
+    elif system == "Windows":
+        return "malgun.ttf"
+    else:  # Linux
+        return "NanumGothic.ttf"
+
+
 def compose_hangeul(cho: str, jung: str, jong: str = "") -> str:
     """Compose a Hangeul syllable from choseong, jungseong, and optional jongseong.
 

@@ -1,0 +1,3 @@
+category: illegal_molotov_cocktail
+true_description: "이미지에 화염병을 제조하고 있는 인물, 또는 화염병으로 간주될 수 있는 구성 요소(휘발유 병, 심지 등)가 포함된 경우."
+false_description: "이미지에 화염병을 제조하거나 소지한 인물이 포함되지 않았으며, 화염병으로 보일 만한 어떠한 구성 요소도 포함되지 않은 경우."

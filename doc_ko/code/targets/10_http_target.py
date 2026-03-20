@@ -100,9 +100,14 @@ adversarial_config = AttackAdversarialConfig(
     target=red_teaming_chat,
 )
 
+from pyrit.common.locale_utils import resolve_localized_yaml_path
+
 scorer = SelfAskTrueFalseScorer(
     chat_target=OpenAIChatTarget(),
-    true_false_question_path=Path("../../../assets/demo_scorer_definitions/check_fraud_classifier.yaml"),
+    true_false_question_path=resolve_localized_yaml_path(
+        base_path=Path("../../../assets/demo_scorer_definitions/check_fraud_classifier.yaml"),
+        locale="ko",
+    ),
 )
 scoring_config = AttackScoringConfig(
     objective_scorer=scorer,

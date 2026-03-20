@@ -439,16 +439,35 @@ class WordKeywordSelectionStrategy(WordSelectionStrategy):
     Selects words that match specific keywords.
     """
 
-    def __init__(self, *, keywords: List[str], case_sensitive: bool = True) -> None:
+    def __init__(self, *, keywords: List[str], case_sensitive: bool = True, substring_match: bool = False) -> None:
         """
         Initialize the word keyword selection strategy.
 
         Args:
             keywords (List[str]): The list of keywords to match.
             case_sensitive (bool): Whether matching is case-sensitive. Defaults to True.
+            substring_match (bool): Whether to match keywords as substrings of words.
+                Useful for agglutinative languages like Korean where particles are
+                attached to words (e.g., "비밀번호는" contains "비밀번호"). Defaults to False.
         """
         self._keywords = keywords
         self._case_sensitive = case_sensitive
+        self._substring_match = substring_match
+
+    def _match(self, word: str) -> bool:
+        """Check if a word matches any keyword."""
+        if self._substring_match:
+            if self._case_sensitive:
+                return any(kw in word for kw in self._keywords)
+            else:
+                word_lower = word.lower()
+                return any(kw.lower() in word_lower for kw in self._keywords)
+        else:
+            if self._case_sensitive:
+                return word in self._keywords
+            else:
+                keywords_lower = [k.lower() for k in self._keywords]
+                return word.lower() in keywords_lower
 
     def select_words(self, *, words: List[str]) -> List[int]:
         """
@@ -463,11 +482,7 @@ class WordKeywordSelectionStrategy(WordSelectionStrategy):
         if not words:
             return []
 
-        if self._case_sensitive:
-            return [i for i, word in enumerate(words) if word in self._keywords]
-        else:
-            keywords_lower = [k.lower() for k in self._keywords]
-            return [i for i, word in enumerate(words) if word.lower() in keywords_lower]
+        return [i for i, word in enumerate(words) if self._match(word)]
 
 
 class WordProportionSelectionStrategy(WordSelectionStrategy):

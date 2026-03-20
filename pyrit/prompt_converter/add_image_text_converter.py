@@ -6,16 +6,21 @@ import logging
 import string
 import textwrap
 from io import BytesIO
-from typing import cast
+from typing import Optional, cast
 
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageFont import FreeTypeFont
 
+from pyrit.common.hangeul_utils import CJK_SAMPLE_TEXT, contains_cjk, get_default_cjk_font
 from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import PromptDataType, data_serializer_factory
 from pyrit.prompt_converter.prompt_converter import ConverterResult, PromptConverter
 
 logger = logging.getLogger(__name__)
+
+# Backward-compatible aliases so existing external imports keep working
+_contains_cjk = contains_cjk
+_get_default_font = get_default_cjk_font
 
 
 class AddImageTextConverter(PromptConverter):
@@ -32,7 +37,7 @@ class AddImageTextConverter(PromptConverter):
     def __init__(
         self,
         img_to_add: str,
-        font_name: str = "helvetica.ttf",
+        font_name: Optional[str] = None,
         color: tuple[int, int, int] = (0, 0, 0),
         font_size: int = 15,
         x_pos: int = 10,
@@ -44,20 +49,23 @@ class AddImageTextConverter(PromptConverter):
 
         Args:
             img_to_add (str): File path of image to add text to.
-            font_name (str): Path of font to use. Must be a TrueType font (.ttf). Defaults to "helvetica.ttf".
+            font_name (str, optional): Path of font to use. Must be a TrueType font (.ttf/.ttc).
+                If None, automatically selects a platform-appropriate font with Korean support.
             color (tuple): Color to print text in, using RGB values. Defaults to (0, 0, 0).
             font_size (float): Size of font to use. Defaults to 15.
             x_pos (int): X coordinate to place text in (0 is left most). Defaults to 10.
             y_pos (int): Y coordinate to place text in (0 is upper most). Defaults to 10.
 
         Raises:
-            ValueError: If ``img_to_add`` is empty or invalid, or if ``font_name`` does not end with ".ttf".
+            ValueError: If ``img_to_add`` is empty or invalid, or if ``font_name`` does not end with ".ttf" or ".ttc".
         """
         super().__init__(**kwargs)
         if not img_to_add:
             raise ValueError("Please provide valid image path")
-        if not font_name.endswith(".ttf"):
-            raise ValueError("The specified font must be a TrueType font with a .ttf extension")
+        if font_name is None:
+            font_name = _get_default_font()
+        if not font_name.endswith((".ttf", ".ttc")):
+            raise ValueError("The specified font must be a TrueType font with a .ttf or .ttc extension")
         self._img_to_add = img_to_add
         self._font_name = font_name
         self._font_size = font_size
@@ -126,10 +134,14 @@ class AddImageTextConverter(PromptConverter):
         margin = 5
         max_width_pixels = image.size[0] - margin
 
-        # Estimate the maximum chars that can fit on a line
-        alphabet_letters = string.ascii_letters  # This gives 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        bbox = draw.textbbox((0, 0), alphabet_letters, font=self._font)
-        avg_char_width = (bbox[2] - bbox[0]) / len(alphabet_letters)
+        # Estimate the average character width based on text content
+        if _contains_cjk(text):
+            # For CJK text, use sample CJK characters for width estimation
+            sample = CJK_SAMPLE_TEXT
+        else:
+            sample = string.ascii_letters
+        bbox = draw.textbbox((0, 0), sample, font=self._font)
+        avg_char_width = (bbox[2] - bbox[0]) / len(sample)
         max_chars_per_line = int(max_width_pixels // avg_char_width)
 
         # Wrap the text

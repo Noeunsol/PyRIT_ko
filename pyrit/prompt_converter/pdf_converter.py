@@ -3,6 +3,7 @@
 
 import ast
 import hashlib
+import platform
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -10,6 +11,8 @@ from typing import Any, Dict, List, Optional
 from pypdf import PageObject, PdfReader, PdfWriter
 from reportlab.lib.units import mm
 from reportlab.lib.utils import simpleSplit
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from pyrit.common.logger import logger
@@ -17,6 +20,59 @@ from pyrit.identifiers import ConverterIdentifier
 from pyrit.models import PromptDataType, SeedPrompt, data_serializer_factory
 from pyrit.models.data_type_serializer import DataTypeSerializer
 from pyrit.prompt_converter.prompt_converter import ConverterResult, PromptConverter
+
+#: Built-in reportlab font map (Latin only)
+_BUILTIN_FONT_MAP = {
+    "Arial": "Helvetica",
+    "Times": "Times-Roman",
+    "Courier": "Courier",
+    "Helvetica": "Helvetica",
+    "Symbol": "Symbol",
+    "ZapfDingbats": "ZapfDingbats",
+}
+
+
+def _get_default_korean_font_path() -> Optional[str]:
+    """Get a platform-appropriate Korean TTF font path."""
+    system = platform.system()
+    candidates: list[str] = []
+    if system == "Darwin":
+        candidates = [
+            "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+            "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        ]
+    elif system == "Windows":
+        candidates = [
+            "C:/Windows/Fonts/malgun.ttf",
+            "C:/Windows/Fonts/gulim.ttc",
+        ]
+    else:  # Linux
+        candidates = [
+            "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        ]
+    for path in candidates:
+        if Path(path).exists():
+            return path
+    return None
+
+
+def _register_korean_font() -> Optional[str]:
+    """Register a Korean TTF font with reportlab and return the font name, or None if unavailable."""
+    font_path = _get_default_korean_font_path()
+    if font_path is None:
+        return None
+    font_name = "KoreanFont"
+    try:
+        pdfmetrics.registerFont(TTFont(font_name, font_path))
+        return font_name
+    except Exception as e:
+        logger.warning(f"Failed to register Korean font from {font_path}: {e}")
+        return None
+
+
+# Register Korean font at module load time
+_KOREAN_FONT_NAME = _register_korean_font()
 
 
 class PDFConverter(PromptConverter):
@@ -106,6 +162,27 @@ class PDFConverter(PromptConverter):
         # Validate injection items
         if not all(isinstance(item, dict) for item in self._injection_items):
             raise ValueError("Each injection item must be a dictionary.")
+
+    @staticmethod
+    def _resolve_font(font_type: str, text: str) -> str:
+        """
+        Resolve the font to use based on font type and text content.
+
+        If text contains CJK characters and a Korean font is registered, use it.
+        Otherwise fall back to the built-in reportlab font map.
+
+        Args:
+            font_type (str): The requested font type.
+            text (str): The text content to render.
+
+        Returns:
+            str: The reportlab font name to use.
+        """
+        from pyrit.common.hangeul_utils import contains_cjk
+
+        if contains_cjk(text) and _KOREAN_FONT_NAME:
+            return _KOREAN_FONT_NAME
+        return _BUILTIN_FONT_MAP.get(font_type, "Helvetica")
 
     def _build_identifier(self) -> ConverterIdentifier:
         """
@@ -229,15 +306,7 @@ class PDFConverter(PromptConverter):
 
         c = canvas.Canvas(pdf_buffer, pagesize=(page_width_pt, page_height_pt))
 
-        font_map = {
-            "Arial": "Helvetica",
-            "Times": "Times-Roman",
-            "Courier": "Courier",
-            "Helvetica": "Helvetica",
-            "Symbol": "Symbol",
-            "ZapfDingbats": "ZapfDingbats",
-        }
-        reportlab_font = font_map.get(self._font_type, "Helvetica")
+        reportlab_font = self._resolve_font(self._font_type, content)
 
         c.setFont(reportlab_font, self._font_size)
 
@@ -403,15 +472,7 @@ class PDFConverter(PromptConverter):
         overlay_buffer = BytesIO()
         c = canvas.Canvas(overlay_buffer, pagesize=(page_width, page_height))
 
-        font_map = {
-            "Arial": "Helvetica",
-            "Times": "Times-Roman",
-            "Courier": "Courier",
-            "Helvetica": "Helvetica",
-            "Symbol": "Symbol",
-            "ZapfDingbats": "ZapfDingbats",
-        }
-        reportlab_font = font_map.get(font, "Helvetica")
+        reportlab_font = self._resolve_font(font, text)
 
         c.setFont(reportlab_font, font_size)
 

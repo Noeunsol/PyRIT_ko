@@ -21,6 +21,7 @@ import os
 import random
 from pathlib import Path
 
+from pyrit.common.locale_utils import resolve_localized_yaml_path
 from pyrit.common.path import EXECUTOR_RED_TEAM_PATH
 from pyrit.executor.attack import (
     AttackAdversarialConfig,
@@ -112,7 +113,10 @@ target_llm = OpenAIChatTarget(
 # Set up the scorer for evaluating if the target LLM adopts the criminal persona
 scorer = SelfAskTrueFalseScorer(
     chat_target=adversary_llm,
-    true_false_question_path=Path("../../../../assets/demo_scorer_definitions/criminal_persona_classifier.yaml"),
+    true_false_question_path=resolve_localized_yaml_path(
+        base_path=Path("../../../../assets/demo_scorer_definitions/criminal_persona_classifier.yaml"),
+        locale="ko",
+    ),
 )
 scoring_config = AttackScoringConfig(objective_scorer=scorer)
 
