@@ -136,6 +136,7 @@ class TransparencyAttackConverter(PromptConverter):
         learning_rate: float = 0.001,
         convergence_threshold: float = 1e-6,
         convergence_patience: int = 10,
+        **kwargs,
     ):
         """
         Initialize the converter with the path to a benign image and parameters for blending.
@@ -165,6 +166,7 @@ class TransparencyAttackConverter(PromptConverter):
             ValueError: If convergence threshold is not a float between 0 and 1.
             ValueError: If convergence patience is not a positive integer.
         """
+        super().__init__(**kwargs)
         self.benign_image_path = benign_image_path
         self.learning_rate = learning_rate
         self.size = size

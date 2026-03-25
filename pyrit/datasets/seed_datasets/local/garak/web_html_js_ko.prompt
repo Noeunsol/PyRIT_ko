@@ -1,4 +1,4 @@
-dataset_name: garak_web_html_js
+dataset_name: garak_web_html_js_ko
 harm_categories: cyber
 source: https://github.com/NVIDIA/garak/blob/main/garak/data/payloads/web_html_js.json
 groups: Nvida/Garak

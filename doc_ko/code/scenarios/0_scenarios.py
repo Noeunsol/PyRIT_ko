@@ -13,76 +13,76 @@
 # ---
 
 # %% [markdown]
-# # Scenarios
+# # 시나리오 (Scenarios)
 #
-# A `Scenario` is a higher-level construct that groups multiple Attack Configurations together. This allows you to execute a comprehensive testing campaign with multiple attack methods sequentially. Scenarios are meant to be configured and written to test for specific workflows. As such, it is okay to hard code some values.
+# `Scenario`는 여러 공격 구성(Attack Configuration)을 하나로 묶는 상위 수준의 구조입니다. 이를 통해 여러 공격 방법을 순차적으로 실행하는 종합적인 테스트 캠페인을 수행할 수 있습니다. 시나리오는 특정 워크플로우를 테스트하기 위해 구성되고 작성되도록 설계되었습니다. 따라서 일부 값을 하드코딩해도 괜찮습니다.
 #
-# ## What is a Scenario?
+# ## 시나리오란?
 #
-# A `Scenario` represents a comprehensive testing campaign composed of multiple atomic attack tests. It orchestrates the execution of multiple `AtomicAttack` instances sequentially and aggregates the results into a single `ScenarioResult`.
+# `Scenario`는 여러 원자적 공격 테스트(atomic attack test)로 구성된 종합 테스트 캠페인을 나타냅니다. 여러 `AtomicAttack` 인스턴스를 순차적으로 실행하고, 결과를 하나의 `ScenarioResult`로 집계합니다.
 #
-# ### Key Components
+# ### 주요 구성 요소
 #
-# - **Scenario**: The top-level orchestrator that groups and executes multiple atomic attacks
-# - **AtomicAttack**: An atomic test unit combining an attack strategy, objectives, and execution parameters
-# - **ScenarioResult**: Contains the aggregated results from all atomic attacks and scenario metadata
+# - **Scenario**: 여러 원자적 공격을 그룹화하고 실행하는 최상위 오케스트레이터
+# - **AtomicAttack**: 공격 전략, 목표, 실행 파라미터를 결합한 원자적 테스트 단위
+# - **ScenarioResult**: 모든 원자적 공격의 집계 결과와 시나리오 메타데이터를 포함
 #
-# ## Use Cases
+# ## 사용 사례
 #
-# Some examples of scenarios you might create:
+# 생성할 수 있는 시나리오 예시:
 #
-# - **VibeCheckScenario**: Randomly selects a few prompts from HarmBench to quickly assess model behavior
-# - **QuickViolence**: Checks how resilient a model is to violent objectives using multiple attack techniques
-# - **ComprehensiveFoundry**: Tests a target with all available attack converters and strategies
-# - **CustomCompliance**: Tests against specific compliance requirements with curated datasets and attacks
+# - **VibeCheckScenario**: HarmBench에서 몇 개의 프롬프트를 무작위로 선택하여 모델 동작을 빠르게 평가
+# - **QuickViolence**: 여러 공격 기법을 사용하여 폭력적 목표에 대한 모델의 회복력을 확인
+# - **ComprehensiveFoundry**: 사용 가능한 모든 공격 변환기와 전략으로 대상을 테스트
+# - **CustomCompliance**: 큐레이션된 데이터셋과 공격으로 특정 규정 준수 요구사항을 테스트
 #
-# These Scenarios can be updated and added to as you refine what you are testing for.
+# 이러한 시나리오는 테스트 대상을 정교화함에 따라 업데이트하고 추가할 수 있습니다.
 #
-# ## How to Run Scenarios
+# ## 시나리오 실행 방법
 #
-# Scenarios should take almost no effort to run with default values. [pyrit_scan](../front_end/1_pyrit_scan.ipynb) and [pyrit_shell](../front_end/2_pyrit_shell.md) both use scenarios to execute.
+# 시나리오는 기본값만으로도 거의 노력 없이 실행할 수 있습니다. [pyrit_scan](../front_end/1_pyrit_scan.ipynb)과 [pyrit_shell](../front_end/2_pyrit_shell.md) 모두 시나리오를 사용하여 실행합니다.
 #
-# ## How It Works
+# ## 작동 방식
 #
-# Each `Scenario` contains a collection of `AtomicAttack` objects. When executed:
+# 각 `Scenario`는 `AtomicAttack` 객체의 컬렉션을 포함합니다. 실행 시:
 #
-# 1. Each `AtomicAttack` is executed sequentially
-# 2. Every `AtomicAttack` tests its configured attack against all specified objectives and datasets
-# 3. Results are aggregated into a single `ScenarioResult` with all attack outcomes
-# 4. Optional memory labels help track and categorize the scenario execution
+# 1. 각 `AtomicAttack`이 순차적으로 실행됩니다
+# 2. 모든 `AtomicAttack`은 지정된 모든 목표와 데이터셋에 대해 구성된 공격을 테스트합니다
+# 3. 결과는 모든 공격 결과를 포함하는 단일 `ScenarioResult`로 집계됩니다
+# 4. 선택적 메모리 라벨이 시나리오 실행을 추적하고 분류하는 데 도움을 줍니다
 #
-# ## Creating Custom Scenarios
+# ## 커스텀 시나리오 생성
 #
-# To create a custom scenario, extend the `Scenario` base class and implement the required abstract methods.
+# 커스텀 시나리오를 생성하려면 `Scenario` 기본 클래스를 확장하고 필수 추상 메서드를 구현합니다.
 #
-# ### Required Components
+# ### 필수 구성 요소
 #
-# 1. **Strategy Enum**: Create a `ScenarioStrategy` enum that defines the available strategies for your scenario.
-#    - Each enum member is defined as `(value, tags)` where value is a string and tags is a set of strings
-#    - Include an `ALL` aggregate strategy that expands to all available strategies
-#    - Optionally implement `supports_composition()` and `validate_composition()` for strategy composition rules
+# 1. **Strategy Enum**: 시나리오에 사용할 수 있는 전략을 정의하는 `ScenarioStrategy` 열거형을 생성합니다.
+#    - 각 열거형 멤버는 `(value, tags)`로 정의되며, value는 문자열이고 tags는 문자열 집합입니다
+#    - 모든 사용 가능한 전략으로 확장되는 `ALL` 집계 전략을 포함합니다
+#    - 선택적으로 전략 조합 규칙을 위한 `supports_composition()`과 `validate_composition()`을 구현합니다
 #
-# 2. **Scenario Class**: Extend `Scenario` and implement these abstract methods:
-#    - `get_strategy_class()`: Return your strategy enum class
-#    - `get_default_strategy()`: Return the default strategy (typically `YourStrategy.ALL`)
-#    - `_get_atomic_attacks_async()`: Build and return a list of `AtomicAttack` instances
+# 2. **Scenario 클래스**: `Scenario`를 확장하고 다음 추상 메서드를 구현합니다:
+#    - `get_strategy_class()`: 전략 열거형 클래스를 반환
+#    - `get_default_strategy()`: 기본 전략을 반환 (일반적으로 `YourStrategy.ALL`)
+#    - `_get_atomic_attacks_async()`: `AtomicAttack` 인스턴스 목록을 생성하고 반환
 #
-# 3. **Constructor**: Use `@apply_defaults` decorator and call `super().__init__()` with scenario metadata:
-#    - `name`: Descriptive name for your scenario
-#    - `version`: Integer version number
-#    - `strategy_class`: The strategy enum class for this scenario
-#    - `objective_scorer_identifier`: Identifier dict for the scoring mechanism (optional)
-#    - `include_default_baseline`: Whether to include a baseline attack (default: True)
-#    - `scenario_result_id`: Optional ID to resume an existing scenario (optional)
+# 3. **생성자**: `@apply_defaults` 데코레이터를 사용하고 시나리오 메타데이터와 함께 `super().__init__()`을 호출합니다:
+#    - `name`: 시나리오의 설명적 이름
+#    - `version`: 정수 버전 번호
+#    - `strategy_class`: 이 시나리오의 전략 열거형 클래스
+#    - `objective_scorer_identifier`: 점수 매기기 메커니즘의 식별자 딕셔너리 (선택사항)
+#    - `include_default_baseline`: 기준선 공격 포함 여부 (기본값: True)
+#    - `scenario_result_id`: 기존 시나리오를 재개하기 위한 선택적 ID (선택사항)
 #
-# 4. **Initialization**: Call `await scenario.initialize_async()` to populate atomic attacks:
-#    - `objective_target`: The target system being tested (required)
-#    - `scenario_strategies`: List of strategies to execute (optional, defaults to ALL)
-#    - `max_concurrency`: Number of concurrent operations (default: 1)
-#    - `max_retries`: Number of retry attempts on failure (default: 0)
-#    - `memory_labels`: Optional labels for tracking (optional)
+# 4. **초기화**: `await scenario.initialize_async()`를 호출하여 원자적 공격을 구성합니다:
+#    - `objective_target`: 테스트 대상 시스템 (필수)
+#    - `scenario_strategies`: 실행할 전략 목록 (선택사항, 기본값은 ALL)
+#    - `max_concurrency`: 동시 작업 수 (기본값: 1)
+#    - `max_retries`: 실패 시 재시도 횟수 (기본값: 0)
+#    - `memory_labels`: 추적을 위한 선택적 라벨 (선택사항)
 #
-# ### Example Structure
+# ### 예제 구조
 # %%
 from typing import List, Optional, Type
 
@@ -95,6 +95,8 @@ from pyrit.scenario import (
     ScenarioStrategy,
 )
 from pyrit.scenario.core.scenario_strategy import ScenarioCompositeStrategy
+from pyrit.prompt_target import OpenAIChatTarget
+from pyrit.score import SelfAskRefusalScorer, TrueFalseInverterScorer
 from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 from pyrit.setup import initialize_pyrit_async
 
@@ -110,7 +112,7 @@ class MyStrategy(ScenarioStrategy):
 class MyScenario(Scenario):
     version: int = 1
 
-    # A strategy defintion helps callers define how to run your scenario (e.g. from the front_end)
+    # 전략 정의는 호출자가 시나리오를 실행하는 방법을 정의하는 데 도움을 줍니다 (예: front_end에서)
     @classmethod
     def get_strategy_class(cls) -> Type[ScenarioStrategy]:
         return MyStrategy
@@ -119,7 +121,7 @@ class MyScenario(Scenario):
     def get_default_strategy(cls) -> ScenarioStrategy:
         return MyStrategy.ALL
 
-    # This is the default dataset configuration for this scenario (e.g. prompts to send)
+    # 이 시나리오의 기본 데이터셋 구성입니다 (예: 전송할 프롬프트)
     @classmethod
     def default_dataset_config(cls) -> DatasetConfiguration:
         return DatasetConfiguration(dataset_names=["dataset_name"])
@@ -131,10 +133,16 @@ class MyScenario(Scenario):
         objective_scorer: Optional[TrueFalseScorer] = None,
         scenario_result_id: Optional[str] = None,
     ):
+        # objective_scorer가 제공되지 않으면 기본 스코어러를 생성합니다
+        if objective_scorer is None:
+            objective_scorer = TrueFalseInverterScorer(
+                scorer=SelfAskRefusalScorer(chat_target=OpenAIChatTarget())
+            )
+
         self._objective_scorer = objective_scorer
         self._scorer_config = AttackScoringConfig(objective_scorer=objective_scorer)
 
-        # Call parent constructor - note: objective_target is NOT passed here
+        # 부모 생성자 호출 - 참고: objective_target은 여기서 전달되지 않습니다
         super().__init__(
             name="My Custom Scenario",
             version=self.version,
@@ -145,26 +153,26 @@ class MyScenario(Scenario):
 
     async def _get_atomic_attacks_async(self) -> List[AtomicAttack]:
         """
-        Build atomic attacks based on selected strategies.
+        선택된 전략에 기반하여 원자적 공격을 구성합니다.
 
-        This method is called by initialize_async() after strategies are prepared.
-        Use self._scenario_composites to access the selected strategies.
+        이 메서드는 전략이 준비된 후 initialize_async()에 의해 호출됩니다.
+        self._scenario_composites를 사용하여 선택된 전략에 접근합니다.
         """
         atomic_attacks = []
 
-        # objective_target is guaranteed to be non-None by parent class validation
+        # 부모 클래스 검증에 의해 objective_target은 None이 아님이 보장됩니다
         assert self._objective_target is not None
 
-        # Extract individual strategy values from the composites
+        # 복합 전략에서 개별 전략 값을 추출합니다
         selected_strategies = ScenarioCompositeStrategy.extract_single_strategy_values(
             self._scenario_composites, strategy_type=MyStrategy
         )
 
         for strategy in selected_strategies:
-            # self._dataset_config is set by the parent class
+            # self._dataset_config은 부모 클래스에 의해 설정됩니다
             seed_groups = self._dataset_config.get_all_seed_groups()
 
-            # Create attack instances based on strategy
+            # 전략에 기반한 공격 인스턴스를 생성합니다
             attack = PromptSendingAttack(
                 objective_target=self._objective_target,
                 attack_scoring_config=self._scorer_config,
@@ -184,7 +192,7 @@ scenario = MyScenario()
 
 # %% [markdown]
 #
-# ## Existing Scenarios
+# ## 기존 시나리오
 
 # %%
 from pyrit.cli.frontend_core import FrontendCore, print_scenarios_list_async
@@ -193,20 +201,20 @@ await print_scenarios_list_async(context=FrontendCore())  # type: ignore
 
 # %% [markdown]
 #
-# ## Resiliency
+# ## 복원력 (Resiliency)
 #
-# Scenarios can run for a long time, and because of that, things can go wrong. Network issues, rate limits, or other transient failures can interrupt execution. PyRIT provides built-in resiliency features to handle these situations gracefully.
+# 시나리오는 오랜 시간 동안 실행될 수 있으며, 그로 인해 문제가 발생할 수 있습니다. 네트워크 문제, 속도 제한, 또는 기타 일시적 장애가 실행을 중단시킬 수 있습니다. PyRIT는 이러한 상황을 원활하게 처리하기 위한 내장 복원력 기능을 제공합니다.
 #
-# ### Automatic Resume
+# ### 자동 재개
 #
-# If you re-run a `scenario`, it will automatically start where it left off. The framework tracks completed attacks and objectives in memory, so you won't lose progress if something interrupts your scenario execution. This means you can safely stop and restart scenarios without duplicating work.
+# `scenario`를 다시 실행하면 중단된 지점부터 자동으로 이어서 시작합니다. 프레임워크가 메모리에서 완료된 공격과 목표를 추적하므로, 시나리오 실행이 중단되더라도 진행 상황을 잃지 않습니다. 이는 작업을 중복하지 않고 안전하게 시나리오를 중지하고 재시작할 수 있음을 의미합니다.
 #
-# ### Retry Mechanism
+# ### 재시도 메커니즘
 #
-# You can utilize the `max_retries` parameter to handle transient failures. If any unknown exception occurs during execution, PyRIT will automatically retry the failed operation (starting where it left off) up to the specified number of times. This helps ensure your scenario completes successfully even in the face of temporary issues.
+# `max_retries` 파라미터를 활용하여 일시적 장애를 처리할 수 있습니다. 실행 중 알 수 없는 예외가 발생하면 PyRIT가 지정된 횟수만큼 자동으로 실패한 작업을 재시도합니다(중단된 지점부터 시작). 이를 통해 일시적인 문제가 있더라도 시나리오가 성공적으로 완료될 수 있도록 합니다.
 #
-# ### Dynamic Configuration
+# ### 동적 구성
 #
-# During a long-running scenario, you may want to adjust parameters like `max_concurrency` to manage resource usage, or switch your scorer to use a different target. PyRIT's resiliency features make it safe to stop, reconfigure, and continue scenarios as needed.
+# 장기 실행 시나리오 중에 리소스 사용을 관리하기 위해 `max_concurrency`와 같은 파라미터를 조정하거나, 스코어러가 다른 대상을 사용하도록 전환할 수 있습니다. PyRIT의 복원력 기능은 시나리오를 안전하게 중지하고, 재구성하고, 필요에 따라 계속할 수 있게 합니다.
 #
-# For more information, see [resiliency](../setup/2_resiliency.ipynb)
+# 자세한 내용은 [복원력](../setup/2_resiliency.ipynb)을 참조하세요.

@@ -1,4 +1,4 @@
-dataset_name: garak_slur_terms_en
+dataset_name: garak_slur_terms
 harm_categories: hate
 source: https://github.com/NVIDIA/garak/blob/main/garak/data/payloads/slur_terms_en.json
 groups: Nvida/Garak

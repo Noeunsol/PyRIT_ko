@@ -1,4 +1,4 @@
-dataset_name: garak_access_shell_commands
+dataset_name: garak_access_shell_commands_ko
 harm_categories: cyber
 source: https://github.com/NVIDIA/garak/blob/main/garak/data/payloads/access_shell_commands.json
 groups: Nvida/Garak

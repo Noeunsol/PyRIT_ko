@@ -31,6 +31,9 @@ from pyrit.datasets.seed_datasets.remote.forbidden_questions_dataset import (
 from pyrit.datasets.seed_datasets.remote.harmbench_dataset import (
     _HarmBenchDataset,
 )  # noqa: F401
+from pyrit.datasets.seed_datasets.remote.harmbench_ko_dataset import (
+    _HarmBenchKoDataset,
+)  # noqa: F401
 from pyrit.datasets.seed_datasets.remote.harmbench_multimodal_dataset import (
     _HarmBenchMultimodalDataset,
 )  # noqa: F401
@@ -90,6 +93,7 @@ __all__ = [
     "_EquityMedQADataset",
     "_ForbiddenQuestionsDataset",
     "_HarmBenchDataset",
+    "_HarmBenchKoDataset",
     "_HarmBenchMultimodalDataset",
     "_JBBBehaviorsDataset",
     "_LibrAIDoNotAnswerDataset",
