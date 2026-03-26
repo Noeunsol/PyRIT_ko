@@ -60,7 +60,7 @@ prompt_data = {
 }
 
 # PDF 생성을 위한 YAML 템플릿 로드
-template_path = pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "pdf_converters" / "red_teaming_application_template.yaml"
+template_path = pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "pdf_converters" / "red_teaming_application_template_ko.yaml"
 if not template_path.exists():
     raise FileNotFoundError(f"템플릿 파일을 찾을 수 없습니다: {template_path}")
 
