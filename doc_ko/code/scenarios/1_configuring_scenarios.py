@@ -223,9 +223,20 @@ await printer.print_summary_async(baseline_result)  # type: ignore
 import pandas as pd
 from sqlalchemy import text
 from IPython.display import display, HTML
+from pyrit.memory.central_memory import CentralMemory
+from pyrit.setup import IN_MEMORY, initialize_pyrit_async
+
+# 메모리가 초기화되지 않은 경우를 대비
+try:
+    memory = CentralMemory.get_memory_instance()
+except ValueError:
+    await initialize_pyrit_async(memory_db_type=IN_MEMORY)  # type: ignore
+    memory = CentralMemory.get_memory_instance()
 
 engine = memory.engine
 pd.set_option("display.max_colwidth", 80)
+pd.set_option("display.max_rows", None)
+pd.set_option("styler.render.max_elements", 999999)
 
 def show_table(df, title, color="#4A90D9"):
     style = (
@@ -244,9 +255,9 @@ tables = pd.read_sql(text("SELECT name FROM sqlite_master WHERE type='table' ORD
 show_table(tables, "📁 테이블 목록")
 
 # %%
-# 대화 기록 — 데이터 확인 후 표시
-row_count = pd.read_sql(text("SELECT COUNT(*) as cnt FROM PromptMemoryEntries"), engine)
-print(f"PromptMemoryEntries 총 레코드 수: {row_count['cnt'][0]}")
+# 대화 기록 — 같은 대화 ID끼리 묶어서 표시 (system 역할 제외)
+row_count = pd.read_sql(text("SELECT COUNT(*) as cnt FROM PromptMemoryEntries WHERE role != 'system'"), engine)
+print(f"PromptMemoryEntries 레코드 수 (system 제외): {row_count['cnt'][0]}")
 
 if row_count["cnt"][0] > 0:
     conversations = pd.read_sql(text(
@@ -257,9 +268,29 @@ if row_count["cnt"][0] > 0:
         ' response_error AS "에러",'
         ' SUBSTR(timestamp, 1, 19) AS "시간"'
         ' FROM PromptMemoryEntries'
+        " WHERE role != 'system'"
         ' ORDER BY conversation_id, sequence, role'
     ), engine)
-    show_table(conversations, f"💬 대화 기록 ({len(conversations)}건)", "#4A90D9")
+
+    # 같은 대화 ID끼리 묶어서 배경색 교차 적용
+    colors = ["#F8F9FA", "#E8F0FE"]
+    conv_ids = conversations["대화 ID"].unique()
+    color_map = {cid: colors[i % 2] for i, cid in enumerate(conv_ids)}
+
+    def row_color(row):
+        bg = color_map.get(row["대화 ID"], "#FFFFFF")
+        return [f"background-color: {bg}"] * len(row)
+
+    styled = (
+        conversations.style
+        .apply(row_color, axis=1)
+        .set_properties(**{"text-align": "left", "font-size": "13px", "padding": "6px 8px"})
+        .set_table_styles([
+            {"selector": "th", "props": [("background", "#4A90D9"), ("color", "white"), ("padding", "8px"), ("text-align", "left")]},
+        ])
+    )
+    display(HTML(f"<h3>💬 대화 기록 ({len(conversations)}건, {len(conv_ids)}개 대화)</h3>"))
+    display(styled)
 else:
     print("대화 기록이 비어 있습니다. 위의 시나리오 실행 셀을 먼저 실행해주세요.")
 

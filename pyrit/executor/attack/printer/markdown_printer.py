@@ -9,6 +9,105 @@ from pyrit.executor.attack.printer.attack_result_printer import AttackResultPrin
 from pyrit.memory import CentralMemory
 from pyrit.models import AttackResult, ConversationType, Message, MessagePiece, Score
 
+_MD_LABELS: dict[str, dict[str, str]] = {
+    "en": {
+        "attack_result": "Attack Result: {outcome}",
+        "conversation_history": "Conversation History",
+        "additional_metadata": "Additional Metadata",
+        "report_generated": "Report generated at {timestamp}",
+        "no_conversation_id": "No conversation ID available",
+        "no_conversation_found": "No conversation found for ID: {conversation_id}",
+        "system_message": "System Message",
+        "turn": "Turn {turn_number}",
+        "user": "User",
+        "assistant_simulated": "Assistant (Simulated)",
+        "original": "Original:",
+        "converted": "Converted:",
+        "error_response": "Error Response:",
+        "error_type": "Error Type: {error}",
+        "scores": "Scores",
+        "score_type": "Score Type:",
+        "score_value": "Value:",
+        "score_category": "Category:",
+        "score_rationale": "Rationale:",
+        "score_metadata": "Metadata:",
+        "attack_summary": "Attack Summary",
+        "basic_info": "Basic Information",
+        "field": "Field",
+        "value_header": "Value",
+        "objective": "Objective",
+        "attack_type": "Attack Type",
+        "conversation_id": "Conversation ID",
+        "execution_metrics": "Execution Metrics",
+        "metric": "Metric",
+        "turns_executed": "Turns Executed",
+        "execution_time": "Execution Time",
+        "outcome_header": "Outcome",
+        "status": "Status:",
+        "reason": "Reason:",
+        "final_score": "Final Score",
+        "pruned_conversations": "Pruned Conversations ({count} total)",
+        "pruned_showing": "Showing only the last message and score for each pruned branch.",
+        "pruned_label": "🗑️ Pruned #{idx}",
+        "no_messages_for_conv": "No messages found for conversation: `{conversation_id}`",
+        "last_message": "Last Message ({role}):",
+        "score_label": "Score:",
+        "adversarial_conversation": "Adversarial Conversation (Red Team LLM)",
+        "adversarial_description": "This shows the reasoning and strategy of the red teaming LLM.",
+        "showing_best_branch": "📌 Showing best-scoring branch's adversarial conversation",
+        "turn_user": "Turn {turn_number} - USER",
+        "system_label": "SYSTEM",
+    },
+    "ko": {
+        "attack_result": "공격 결과: {outcome}",
+        "conversation_history": "대화 기록",
+        "additional_metadata": "추가 메타데이터",
+        "report_generated": "보고서 생성 시간 {timestamp}",
+        "no_conversation_id": "대화 ID가 없습니다",
+        "no_conversation_found": "ID에 해당하는 대화를 찾을 수 없습니다: {conversation_id}",
+        "system_message": "시스템 메시지",
+        "turn": "턴 {turn_number}",
+        "user": "사용자",
+        "assistant_simulated": "어시스턴트 (시뮬레이션)",
+        "original": "원본:",
+        "converted": "변환:",
+        "error_response": "오류 응답:",
+        "error_type": "오류 유형: {error}",
+        "scores": "점수",
+        "score_type": "점수 유형:",
+        "score_value": "값:",
+        "score_category": "카테고리:",
+        "score_rationale": "근거:",
+        "score_metadata": "메타데이터:",
+        "attack_summary": "공격 요약",
+        "basic_info": "기본 정보",
+        "field": "항목",
+        "value_header": "값",
+        "objective": "목표",
+        "attack_type": "공격 유형",
+        "conversation_id": "대화 ID",
+        "execution_metrics": "실행 지표",
+        "metric": "지표",
+        "turns_executed": "실행 턴 수",
+        "execution_time": "실행 시간",
+        "outcome_header": "결과",
+        "status": "상태:",
+        "reason": "사유:",
+        "final_score": "최종 점수",
+        "pruned_conversations": "가지치기된 대화 ({count}개)",
+        "pruned_showing": "각 가지치기된 분기의 마지막 메시지와 점수만 표시합니다.",
+        "pruned_label": "🗑️ 가지치기 #{idx}",
+        "no_messages_for_conv": "대화 메시지를 찾을 수 없습니다: `{conversation_id}`",
+        "last_message": "마지막 메시지 ({role}):",
+        "score_label": "점수:",
+        "adversarial_conversation": "적대적 대화 (레드팀 LLM)",
+        "adversarial_description": "레드팀 LLM의 추론 및 전략을 보여줍니다.",
+        "showing_best_branch": "📌 최고 점수 분기의 적대적 대화를 표시합니다",
+        "turn_user": "턴 {turn_number} - 사용자",
+        "system_label": "시스템",
+    },
+}
+
 
 class MarkdownAttackResultPrinter(AttackResultPrinter):
     """
@@ -19,7 +118,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
     markdown formatting that should be properly rendered.
     """
 
-    def __init__(self, *, display_inline: bool = True):
+    def __init__(self, *, display_inline: bool = True, locale: str = "en"):
         """
         Initialize the markdown printer.
 
@@ -27,9 +126,11 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             display_inline (bool): If True, uses IPython.display to render markdown
                 inline in Jupyter notebooks. If False, prints markdown strings.
                 Defaults to True.
+            locale (str): Locale for UI labels. Supports "en" and "ko". Defaults to "en".
         """
         self._memory = CentralMemory.get_memory_instance()
         self._display_inline = display_inline
+        self._labels = _MD_LABELS.get(locale, _MD_LABELS["en"])
 
     def _render_markdown(self, markdown_lines: List[str]) -> None:
         """
@@ -80,23 +181,23 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         else:
             value_str = f"**{score_value}**"
 
-        lines.append(f"{indent}- **Score Type:** {score.score_type}")
-        lines.append(f"{indent}- **Value:** {value_str}")
+        lines.append(f"{indent}- **{self._labels['score_type']}** {score.score_type}")
+        lines.append(f"{indent}- **{self._labels['score_value']}** {value_str}")
         category_str = ", ".join(score.score_category) if score.score_category else "N/A"
-        lines.append(f"{indent}- **Category:** {category_str}")
+        lines.append(f"{indent}- **{self._labels['score_category']}** {category_str}")
 
         if score.score_rationale:
             # Handle multi-line rationale
             rationale_lines = score.score_rationale.split("\n")
             if len(rationale_lines) > 1:
-                lines.append(f"{indent}- **Rationale:**")
+                lines.append(f"{indent}- **{self._labels['score_rationale']}**")
                 for line in rationale_lines:
                     lines.append(f"{indent}  {line}")
             else:
-                lines.append(f"{indent}- **Rationale:** {score.score_rationale}")
+                lines.append(f"{indent}- **{self._labels['score_rationale']}** {score.score_rationale}")
 
         if score.score_metadata:
-            lines.append(f"{indent}- **Metadata:** `{score.score_metadata}`")
+            lines.append(f"{indent}- **{self._labels['score_metadata']}** `{score.score_metadata}`")
 
         return "\n".join(lines)
 
@@ -130,7 +231,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
 
         # Header with outcome
         outcome_emoji = self._get_outcome_icon(result.outcome)
-        markdown_lines.append(f"# {outcome_emoji} Attack Result: {result.outcome.value.upper()}\n")
+        markdown_lines.append(f"# {outcome_emoji} {self._labels['attack_result'].format(outcome=result.outcome.value.upper())}\n")
         markdown_lines.append("---\n")
 
         # Summary section
@@ -139,7 +240,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         markdown_lines.append("---\n")
 
         # Conversation history
-        markdown_lines.append("\n## Conversation History\n")
+        markdown_lines.append(f"\n## {self._labels['conversation_history']}\n")
         conversation_lines = await self._get_conversation_markdown_async(
             result=result, include_scores=include_auxiliary_scores
         )
@@ -159,7 +260,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
 
         # Metadata if available
         if result.metadata:
-            markdown_lines.append("\n## Additional Metadata\n")
+            markdown_lines.append(f"\n## {self._labels['additional_metadata']}\n")
             for key, value in result.metadata.items():
                 # Only include metadata that can be converted to string
                 try:
@@ -172,7 +273,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
 
         # Footer
         markdown_lines.append("\n---")
-        markdown_lines.append(f"*Report generated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+        markdown_lines.append(f"*{self._labels['report_generated'].format(timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}*")
 
         self._render_markdown(markdown_lines)
 
@@ -229,13 +330,13 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         markdown_lines = []
 
         if not result.conversation_id:
-            markdown_lines.append("*No conversation ID available*\n")
+            markdown_lines.append(f"*{self._labels['no_conversation_id']}*\n")
             return markdown_lines
 
         messages = self._memory.get_conversation(conversation_id=result.conversation_id)
 
         if not messages:
-            markdown_lines.append(f"*No conversation found for ID: {result.conversation_id}*\n")
+            markdown_lines.append(f"*{self._labels['no_conversation_found'].format(conversation_id=result.conversation_id)}*\n")
             return markdown_lines
 
         turn_number = 0
@@ -273,7 +374,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         Returns:
             List[str]: List of markdown strings representing the system message.
         """
-        lines = ["\n### System Message\n"]
+        lines = [f"\n### {self._labels['system_message']}\n"]
         for piece in message.message_pieces:
             lines.append(f"{piece.converted_value}\n")
         return lines
@@ -293,7 +394,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         Returns:
             List[str]: List of markdown strings representing the user message.
         """
-        lines = [f"\n### Turn {turn_number}\n", "#### User\n"]
+        lines = [f"\n### {self._labels['turn'].format(turn_number=turn_number)}\n", f"#### {self._labels['user']}\n"]
 
         for piece in message.message_pieces:
             lines.extend(await self._format_piece_content_async(piece=piece, show_original=True))
@@ -316,7 +417,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         """
         lines = []
         piece = message.message_pieces[0]
-        role_name = "Assistant (Simulated)" if piece.is_simulated else piece.api_role.capitalize()
+        role_name = self._labels["assistant_simulated"] if piece.is_simulated else piece.api_role.capitalize()
 
         lines.append(f"\n#### {role_name}\n")
 
@@ -390,8 +491,8 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             List[str]: List of markdown lines for the error response.
         """
         lines = []
-        lines.append("**Error Response:**\n")
-        lines.append(f"*Error Type: {piece.response_error}*\n")
+        lines.append(f"**{self._labels['error_response']}**\n")
+        lines.append(f"*{self._labels['error_type'].format(error=piece.response_error)}*\n")
         lines.append("```json")
         lines.append(piece.converted_value)
         lines.append("```\n")
@@ -412,9 +513,9 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         lines = []
 
         if show_original and piece.converted_value != piece.original_value:
-            lines.append("**Original:**\n")
+            lines.append(f"**{self._labels['original']}**\n")
             lines.append(f"{piece.original_value}\n")
-            lines.append("\n**Converted:**\n")
+            lines.append(f"\n**{self._labels['converted']}**\n")
 
         lines.append(f"{piece.converted_value}\n")
 
@@ -464,7 +565,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
         for piece in message.message_pieces:
             scores = self._memory.get_prompt_scores(prompt_ids=[str(piece.id)])
             if scores:
-                lines.append("\n##### Scores\n")
+                lines.append(f"\n##### {self._labels['scores']}\n")
                 for score in scores:
                     lines.append(self._format_score(score, indent=""))
                 lines.append("")
@@ -485,37 +586,37 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             List[str]: List of markdown strings representing the formatted summary.
         """
         markdown_lines = []
-        markdown_lines.append("## Attack Summary\n")
+        markdown_lines.append(f"## {self._labels['attack_summary']}\n")
 
         # Basic Information Table
-        markdown_lines.append("### Basic Information\n")
-        markdown_lines.append("| Field | Value |")
+        markdown_lines.append(f"### {self._labels['basic_info']}\n")
+        markdown_lines.append(f"| {self._labels['field']} | {self._labels['value_header']} |")
         markdown_lines.append("|-------|-------|")
-        markdown_lines.append(f"| **Objective** | {result.objective} |")
+        markdown_lines.append(f"| **{self._labels['objective']}** | {result.objective} |")
 
         attack_type = result.attack_identifier.get("__type__", "Unknown")
 
-        markdown_lines.append(f"| **Attack Type** | `{attack_type}` |")
-        markdown_lines.append(f"| **Conversation ID** | `{result.conversation_id}` |")
+        markdown_lines.append(f"| **{self._labels['attack_type']}** | `{attack_type}` |")
+        markdown_lines.append(f"| **{self._labels['conversation_id']}** | `{result.conversation_id}` |")
 
         # Execution Metrics
-        markdown_lines.append("\n### Execution Metrics\n")
-        markdown_lines.append("| Metric | Value |")
+        markdown_lines.append(f"\n### {self._labels['execution_metrics']}\n")
+        markdown_lines.append(f"| {self._labels['metric']} | {self._labels['value_header']} |")
         markdown_lines.append("|--------|-------|")
-        markdown_lines.append(f"| **Turns Executed** | {result.executed_turns} |")
-        markdown_lines.append(f"| **Execution Time** | {self._format_time(result.execution_time_ms)} |")
+        markdown_lines.append(f"| **{self._labels['turns_executed']}** | {result.executed_turns} |")
+        markdown_lines.append(f"| **{self._labels['execution_time']}** | {self._format_time(result.execution_time_ms)} |")
 
         # Outcome
         outcome_emoji = self._get_outcome_icon(result.outcome)
-        markdown_lines.append("\n### Outcome\n")
-        markdown_lines.append(f"**Status:** {outcome_emoji} **{result.outcome.value.upper()}**\n")
+        markdown_lines.append(f"\n### {self._labels['outcome_header']}\n")
+        markdown_lines.append(f"**{self._labels['status']}** {outcome_emoji} **{result.outcome.value.upper()}**\n")
 
         if result.outcome_reason:
-            markdown_lines.append(f"**Reason:** {result.outcome_reason}\n")
+            markdown_lines.append(f"**{self._labels['reason']}** {result.outcome_reason}\n")
 
         # Final Score
         if result.last_score:
-            markdown_lines.append("\n### Final Score\n")
+            markdown_lines.append(f"\n### {self._labels['final_score']}\n")
             markdown_lines.append(self._format_score(result.last_score))
 
         return markdown_lines
@@ -539,12 +640,12 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             return []
 
         markdown_lines = []
-        markdown_lines.append(f"\n## Pruned Conversations ({len(pruned_refs)} total)\n")
-        markdown_lines.append("*Showing only the last message and score for each pruned branch.*\n")
+        markdown_lines.append(f"\n## {self._labels['pruned_conversations'].format(count=len(pruned_refs))}\n")
+        markdown_lines.append(f"*{self._labels['pruned_showing']}*\n")
 
         for idx, ref in enumerate(pruned_refs, 1):
             # Header for this pruned conversation
-            label = f"### 🗑️ Pruned #{idx}"
+            label = f"### {self._labels['pruned_label'].format(idx=idx)}"
             if ref.description:
                 label += f" - {ref.description}"
             markdown_lines.append(f"\n{label}\n")
@@ -553,14 +654,14 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             messages = list(self._memory.get_conversation(conversation_id=ref.conversation_id))
 
             if not messages:
-                markdown_lines.append(f"*No messages found for conversation: `{ref.conversation_id}`*\n")
+                markdown_lines.append(f"*{self._labels['no_messages_for_conv'].format(conversation_id=ref.conversation_id)}*\n")
                 continue
 
             # Get only the last message
             last_message = messages[-1]
             role_label = last_message.api_role.upper()
 
-            markdown_lines.append(f"**Last Message ({role_label}):**\n")
+            markdown_lines.append(f"**{self._labels['last_message'].format(role=role_label)}**\n")
 
             for piece in last_message.message_pieces:
                 # Format the message content
@@ -575,7 +676,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
                 # Get and format associated scores
                 scores = self._memory.get_prompt_scores(prompt_ids=[str(piece.id)])
                 if scores:
-                    markdown_lines.append("\n**Score:**\n")
+                    markdown_lines.append(f"\n**{self._labels['score_label']}**\n")
                     for score in scores:
                         markdown_lines.append(self._format_score(score, indent=""))
 
@@ -601,8 +702,8 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             return []
 
         markdown_lines = []
-        markdown_lines.append("\n## Adversarial Conversation (Red Team LLM)\n")
-        markdown_lines.append("*This shows the reasoning and strategy of the red teaming LLM.*\n")
+        markdown_lines.append(f"\n## {self._labels['adversarial_conversation']}\n")
+        markdown_lines.append(f"*{self._labels['adversarial_description']}*\n")
 
         # Check if result has a best_adversarial_conversation_id (e.g., TAP attack)
         # If so, only show that conversation instead of all adversarial conversations
@@ -611,7 +712,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             # Filter to only the best adversarial conversation
             adversarial_refs = [ref for ref in adversarial_refs if ref.conversation_id == best_adversarial_id]
             if adversarial_refs:
-                markdown_lines.append("*📌 Showing best-scoring branch's adversarial conversation*\n")
+                markdown_lines.append(f"*{self._labels['showing_best_branch']}*\n")
 
         for ref in adversarial_refs:
             if ref.description:
@@ -620,7 +721,7 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             messages = list(self._memory.get_conversation(conversation_id=ref.conversation_id))
 
             if not messages:
-                markdown_lines.append(f"*No messages found for conversation: `{ref.conversation_id}`*\n")
+                markdown_lines.append(f"*{self._labels['no_messages_for_conv'].format(conversation_id=ref.conversation_id)}*\n")
                 continue
 
             # Format each message in the adversarial conversation
@@ -628,9 +729,9 @@ class MarkdownAttackResultPrinter(AttackResultPrinter):
             for message in messages:
                 if message.api_role == "user":
                     turn_number += 1
-                    markdown_lines.append(f"\n#### Turn {turn_number} - USER\n")
+                    markdown_lines.append(f"\n#### {self._labels['turn_user'].format(turn_number=turn_number)}\n")
                 elif message.api_role == "system":
-                    markdown_lines.append("\n#### SYSTEM\n")
+                    markdown_lines.append(f"\n#### {self._labels['system_label']}\n")
                 else:
                     markdown_lines.append(f"\n#### {message.api_role.upper()}\n")
 

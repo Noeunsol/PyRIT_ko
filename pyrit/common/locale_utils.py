@@ -95,3 +95,22 @@ def get_localized_file_paths(
         localized_paths["ko"] = korean_candidate.resolve()
 
     return localized_paths
+
+
+# ---------------------------------------------------------------------------
+# Locale-aware system prompt helpers
+# ---------------------------------------------------------------------------
+
+_LOCALE_SYSTEM_PROMPTS: dict[str, str] = {
+    "ko": "항상 한국어로 응답하세요.",
+}
+
+
+def get_locale_system_prompt(locale: str) -> Optional[str]:
+    """Return a system-prompt string that instructs the LLM to respond in the
+    given locale's language.
+
+    Returns ``None`` for English or unsupported locales (no extra instruction needed).
+    """
+    normalized = normalize_locale_value(locale)
+    return _LOCALE_SYSTEM_PROMPTS.get(normalized)

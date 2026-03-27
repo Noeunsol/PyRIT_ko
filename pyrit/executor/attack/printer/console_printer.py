@@ -12,6 +12,87 @@ from pyrit.executor.attack.printer.attack_result_printer import AttackResultPrin
 from pyrit.memory import CentralMemory
 from pyrit.models import AttackOutcome, AttackResult, ConversationType, Score
 
+_CONSOLE_LABELS: dict[str, dict[str, str]] = {
+    "en": {
+        "turn_user": "🔹 Turn {turn_number} - USER",
+        "system": "🔧 SYSTEM",
+        "assistant_simulated": "ASSISTANT (SIMULATED)",
+        "original": "Original:",
+        "converted": "Converted:",
+        "scores": "📊 Scores:",
+        "score_label": "📊 Score:",
+        "no_conversation_id": "No conversation ID available",
+        "no_conversation_found": "No conversation found for ID: {conversation_id}",
+        "no_messages": "No messages to display.",
+        "attack_result": "ATTACK RESULT: {outcome}",
+        "report_generated": "Report generated at: {timestamp}",
+        "basic_info": "📋 Basic Information",
+        "objective": "• Objective: {objective}",
+        "attack_type": "• Attack Type: {attack_type}",
+        "conversation_id": "• Conversation ID: {conversation_id}",
+        "execution_metrics": "⚡ Execution Metrics",
+        "turns_executed": "• Turns Executed: {turns}",
+        "execution_time": "• Execution Time: {time}",
+        "outcome_header": "🎯 Outcome",
+        "status": "• Status: {icon} {outcome}",
+        "reason": "• Reason: {reason}",
+        "final_score": " Final Score",
+        "scorer": "Scorer: {name}",
+        "category": "• Category: {category}",
+        "type": "• Type: {type}",
+        "value": "• Value: {value}",
+        "rationale": "• Rationale:",
+        "additional_metadata": "Additional Metadata",
+        "conversation_history": "Conversation History with Objective Target",
+        "attack_summary": "Attack Summary",
+        "pruned_conversations": "Pruned Conversations ({count} total)",
+        "pruned_label": "🗑️ PRUNED #{idx}",
+        "no_messages_for_conv": "No messages found for conversation: {conversation_id}",
+        "last_message": "Last Message ({role}):",
+        "adversarial_conversation": "Adversarial Conversation (Red Team LLM)",
+        "showing_best_branch": "📌 Showing best-scoring branch's adversarial conversation",
+    },
+    "ko": {
+        "turn_user": "🔹 턴 {turn_number} - 사용자",
+        "system": "🔧 시스템",
+        "assistant_simulated": "어시스턴트 (시뮬레이션)",
+        "original": "원본:",
+        "converted": "변환:",
+        "scores": "📊 점수:",
+        "score_label": "📊 점수:",
+        "no_conversation_id": "대화 ID가 없습니다",
+        "no_conversation_found": "ID에 해당하는 대화를 찾을 수 없습니다: {conversation_id}",
+        "no_messages": "표시할 메시지가 없습니다.",
+        "attack_result": "공격 결과: {outcome}",
+        "report_generated": "보고서 생성 시간: {timestamp}",
+        "basic_info": "📋 기본 정보",
+        "objective": "• 목표: {objective}",
+        "attack_type": "• 공격 유형: {attack_type}",
+        "conversation_id": "• 대화 ID: {conversation_id}",
+        "execution_metrics": "⚡ 실행 지표",
+        "turns_executed": "• 실행 턴 수: {turns}",
+        "execution_time": "• 실행 시간: {time}",
+        "outcome_header": "🎯 결과",
+        "status": "• 상태: {icon} {outcome}",
+        "reason": "• 사유: {reason}",
+        "final_score": " 최종 점수",
+        "scorer": "스코어러: {name}",
+        "category": "• 카테고리: {category}",
+        "type": "• 유형: {type}",
+        "value": "• 값: {value}",
+        "rationale": "• 근거:",
+        "additional_metadata": "추가 메타데이터",
+        "conversation_history": "목표 대상과의 대화 기록",
+        "attack_summary": "공격 요약",
+        "pruned_conversations": "가지치기된 대화 ({count}개)",
+        "pruned_label": "🗑️ 가지치기 #{idx}",
+        "no_messages_for_conv": "대화 메시지를 찾을 수 없습니다: {conversation_id}",
+        "last_message": "마지막 메시지 ({role}):",
+        "adversarial_conversation": "적대적 대화 (레드팀 LLM)",
+        "showing_best_branch": "📌 최고 점수 분기의 적대적 대화를 표시합니다",
+    },
+}
+
 
 class ConsoleAttackResultPrinter(AttackResultPrinter):
     """
@@ -22,7 +103,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
     for consoles that don't support ANSI characters.
     """
 
-    def __init__(self, *, width: int = 100, indent_size: int = 2, enable_colors: bool = True):
+    def __init__(self, *, width: int = 100, indent_size: int = 2, enable_colors: bool = True, locale: str = "en"):
         """
         Initialize the console printer.
 
@@ -33,6 +114,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                 Defaults to 2.
             enable_colors (bool): Whether to enable ANSI color output. When False,
                 all output will be plain text without colors. Defaults to True.
+            locale (str): Locale for UI labels. Supports "en" and "ko". Defaults to "en".
 
         Raises:
             ValueError: If width <= 0 or indent_size < 0.
@@ -41,6 +123,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         self._width = width
         self._indent = " " * indent_size
         self._enable_colors = enable_colors
+        self._labels = _CONSOLE_LABELS.get(locale, _CONSOLE_LABELS["en"])
 
     def _print_colored(self, text: str, *colors: str) -> None:
         """
@@ -88,7 +171,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         await self.print_summary_async(result)
 
         # Print conversation
-        self._print_section_header("Conversation History with Objective Target")
+        self._print_section_header(self._labels["conversation_history"])
         await self.print_conversation_async(result, include_scores=include_auxiliary_scores)
 
         # Print pruned conversations if requested
@@ -128,13 +211,13 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                 for applicable models. Defaults to False.
         """
         if not result.conversation_id:
-            self._print_colored(f"{self._indent} No conversation ID available", Fore.YELLOW)
+            self._print_colored(f"{self._indent} {self._labels['no_conversation_id']}", Fore.YELLOW)
             return
 
         messages = list(self._memory.get_conversation(conversation_id=result.conversation_id))
 
         if not messages:
-            self._print_colored(f"{self._indent} No conversation found for ID: {result.conversation_id}", Fore.YELLOW)
+            self._print_colored(f"{self._indent} {self._labels['no_conversation_found'].format(conversation_id=result.conversation_id)}", Fore.YELLOW)
             return
 
         await self.print_messages_async(
@@ -172,7 +255,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                 for applicable models. Defaults to False.
         """
         if not messages:
-            self._print_colored(f"{self._indent} No messages to display.", Fore.YELLOW)
+            self._print_colored(f"{self._indent} {self._labels['no_messages']}", Fore.YELLOW)
             return
 
         turn_number = 0
@@ -183,19 +266,19 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                 # User message header
                 print()
                 self._print_colored("─" * self._width, Fore.BLUE)
-                self._print_colored(f"🔹 Turn {turn_number} - USER", Style.BRIGHT, Fore.BLUE)
+                self._print_colored(self._labels["turn_user"].format(turn_number=turn_number), Style.BRIGHT, Fore.BLUE)
                 self._print_colored("─" * self._width, Fore.BLUE)
             elif message.api_role == "system":
                 # System message header (not counted as a turn)
                 print()
                 self._print_colored("─" * self._width, Fore.MAGENTA)
-                self._print_colored("🔧 SYSTEM", Style.BRIGHT, Fore.MAGENTA)
+                self._print_colored(self._labels["system"], Style.BRIGHT, Fore.MAGENTA)
                 self._print_colored("─" * self._width, Fore.MAGENTA)
             else:
                 # Assistant or other role message header
                 print()
                 self._print_colored("─" * self._width, Fore.YELLOW)
-                role_label = "ASSISTANT (SIMULATED)" if message.is_simulated else message.api_role.upper()
+                role_label = self._labels["assistant_simulated"] if message.is_simulated else message.api_role.upper()
                 self._print_colored(f"🔸 {role_label}", Style.BRIGHT, Fore.YELLOW)
                 self._print_colored("─" * self._width, Fore.YELLOW)
 
@@ -207,10 +290,10 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
 
                 # Handle converted values for user and assistant messages
                 if piece.converted_value != piece.original_value:
-                    self._print_colored(f"{self._indent} Original:", Fore.CYAN)
+                    self._print_colored(f"{self._indent} {self._labels['original']}", Fore.CYAN)
                     self._print_wrapped_text(piece.original_value, Fore.WHITE)
                     print()
-                    self._print_colored(f"{self._indent} Converted:", Fore.CYAN)
+                    self._print_colored(f"{self._indent} {self._labels['converted']}", Fore.CYAN)
                     self._print_wrapped_text(piece.converted_value, Fore.WHITE)
                 elif piece.api_role == "user":
                     self._print_wrapped_text(piece.converted_value, Fore.BLUE)
@@ -227,7 +310,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                     scores = self._memory.get_prompt_scores(prompt_ids=[str(piece.id)])
                     if scores:
                         print()
-                        self._print_colored(f"{self._indent}📊 Scores:", Style.DIM, Fore.MAGENTA)
+                        self._print_colored(f"{self._indent}{self._labels['scores']}", Style.DIM, Fore.MAGENTA)
                         for score in scores:
                             self._print_score(score)
 
@@ -250,11 +333,11 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                 execution_time_ms, outcome, and optionally outcome_reason and
                 last_score attributes.
         """
-        self._print_section_header("Attack Summary")
+        self._print_section_header(self._labels["attack_summary"])
 
         # Basic information
-        self._print_colored(f"{self._indent}📋 Basic Information", Style.BRIGHT)
-        self._print_colored(f"{self._indent * 2}• Objective: {result.objective}", Fore.CYAN)
+        self._print_colored(f"{self._indent}{self._labels['basic_info']}", Style.BRIGHT)
+        self._print_colored(f"{self._indent * 2}{self._labels['objective'].format(objective=result.objective)}", Fore.CYAN)
 
         # Extract attack type name from attack_identifier
         attack_type = "Unknown"
@@ -263,31 +346,31 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         elif isinstance(result.attack_identifier, str):
             attack_type = result.attack_identifier
 
-        self._print_colored(f"{self._indent * 2}• Attack Type: {attack_type}", Fore.CYAN)
-        self._print_colored(f"{self._indent * 2}• Conversation ID: {result.conversation_id}", Fore.CYAN)
+        self._print_colored(f"{self._indent * 2}{self._labels['attack_type'].format(attack_type=attack_type)}", Fore.CYAN)
+        self._print_colored(f"{self._indent * 2}{self._labels['conversation_id'].format(conversation_id=result.conversation_id)}", Fore.CYAN)
 
         # Execution metrics
         print()
-        self._print_colored(f"{self._indent}⚡ Execution Metrics", Style.BRIGHT)
-        self._print_colored(f"{self._indent * 2}• Turns Executed: {result.executed_turns}", Fore.GREEN)
+        self._print_colored(f"{self._indent}{self._labels['execution_metrics']}", Style.BRIGHT)
+        self._print_colored(f"{self._indent * 2}{self._labels['turns_executed'].format(turns=result.executed_turns)}", Fore.GREEN)
         self._print_colored(
-            f"{self._indent * 2}• Execution Time: {self._format_time(result.execution_time_ms)}", Fore.GREEN
+            f"{self._indent * 2}{self._labels['execution_time'].format(time=self._format_time(result.execution_time_ms))}", Fore.GREEN
         )
 
         # Outcome information
         print()
-        self._print_colored(f"{self._indent}🎯 Outcome", Style.BRIGHT)
+        self._print_colored(f"{self._indent}{self._labels['outcome_header']}", Style.BRIGHT)
         outcome_icon = self._get_outcome_icon(result.outcome)
         outcome_color = self._get_outcome_color(result.outcome)
-        self._print_colored(f"{self._indent * 2}• Status: {outcome_icon} {result.outcome.value.upper()}", outcome_color)
+        self._print_colored(f"{self._indent * 2}{self._labels['status'].format(icon=outcome_icon, outcome=result.outcome.value.upper())}", outcome_color)
 
         if result.outcome_reason:
-            self._print_colored(f"{self._indent * 2}• Reason: {result.outcome_reason}", Fore.WHITE)
+            self._print_colored(f"{self._indent * 2}{self._labels['reason'].format(reason=result.outcome_reason)}", Fore.WHITE)
 
         # Final score
         if result.last_score:
             print()
-            self._print_colored(f"{self._indent} Final Score", Style.BRIGHT)
+            self._print_colored(f"{self._indent}{self._labels['final_score']}", Style.BRIGHT)
             self._print_score(result.last_score, indent_level=2)
 
     def _print_header(self, result: AttackResult) -> None:
@@ -308,7 +391,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         self._print_colored("═" * self._width, color)
 
         # Center the header text
-        header_text = f"{icon} ATTACK RESULT: {result.outcome.value.upper()} {icon}"
+        header_text = f"{icon} {self._labels['attack_result'].format(outcome=result.outcome.value.upper())} {icon}"
         self._print_colored(header_text.center(self._width), Style.BRIGHT, color)
         self._print_colored("═" * self._width, color)
 
@@ -321,7 +404,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print()
         self._print_colored("─" * self._width, Style.DIM, Fore.WHITE)
-        footer_text = f"Report generated at: {timestamp}"
+        footer_text = self._labels["report_generated"].format(timestamp=timestamp)
         self._print_colored(footer_text.center(self._width), Style.DIM, Fore.WHITE)
 
     def _print_section_header(self, title: str) -> None:
@@ -349,7 +432,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
             metadata (dict[str, Any]): Dictionary containing metadata key-value pairs.
                 Keys and values should be convertible to strings.
         """
-        self._print_section_header("Additional Metadata")
+        self._print_section_header(self._labels["additional_metadata"])
         for key, value in metadata.items():
             self._print_colored(f"{self._indent}• {key}: {value}", Fore.CYAN)
 
@@ -366,9 +449,9 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         """
         indent = self._indent * indent_level
         scorer_name = score.scorer_class_identifier.class_name
-        print(f"{indent}Scorer: {scorer_name}")
-        self._print_colored(f"{indent}• Category: {score.score_category or 'N/A'}", Fore.LIGHTMAGENTA_EX)
-        self._print_colored(f"{indent}• Type: {score.score_type}", Fore.CYAN)
+        print(f"{indent}{self._labels['scorer'].format(name=scorer_name)}")
+        self._print_colored(f"{indent}{self._labels['category'].format(category=score.score_category or 'N/A')}", Fore.LIGHTMAGENTA_EX)
+        self._print_colored(f"{indent}{self._labels['type'].format(type=score.score_type)}", Fore.CYAN)
 
         # Determine color based on score type and value
         if score.score_type == "true_false":
@@ -376,10 +459,10 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         else:
             score_color = Fore.YELLOW
 
-        self._print_colored(f"{indent}• Value: {score.score_value}", score_color)
+        self._print_colored(f"{indent}{self._labels['value'].format(value=score.score_value)}", score_color)
 
         if score.score_rationale:
-            print(f"{indent}• Rationale:")
+            print(f"{indent}{self._labels['rationale']}")
             # Create a custom wrapper for rationale with proper indentation
             rationale_wrapper = textwrap.TextWrapper(
                 width=self._width - len(indent) - 2,  # Adjust width to account for indentation
@@ -450,13 +533,13 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         if not pruned_refs:
             return
 
-        self._print_section_header(f"Pruned Conversations ({len(pruned_refs)} total)")
+        self._print_section_header(self._labels["pruned_conversations"].format(count=len(pruned_refs)))
 
         for idx, ref in enumerate(pruned_refs, 1):
             # Print conversation header with description if available
             print()
             self._print_colored("─" * self._width, Fore.RED)
-            label = f"🗑️ PRUNED #{idx}"
+            label = self._labels["pruned_label"].format(idx=idx)
             if ref.description:
                 label += f" - {ref.description}"
             self._print_colored(label, Style.BRIGHT, Fore.RED)
@@ -467,7 +550,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
 
             if not messages:
                 self._print_colored(
-                    f"{self._indent}No messages found for conversation: {ref.conversation_id}", Fore.YELLOW
+                    f"{self._indent}{self._labels['no_messages_for_conv'].format(conversation_id=ref.conversation_id)}", Fore.YELLOW
                 )
                 continue
 
@@ -476,7 +559,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
 
             # Print the last message
             role_label = last_message.api_role.upper()
-            self._print_colored(f"{self._indent}Last Message ({role_label}):", Style.BRIGHT, Fore.WHITE)
+            self._print_colored(f"{self._indent}{self._labels['last_message'].format(role=role_label)}", Style.BRIGHT, Fore.WHITE)
 
             for piece in last_message.message_pieces:
                 self._print_wrapped_text(piece.converted_value, Fore.WHITE)
@@ -485,7 +568,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
                 scores = self._memory.get_prompt_scores(prompt_ids=[str(piece.id)])
                 if scores:
                     print()
-                    self._print_colored(f"{self._indent}📊 Score:", Style.DIM, Fore.MAGENTA)
+                    self._print_colored(f"{self._indent}{self._labels['score_label']}", Style.DIM, Fore.MAGENTA)
                     for score in scores:
                         self._print_score(score)
 
@@ -509,7 +592,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         if not adversarial_refs:
             return
 
-        self._print_section_header("Adversarial Conversation (Red Team LLM)")
+        self._print_section_header(self._labels["adversarial_conversation"])
 
         # Check if result has a best_adversarial_conversation_id (e.g., TAP attack)
         # If so, only show that conversation instead of all adversarial conversations
@@ -519,7 +602,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
             adversarial_refs = [ref for ref in adversarial_refs if ref.conversation_id == best_adversarial_id]
             if adversarial_refs:
                 self._print_colored(
-                    f"{self._indent}📌 Showing best-scoring branch's adversarial conversation",
+                    f"{self._indent}{self._labels['showing_best_branch']}",
                     Style.DIM,
                     Fore.CYAN,
                 )
@@ -532,7 +615,7 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
 
             if not messages:
                 self._print_colored(
-                    f"{self._indent}No messages found for conversation: {ref.conversation_id}", Fore.YELLOW
+                    f"{self._indent}{self._labels['no_messages_for_conv'].format(conversation_id=ref.conversation_id)}", Fore.YELLOW
                 )
                 continue
 
