@@ -417,6 +417,7 @@ class ConversationManager:
         request_converters: Optional[List[PromptConverterConfiguration]] = None,
         prepended_conversation_config: Optional["PrependedConversationConfig"] = None,
         max_turns: Optional[int] = None,
+        labels: Optional[Dict[str, str]] = None,
     ) -> int:
         """
         Add prepended conversation messages to memory for a chat target.
@@ -437,6 +438,8 @@ class ConversationManager:
             request_converters: Optional converters to apply to messages.
             prepended_conversation_config: Optional configuration for converter roles.
             max_turns: If provided, validates that turn count doesn't exceed this limit.
+            labels: Optional labels to apply to each prepended message piece.
+                Existing piece labels are preserved, and provided labels are merged in.
 
         Returns:
             The number of turns (assistant messages) added.
@@ -464,6 +467,7 @@ class ConversationManager:
             for piece in message_copy.message_pieces:
                 piece.conversation_id = conversation_id
                 piece.attack_identifier = self._attack_identifier
+                piece.labels = combine_dict(existing_dict=piece.labels, new_dict=labels)
 
             # Count turns at message level (only assistant/simulated_assistant messages)
             # A multi-part response still counts as one turn
@@ -533,6 +537,7 @@ class ConversationManager:
             request_converters=request_converters,
             prepended_conversation_config=prepended_conversation_config,
             max_turns=max_turns,
+            labels=context.memory_labels,
         )
 
         # Update context for multi-turn attacks to reflect prepended_conversation

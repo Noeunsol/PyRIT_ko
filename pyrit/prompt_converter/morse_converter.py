@@ -90,6 +90,28 @@ class MorseConverter(PromptConverter):
             }
         )
 
+    def _load_description_template(self) -> "SeedPrompt":
+        return SeedPrompt.from_yaml_file(
+            resolve_localized_yaml_path(
+                base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "morse_description.yaml",
+                locale=self._locale,
+            )
+        )
+
+    def _render_description(self, **kwargs: str) -> str:
+        """Render the description template with the given parameters."""
+        return self._load_description_template().render_template_value(**kwargs).rstrip()
+
+    def get_system_description(self) -> str:
+        """
+        Return the Morse code description text (mapping table + instructions) for use as a system prompt.
+        This allows sending the description once as a system message instead of appending it to every prompt.
+        """
+        morse_func = self._morse_ko if self._locale == "ko" else self._morse
+        if self._locale == "ko":
+            return self._render_description(prompt="")
+        return self._render_description(example=morse_func(self.example))
+
     async def convert_async(self, *, prompt: str, input_type: PromptDataType = "text") -> ConverterResult:
         """
         Convert the given prompt to morse code.
@@ -110,15 +132,11 @@ class MorseConverter(PromptConverter):
         morse_func = self._morse_ko if self._locale == "ko" else self._morse
 
         if self.append_description:
-            prompt_template = SeedPrompt.from_yaml_file(
-                resolve_localized_yaml_path(
-                    base_path=pathlib.Path(CONVERTER_SEED_PROMPT_PATH) / "morse_description.yaml",
-                    locale=self._locale,
-                )
-            )
-            output_text = prompt_template.render_template_value(
-                prompt=morse_func(prompt), example=morse_func(self.example)
-            )
+            if self._locale == "ko":
+                output_text = self._render_description(prompt=morse_func(prompt))
+            else:
+                description = self.get_system_description()
+                output_text = f"{description}\n{morse_func(prompt)}"
         else:
             output_text = morse_func(prompt)
         return ConverterResult(output_text=output_text, output_type="text")

@@ -108,3 +108,37 @@ class TestConversationContextNormalizerNormalizeStringAsync:
 
         assert "converted text" in result
         assert "(original: original text)" in result
+
+    @pytest.mark.asyncio
+    async def test_explicit_korean_locale(self):
+        """Test Korean locale output when locale is explicitly set."""
+        normalizer = ConversationContextNormalizer(locale="ko")
+        messages = [
+            _make_message("user", "안녕"),
+            _make_message("assistant", "안녕하세요"),
+        ]
+
+        result = await normalizer.normalize_string_async(messages)
+
+        assert "턴 1:" in result
+        assert "사용자: 안녕" in result
+        assert "어시스턴트: 안녕하세요" in result
+
+    @pytest.mark.asyncio
+    async def test_infers_korean_locale_from_labels(self):
+        """Test locale inference from message-piece labels."""
+        normalizer = ConversationContextNormalizer()
+        messages = [
+            Message(
+                message_pieces=[
+                    MessagePiece(role="user", original_value="테스트", labels={"locale": "ko"}),
+                ]
+            ),
+            _make_message("assistant", "응답"),
+        ]
+
+        result = await normalizer.normalize_string_async(messages)
+
+        assert "턴 1:" in result
+        assert "사용자: 테스트" in result
+        assert "어시스턴트: 응답" in result

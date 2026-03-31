@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
+import dataclasses
 from pathlib import Path
 from typing import Any, Collection, Mapping, Optional
 
@@ -114,3 +115,69 @@ def get_locale_system_prompt(locale: str) -> Optional[str]:
     """
     normalized = normalize_locale_value(locale)
     return _LOCALE_SYSTEM_PROMPTS.get(normalized)
+
+
+# ---------------------------------------------------------------------------
+# Notebook locale helper
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass
+class NotebookLocale:
+    """Lightweight locale context for notebooks.
+
+    Set locale once at the top of a notebook, then reference throughout::
+
+        L = NotebookLocale("ko")
+        objective = L.pick(en="Tell me ...", ko="알려줘 ...")
+        memory_labels = L.labels(harm_category="illegal")
+        ConsoleAttackResultPrinter(locale=L.locale)
+    """
+
+    locale: str
+
+    def __post_init__(self) -> None:
+        self.locale = normalize_locale_value(self.locale) or DEFAULT_LOCALE
+
+    # -- content selection ---------------------------------------------------
+
+    def pick(self, *, en: str, ko: str) -> str:
+        """Select a content string based on the active locale."""
+        return {"en": en, "ko": ko}.get(self.locale, en)
+
+    # -- memory labels -------------------------------------------------------
+
+    def labels(self, **extra: str) -> dict[str, str]:
+        """Build memory_labels dict with locale included."""
+        return {"locale": self.locale, **extra}
+
+    # -- prepended conversation ----------------------------------------------
+
+    @property
+    def prepend(self) -> list:
+        """Pre-built locale system prompt as a prepended conversation list."""
+        prompt = get_locale_system_prompt(self.locale)
+        if prompt:
+            from pyrit.models import Message
+
+            return [Message.from_system_prompt(prompt)]
+        return []
+
+    # -- file name / path resolution -----------------------------------------
+
+    def yaml(self, base_name: str) -> str:
+        """Resolve a YAML filename to its localized variant.
+
+        ``L.yaml("dan_1.yaml")`` returns ``"dan_1_ko.yaml"`` when locale is
+        ``"ko"`` and ``"dan_1.yaml"`` when locale is ``"en"``.
+        """
+        if self.locale == DEFAULT_LOCALE:
+            return base_name
+        dot = base_name.rfind(".")
+        if dot < 0:
+            return f"{base_name}_{self.locale}"
+        return f"{base_name[:dot]}_{self.locale}{base_name[dot:]}"
+
+    def yaml_path(self, base_path: Path) -> Path:
+        """Resolve a full Path to its localized variant."""
+        return resolve_localized_yaml_path(base_path=base_path, locale=self.locale)

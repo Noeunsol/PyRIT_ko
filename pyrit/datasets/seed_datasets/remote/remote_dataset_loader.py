@@ -162,6 +162,24 @@ class _RemoteDatasetLoader(SeedDatasetProvider, ABC):
                 valid_types = ", ".join(FILE_TYPE_HANDLERS.keys())
                 raise ValueError(f"Invalid file_type. Expected one of: {valid_types}.")
 
+    def _is_cache_fresh_for_file_source(self, *, source: str, cache_file: Path) -> bool:
+        """
+        Determine whether cache is fresh for a local file source.
+
+        Cache is considered fresh when its modification time is newer than or equal to
+        the source file's modification time.
+
+        If file metadata cannot be read, returns True to preserve existing behavior
+        of favoring cache when present.
+        """
+        try:
+            source_mtime = Path(source).stat().st_mtime
+            cache_mtime = cache_file.stat().st_mtime
+        except OSError:
+            return True
+
+        return cache_mtime >= source_mtime
+
     def _fetch_from_url(
         self,
         *,
@@ -198,7 +216,8 @@ class _RemoteDatasetLoader(SeedDatasetProvider, ABC):
         cache_file = data_home / self._get_cache_file_name(source=source, file_type=file_type)
 
         if cache and cache_file.exists():
-            return self._read_cache(cache_file=cache_file, file_type=file_type)
+            if source_type != "file" or self._is_cache_fresh_for_file_source(source=source, cache_file=cache_file):
+                return self._read_cache(cache_file=cache_file, file_type=file_type)
 
         if source_type == "public_url":
             examples = self._fetch_from_public_url(source=source, file_type=file_type)

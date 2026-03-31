@@ -1,8 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-from typing import List
+from typing import List, Optional
 
+from pyrit.common.locale_utils import normalize_locale_value, resolve_locale_from_labels
 from pyrit.message_normalizer.message_normalizer import MessageStringNormalizer
 from pyrit.models import Message, MessagePiece
 
@@ -24,6 +25,48 @@ class ConversationContextNormalizer(MessageStringNormalizer):
         ...
     """
 
+    _LOCALIZED_LABELS = {
+        "en": {
+            "turn": "Turn {turn_number}:",
+            "user": "User",
+            "assistant": "Assistant",
+            "original_suffix": " (original: {original})",
+        },
+        "ko": {
+            "turn": "턴 {turn_number}:",
+            "user": "사용자",
+            "assistant": "어시스턴트",
+            "original_suffix": " (원문: {original})",
+        },
+    }
+
+    def __init__(self, *, locale: Optional[str] = None):
+        """
+        Initialize the normalizer.
+
+        Args:
+            locale: Optional locale override ("en" or "ko"). If not provided,
+                locale is inferred from message labels and defaults to "en".
+        """
+        normalized_locale = normalize_locale_value(locale) if locale else ""
+        self._locale = normalized_locale if normalized_locale in self._LOCALIZED_LABELS else None
+
+    def _resolve_locale(self, messages: List[Message]) -> str:
+        """Resolve locale from explicit override or first message-piece labels."""
+        if self._locale:
+            return self._locale
+
+        for message in messages:
+            for piece in message.message_pieces:
+                if piece.labels:
+                    return resolve_locale_from_labels(
+                        labels=piece.labels,
+                        supported_locales=self._LOCALIZED_LABELS,
+                        default_locale="en",
+                    )
+
+        return "en"
+
     async def normalize_string_async(self, messages: List[Message]) -> str:
         """
         Normalize a list of messages into a turn-based context string.
@@ -40,6 +83,8 @@ class ConversationContextNormalizer(MessageStringNormalizer):
         if not messages:
             raise ValueError("Messages list cannot be empty")
 
+        locale = self._resolve_locale(messages)
+        labels = self._LOCALIZED_LABELS[locale]
         context_parts: List[str] = []
         turn_number = 0
 
@@ -52,16 +97,16 @@ class ConversationContextNormalizer(MessageStringNormalizer):
                 # Start a new turn when we see a user message
                 if piece.api_role == "user":
                     turn_number += 1
-                    context_parts.append(f"Turn {turn_number}:")
+                    context_parts.append(labels["turn"].format(turn_number=turn_number))
 
                 # Format the piece content
-                content = self._format_piece_content(piece)
-                role_label = "User" if piece.api_role == "user" else "Assistant"
+                content = self._format_piece_content(piece, locale=locale)
+                role_label = labels["user"] if piece.api_role == "user" else labels["assistant"]
                 context_parts.append(f"{role_label}: {content}")
 
         return "\n".join(context_parts)
 
-    def _format_piece_content(self, piece: MessagePiece) -> str:
+    def _format_piece_content(self, piece: MessagePiece, *, locale: str = "en") -> str:
         """
         Format a single message piece into a content string.
 
@@ -89,6 +134,7 @@ class ConversationContextNormalizer(MessageStringNormalizer):
         converted = piece.converted_value
 
         if original != converted:
-            return f"{converted} (original: {original})"
+            localized_suffix = self._LOCALIZED_LABELS.get(locale, self._LOCALIZED_LABELS["en"])["original_suffix"]
+            return f"{converted}{localized_suffix.format(original=original)}"
         else:
             return converted

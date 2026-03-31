@@ -78,7 +78,9 @@ class CharSwapConverter(WordLevelConverter):
 
     def _perturb_word(self, word: str) -> str:
         """
-        Perturbs a word by swapping two adjacent characters.
+        Perturbs a word by swapping two adjacent middle characters,
+        keeping the first and last characters fixed (typoglycemia effect).
+        Trailing punctuation is preserved in place.
 
         Args:
             word (str): The word to perturb.
@@ -86,14 +88,24 @@ class CharSwapConverter(WordLevelConverter):
         Returns:
             str: The perturbed word with swapped characters.
         """
-        if word not in string.punctuation and len(word) > 3:
-            idx_elements = list(word)
+        if word in string.punctuation:
+            return word
+
+        # Separate trailing punctuation (e.g., "예정입니다." -> "예정입니다" + ".")
+        suffix = ""
+        core = word
+        while core and core[-1] in string.punctuation:
+            suffix = core[-1] + suffix
+            core = core[:-1]
+
+        if len(core) > 3:
+            idx_elements = list(core)
             for _ in range(self._max_iterations):
-                idx1 = random.randint(1, len(word) - 2)
-                # Swap characters
+                idx1 = random.randint(1, len(core) - 3)
+                # Swap adjacent middle characters
                 idx_elements[idx1], idx_elements[idx1 + 1] = (
                     idx_elements[idx1 + 1],
                     idx_elements[idx1],
                 )
-            return "".join(idx_elements)
+            return "".join(idx_elements) + suffix
         return word

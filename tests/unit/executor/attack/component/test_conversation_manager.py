@@ -1646,6 +1646,29 @@ class TestAddPrependedConversationToMemory:
 
         assert turn_count == 0
 
+    @pytest.mark.asyncio
+    async def test_applies_labels_to_prepended_pieces(
+        self,
+        attack_identifier: Dict[str, str],
+        sample_conversation: List[Message],
+    ) -> None:
+        """Test that provided labels are merged into prepended message pieces."""
+        manager = ConversationManager(attack_identifier=attack_identifier)
+        conversation_id = str(uuid.uuid4())
+
+        await manager.add_prepended_conversation_to_memory_async(
+            prepended_conversation=sample_conversation,
+            conversation_id=conversation_id,
+            labels={"locale": "ko", "source": "prepended"},
+        )
+
+        stored = manager.get_conversation(conversation_id)
+        for message in stored:
+            piece = message.get_piece()
+            assert piece.labels is not None
+            assert piece.labels["locale"] == "ko"
+            assert piece.labels["source"] == "prepended"
+
 
 # =============================================================================
 # Test Class: Edge Cases and Error Handling

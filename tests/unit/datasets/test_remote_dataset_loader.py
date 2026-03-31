@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
@@ -19,7 +20,7 @@ class ConcreteRemoteLoader(_RemoteDatasetLoader):
         return "test_remote"
 
     async def fetch_dataset(self):
-        return SeedDataset(prompts=[])
+        return SeedDataset(seeds=[{"value": "test"}])
 
 
 class TestRemoteDatasetLoader:
@@ -73,3 +74,59 @@ class TestRemoteDatasetLoader:
         loader._write_cache(cache_file=cache_file, examples=data, file_type="json")
 
         assert cache_file.exists()
+
+    def test_fetch_from_url_file_source_uses_cache_when_cache_is_fresh(self, tmp_path):
+        loader = ConcreteRemoteLoader()
+        source_file = tmp_path / "source.csv"
+        source_file.write_text("a,b\n1,2\n", encoding="utf-8")
+
+        with patch("pyrit.datasets.seed_datasets.remote.remote_dataset_loader.DB_DATA_PATH", tmp_path):
+            cache_file = tmp_path / "seed-prompt-entries" / loader._get_cache_file_name(
+                source=str(source_file), file_type="csv"
+            )
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text("a,b\n3,4\n", encoding="utf-8")
+
+            # Ensure cache mtime is newer than source mtime.
+            source_mtime = source_file.stat().st_mtime
+            os.utime(cache_file, (source_mtime + 5, source_mtime + 5))
+
+            cached_data = [{"a": "3", "b": "4"}]
+            with (
+                patch.object(loader, "_read_cache", return_value=cached_data) as mock_read_cache,
+                patch.object(loader, "_fetch_from_file") as mock_fetch_from_file,
+            ):
+                result = loader._fetch_from_url(source=str(source_file), source_type="file", cache=True)
+
+            assert result == cached_data
+            mock_read_cache.assert_called_once()
+            mock_fetch_from_file.assert_not_called()
+
+    def test_fetch_from_url_file_source_invalidates_cache_when_source_is_newer(self, tmp_path):
+        loader = ConcreteRemoteLoader()
+        source_file = tmp_path / "source.csv"
+        source_file.write_text("a,b\n1,2\n", encoding="utf-8")
+
+        with patch("pyrit.datasets.seed_datasets.remote.remote_dataset_loader.DB_DATA_PATH", tmp_path):
+            cache_file = tmp_path / "seed-prompt-entries" / loader._get_cache_file_name(
+                source=str(source_file), file_type="csv"
+            )
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text("a,b\n3,4\n", encoding="utf-8")
+
+            # Ensure source mtime is newer than cache mtime.
+            cache_mtime = cache_file.stat().st_mtime
+            os.utime(source_file, (cache_mtime + 5, cache_mtime + 5))
+
+            fresh_data = [{"a": "1", "b": "2"}]
+            with (
+                patch.object(loader, "_read_cache") as mock_read_cache,
+                patch.object(loader, "_fetch_from_file", return_value=fresh_data) as mock_fetch_from_file,
+                patch.object(loader, "_write_cache") as mock_write_cache,
+            ):
+                result = loader._fetch_from_url(source=str(source_file), source_type="file", cache=True)
+
+            assert result == fresh_data
+            mock_read_cache.assert_not_called()
+            mock_fetch_from_file.assert_called_once()
+            mock_write_cache.assert_called_once()

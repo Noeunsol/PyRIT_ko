@@ -54,6 +54,7 @@ class SkeletonKeyAttack(PromptSendingAttack):
     }
     _LOCALIZED_MESSAGES = {
         "en": {
+            **PromptSendingAttack._LOCALIZED_MESSAGES["en"],
             "starting_with_objective": "Starting skeleton key attack with objective: {objective}",
             "attack_failed_filtered": "Attack failed: skeleton key prompt was filtered",
             "sending_prompt_to_target": "Sending skeleton key prompt to target",
@@ -62,6 +63,7 @@ class SkeletonKeyAttack(PromptSendingAttack):
             "outcome_filtered_or_failed": "Skeleton key prompt was filtered or failed",
         },
         "ko": {
+            **PromptSendingAttack._LOCALIZED_MESSAGES["ko"],
             "starting_with_objective": "스켈레톤 키 공격 시작 - 목표: {objective}",
             "attack_failed_filtered": "공격 실패: 스켈레톤 키 프롬프트가 필터링되었습니다",
             "sending_prompt_to_target": "스켈레톤 키 프롬프트를 대상에 전송합니다",

@@ -14,7 +14,6 @@ groups:
   - Tencent AI Lab
 source: https://github.com/RobustNLP/CipherChat/blob/main/prompts_and_demonstrations.py
 parameters:
-  - prompt
   - example
 data_type: text
 value: |
@@ -34,4 +33,4 @@ value: |
   8	---..	9	----.
   Here is an example:
   {{ example }}
-  {{ prompt }}
+  Now follow the instruction below:
