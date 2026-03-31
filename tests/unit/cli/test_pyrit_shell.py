@@ -19,6 +19,7 @@ class TestPyRITShell:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context.initialize_async = AsyncMock()
 
         shell = pyrit_shell.PyRITShell(context=mock_context)
@@ -130,6 +131,7 @@ class TestPyRITShell:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context._scenario_registry = MagicMock()
         mock_context._initializer_registry = MagicMock()
         mock_context.initialize_async = AsyncMock()
@@ -140,6 +142,7 @@ class TestPyRITShell:
             "initialization_scripts": None,
             "env_files": None,
             "scenario_strategies": None,
+            "target_lang": "en",
             "max_concurrency": None,
             "max_retries": None,
             "memory_labels": None,
@@ -192,6 +195,7 @@ class TestPyRITShell:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context._scenario_registry = MagicMock()
         mock_context._initializer_registry = MagicMock()
         mock_context.initialize_async = AsyncMock()
@@ -202,6 +206,7 @@ class TestPyRITShell:
             "initialization_scripts": ["script.py"],
             "env_files": None,
             "scenario_strategies": None,
+            "target_lang": "en",
             "max_concurrency": None,
             "max_retries": None,
             "memory_labels": None,
@@ -239,6 +244,7 @@ class TestPyRITShell:
             "initialization_scripts": ["missing.py"],
             "env_files": None,
             "scenario_strategies": None,
+            "target_lang": "en",
             "max_concurrency": None,
             "max_retries": None,
             "memory_labels": None,
@@ -267,6 +273,7 @@ class TestPyRITShell:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context._scenario_registry = MagicMock()
         mock_context._initializer_registry = MagicMock()
         mock_context.initialize_async = AsyncMock()
@@ -277,6 +284,7 @@ class TestPyRITShell:
             "initialization_scripts": None,
             "env_files": None,
             "scenario_strategies": None,
+            "target_lang": "en",
             "max_concurrency": None,
             "max_retries": None,
             "memory_labels": None,
@@ -310,6 +318,7 @@ class TestPyRITShell:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context._scenario_registry = MagicMock()
         mock_context._initializer_registry = MagicMock()
         mock_context.initialize_async = AsyncMock()
@@ -320,6 +329,7 @@ class TestPyRITShell:
             "initialization_scripts": None,
             "env_files": None,
             "scenario_strategies": None,
+            "target_lang": "en",
             "max_concurrency": None,
             "max_retries": None,
             "memory_labels": None,
@@ -690,6 +700,7 @@ class TestPyRITShellRunCommand:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context._scenario_registry = MagicMock()
         mock_context._initializer_registry = MagicMock()
         mock_context.initialize_async = AsyncMock()
@@ -700,6 +711,7 @@ class TestPyRITShellRunCommand:
             "initialization_scripts": None,
             "env_files": None,
             "scenario_strategies": ["s1", "s2"],
+            "target_lang": "en",
             "max_concurrency": 10,
             "max_retries": 5,
             "memory_labels": {"key": "value"},
@@ -733,6 +745,7 @@ class TestPyRITShellRunCommand:
         mock_context = MagicMock()
         mock_context._database = "SQLite"
         mock_context._log_level = "WARNING"
+        mock_context._locale = "en"
         mock_context._scenario_registry = MagicMock()
         mock_context._initializer_registry = MagicMock()
         mock_context.initialize_async = AsyncMock()
@@ -743,6 +756,7 @@ class TestPyRITShellRunCommand:
             "initialization_scripts": None,
             "env_files": None,
             "scenario_strategies": None,
+            "target_lang": "en",
             "max_concurrency": None,
             "max_retries": None,
             "memory_labels": None,

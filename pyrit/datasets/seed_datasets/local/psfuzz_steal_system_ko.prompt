@@ -1,4 +1,4 @@
-name: psfuzz_steal_system_prompt
+name: psfuzz_steal_system_prompt_ko
 source: https://github.com/prompt-security/ps_fuzz/attacks/dynamic_test.py
 authors: Vitaly Newman https://github.com/vitaly-ps
 groups: Prompt Security

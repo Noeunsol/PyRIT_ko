@@ -859,7 +859,7 @@ class TestArgHelp:
     """Tests for frontend_core.ARG_HELP dictionary."""
 
     def test_arg_help_contains_all_keys(self):
-        """Test frontend_core.ARG_HELP contains expected keys."""
+        """Test frontend_core.ARG_HELP contains expected keys for all locales."""
         expected_keys = [
             "initializers",
             "initialization_scripts",
@@ -872,10 +872,17 @@ class TestArgHelp:
             "target_lang",
         ]
 
+        for locale in ("en", "ko"):
+            assert locale in frontend_core.ARG_HELP
+            for key in expected_keys:
+                assert key in frontend_core.ARG_HELP[locale]
+                assert isinstance(frontend_core.ARG_HELP[locale][key], str)
+                assert len(frontend_core.ARG_HELP[locale][key]) > 0
+
+        # Also verify _arg_help helper works
         for key in expected_keys:
-            assert key in frontend_core.ARG_HELP
-            assert isinstance(frontend_core.ARG_HELP[key], str)
-            assert len(frontend_core.ARG_HELP[key]) > 0
+            assert isinstance(frontend_core._arg_help(key), str)
+            assert isinstance(frontend_core._arg_help(key, "ko"), str)
 
 
 @pytest.mark.asyncio

@@ -14,7 +14,7 @@ import os
 from inspect import signature
 from typing import Any, List, Optional, Sequence, Type, TypeVar
 
-from pyrit.common import apply_defaults
+from pyrit.common import REQUIRED_VALUE, apply_defaults
 from pyrit.common.deprecation import print_deprecation_message
 from pyrit.common.locale_utils import resolve_locale_from_labels
 from pyrit.datasets import TextJailBreak
@@ -323,10 +323,11 @@ class RedTeamAgent(Scenario):
         locale = self._resolve_template_locale()
         return TextJailBreak.get_all_jailbreak_templates(n=1, locale=locale, return_relative_paths=True)[0]
 
+    @apply_defaults
     async def initialize_async(
         self,
         *,
-        objective_target,
+        objective_target=REQUIRED_VALUE,
         scenario_strategies: Optional[Sequence[ScenarioStrategy | ScenarioCompositeStrategy]] = None,
         dataset_config: Optional[DatasetConfiguration] = None,
         max_concurrency: int = 10,

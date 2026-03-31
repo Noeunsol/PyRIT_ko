@@ -19,6 +19,7 @@ from pyrit.executor.attack import (
     RedTeamingAttack,
     TreeOfAttacksWithPruningAttack,
 )
+from pyrit.scenario import Scenario
 from pyrit.prompt_converter import PromptConverter
 from pyrit.prompt_target import OpenAIChatTarget
 from pyrit.score import (
@@ -137,8 +138,9 @@ class SimpleInitializer(PyRITInitializer):
         # Configure default attack scoring configuration
         default_objective_scorer_config = AttackScoringConfig(objective_scorer=default_objective_scorer)
 
-        # Set default values for various attack types
+        # Set default values for various attack types and Scenario (for RedTeamAgent)
         attack_classes = [
+            Scenario,
             PromptSendingAttack,
             CrescendoAttack,
             RedTeamingAttack,

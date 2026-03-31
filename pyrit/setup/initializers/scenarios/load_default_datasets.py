@@ -73,6 +73,14 @@ class LoadDefaultDatasets(PyRITInitializer):
                 except Exception as e:
                     logger.warning(f"Could not get default datasets from scenario '{scenario_name}': {e}")
 
+        # Add Korean (_ko) variants for all datasets (if they exist as registered providers)
+        available_names = set(SeedDatasetProvider.get_all_dataset_names())
+        ko_datasets = [
+            f"{name}_ko" for name in all_default_datasets
+            if not name.endswith("_ko") and f"{name}_ko" in available_names
+        ]
+        all_default_datasets.extend(ko_datasets)
+
         # Remove duplicates
         unique_datasets = list(dict.fromkeys(all_default_datasets))
 

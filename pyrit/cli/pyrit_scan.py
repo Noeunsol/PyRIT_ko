@@ -88,21 +88,21 @@ Examples:
         "--initializers",
         type=str,
         nargs="+",
-        help=frontend_core.ARG_HELP["initializers"],
+        help=frontend_core._arg_help("initializers"),
     )
 
     parser.add_argument(
         "--initialization-scripts",
         type=str,
         nargs="+",
-        help=frontend_core.ARG_HELP["initialization_scripts"],
+        help=frontend_core._arg_help("initialization_scripts"),
     )
 
     parser.add_argument(
         "--env-files",
         type=str,
         nargs="+",
-        help=frontend_core.ARG_HELP["env_files"],
+        help=frontend_core._arg_help("env_files"),
     )
 
     parser.add_argument(
@@ -111,25 +111,25 @@ Examples:
         type=str,
         nargs="+",
         dest="scenario_strategies",
-        help=frontend_core.ARG_HELP["scenario_strategies"],
+        help=frontend_core._arg_help("scenario_strategies"),
     )
 
     parser.add_argument(
         "--max-concurrency",
         type=frontend_core.positive_int,
-        help=frontend_core.ARG_HELP["max_concurrency"],
+        help=frontend_core._arg_help("max_concurrency"),
     )
 
     parser.add_argument(
         "--max-retries",
         type=frontend_core.non_negative_int,
-        help=frontend_core.ARG_HELP["max_retries"],
+        help=frontend_core._arg_help("max_retries"),
     )
 
     parser.add_argument(
         "--memory-labels",
         type=str,
-        help=frontend_core.ARG_HELP["memory_labels"],
+        help=frontend_core._arg_help("memory_labels"),
     )
 
     parser.add_argument(
@@ -137,20 +137,20 @@ Examples:
         type=str,
         choices=["en", "ko"],
         default="en",
-        help=frontend_core.ARG_HELP["target_lang"],
+        help=frontend_core._arg_help("target_lang"),
     )
 
     parser.add_argument(
         "--dataset-names",
         type=str,
         nargs="+",
-        help=frontend_core.ARG_HELP["dataset_names"],
+        help=frontend_core._arg_help("dataset_names"),
     )
 
     parser.add_argument(
         "--max-dataset-size",
         type=frontend_core.positive_int,
-        help=frontend_core.ARG_HELP["max_dataset_size"],
+        help=frontend_core._arg_help("max_dataset_size"),
     )
 
     return parser.parse_args(args)
@@ -163,13 +163,15 @@ def main(args: Optional[list[str]] = None) -> int:
     Returns:
         int: Exit code (0 for success, 1 for error).
     """
-    print("Starting PyRIT...")
-    sys.stdout.flush()
-
     try:
         parsed_args = parse_args(args)
     except SystemExit as e:
         return e.code if isinstance(e.code, int) else 1
+
+    locale = parsed_args.target_lang
+
+    print(frontend_core._cli_label("starting_pyrit", locale))
+    sys.stdout.flush()
 
     # Handle list commands (don't need full context)
     if parsed_args.list_scenarios:
@@ -197,6 +199,7 @@ def main(args: Optional[list[str]] = None) -> int:
             initialization_scripts=initialization_scripts,
             env_files=env_files,
             log_level=parsed_args.log_level,
+            locale=locale,
         )
 
         return asyncio.run(frontend_core.print_scenarios_list_async(context=context))
@@ -205,12 +208,12 @@ def main(args: Optional[list[str]] = None) -> int:
         # Discover from scenarios directory
         scenarios_path = frontend_core.get_default_initializer_discovery_path()
 
-        context = frontend_core.FrontendCore(log_level=parsed_args.log_level)
+        context = frontend_core.FrontendCore(log_level=parsed_args.log_level, locale=locale)
         return asyncio.run(frontend_core.print_initializers_list_async(context=context, discovery_path=scenarios_path))
 
     # Verify scenario was provided
     if not parsed_args.scenario_name:
-        print("Error: No scenario specified. Use --help for usage information.")
+        print(frontend_core._cli_label("no_scenario_specified", locale))
         return 1
 
     # Run scenario
@@ -234,6 +237,7 @@ def main(args: Optional[list[str]] = None) -> int:
             initializer_names=parsed_args.initializers,
             env_files=env_files,
             log_level=parsed_args.log_level,
+            locale=locale,
         )
 
         # Parse memory labels if provided
