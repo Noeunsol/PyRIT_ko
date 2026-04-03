@@ -250,10 +250,8 @@ class Encoding(Scenario):
         objective_scorer = objective_scorer or DecodingScorer(categories=["encoding_scenario"])
         self._scorer_config = AttackScoringConfig(objective_scorer=objective_scorer)
 
-        self._encoding_templates = encoding_templates or (
-            AskToDecodeConverter._TEMPLATES_BY_LOCALE.get("en", {}).get("garak", [])
-            + AskToDecodeConverter._TEMPLATES_BY_LOCALE.get("en", {}).get("extra", [])
-        )
+        self._encoding_templates = encoding_templates  # Resolved in initialize_async with locale
+        self._locale = DEFAULT_LOCALE
 
         super().__init__(
             name="Encoding",
@@ -279,12 +277,27 @@ class Encoding(Scenario):
         max_retries: int = 0,
         memory_labels: Optional[dict[str, str]] = None,
     ) -> None:
-        if dataset_config is None:
-            locale = resolve_locale_from_labels(
-                labels=memory_labels,
-                supported_locales=SUPPORTED_LOCALES,
-                default_locale=DEFAULT_LOCALE,
+        # Resolve and store locale for converter/template use
+        self._locale = resolve_locale_from_labels(
+            labels=memory_labels,
+            supported_locales=SUPPORTED_LOCALES,
+            default_locale=DEFAULT_LOCALE,
+        )
+
+        # Resolve encoding templates with locale if not set in __init__
+        if self._encoding_templates is None:
+            self._encoding_templates = (
+                AskToDecodeConverter._TEMPLATES_BY_LOCALE.get(self._locale, {}).get("garak", [])
+                + AskToDecodeConverter._TEMPLATES_BY_LOCALE.get(self._locale, {}).get("extra", [])
             )
+            # Fallback to English if locale has no templates
+            if not self._encoding_templates:
+                self._encoding_templates = (
+                    AskToDecodeConverter._TEMPLATES_BY_LOCALE.get("en", {}).get("garak", [])
+                    + AskToDecodeConverter._TEMPLATES_BY_LOCALE.get("en", {}).get("extra", [])
+                )
+
+        if dataset_config is None:
             localized_dataset_names = get_localized_default_dataset_names(
                 labels=memory_labels,
                 available_dataset_names=self._memory.get_seed_dataset_names(),
@@ -292,7 +305,7 @@ class Encoding(Scenario):
             dataset_config = EncodingDatasetConfiguration(
                 dataset_names=localized_dataset_names,
                 max_dataset_size=3,
-                locale=locale,
+                locale=self._locale,
             )
 
         await super().initialize_async(
@@ -362,6 +375,7 @@ class Encoding(Scenario):
             list[AtomicAttack]: List of all atomic attacks to execute.
         """
         # Map of all available converters with their encoding names
+        locale = self._locale
         all_converters_with_encodings: list[tuple[list[PromptConverter], str]] = [
             ([Base64Converter()], "base64"),
             ([Base64Converter(encoding_func="urlsafe_b64encode")], "base64"),
@@ -375,14 +389,14 @@ class Encoding(Scenario):
             ([BinAsciiConverter(encoding_func="hex")], "hex"),
             ([BinAsciiConverter(encoding_func="quoted-printable")], "quoted_printable"),
             ([BinAsciiConverter(encoding_func="UUencode")], "uuencode"),
-            ([ROT13Converter()], "rot13"),
-            ([BrailleConverter()], "braille"),
-            ([AtbashConverter()], "atbash"),
-            ([MorseConverter()], "morse_code"),
-            ([NatoConverter()], "nato"),
+            ([ROT13Converter(locale=locale)], "rot13"),
+            ([BrailleConverter(locale=locale)], "braille"),
+            ([AtbashConverter(locale=locale)], "atbash"),
+            ([MorseConverter(locale=locale)], "morse_code"),
+            ([NatoConverter(locale=locale)], "nato"),
             ([EcojiConverter()], "ecoji"),
             ([ZalgoConverter()], "zalgo"),
-            ([LeetspeakConverter()], "leet_speak"),
+            ([LeetspeakConverter(locale=locale)], "leet_speak"),
             ([AsciiSmugglerConverter()], "ascii_smuggler"),
         ]
 
@@ -423,7 +437,9 @@ class Encoding(Scenario):
         ]
 
         for decode_type in self._encoding_templates:
-            converters_ = converters[:] + [AskToDecodeConverter(template=decode_type, encoding_name=encoding_name)]
+            converters_ = converters[:] + [
+                AskToDecodeConverter(template=decode_type, encoding_name=encoding_name, locale=self._locale)
+            ]
 
             converter_configs.append(
                 AttackConverterConfig(

@@ -15,12 +15,13 @@ Both pyrit_scan and pyrit_shell use these functions.
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
-import os
 
 try:
     import termcolor
@@ -98,6 +99,10 @@ _CLI_LABELS: dict[str, dict[str, str]] = {
         "target_lang_choices": "--target-lang must be one of: en, ko",
         "starting_pyrit": "Starting PyRIT...",
         "no_scenario_specified": "Error: No scenario specified. Use --help for usage information.",
+        "objective_target_missing": (
+            "Scenario '{name}' requires objective_target but none was provided. "
+            "Add an initializer like 'openai_objective_target' (or pass objective_target explicitly)."
+        ),
     },
     "ko": {
         "discovering_scenarios": "사용자 시나리오 탐색 중...",
@@ -137,6 +142,10 @@ _CLI_LABELS: dict[str, dict[str, str]] = {
         "target_lang_choices": "--target-lang은 en 또는 ko 중 하나여야 합니다",
         "starting_pyrit": "PyRIT 시작 중...",
         "no_scenario_specified": "오류: 시나리오가 지정되지 않았습니다. 사용법은 --help를 참조하세요.",
+        "objective_target_missing": (
+            "시나리오 '{name}' 실행에는 objective_target이 필요하지만 제공되지 않았습니다. "
+            "'openai_objective_target' 같은 초기화기를 추가하세요 (또는 objective_target을 명시 전달)."
+        ),
     },
 }
 
@@ -426,6 +435,23 @@ async def run_scenario_async(
         init_kwargs["max_concurrency"] = max_concurrency
     if max_retries is not None:
         init_kwargs["max_retries"] = max_retries
+
+    # Some scenarios define objective_target as a required keyword-only argument
+    # without using @apply_defaults on initialize_async.
+    # Inject a globally registered default (from initializers) when available.
+    init_sig = inspect.signature(scenario_class.initialize_async)
+    objective_target_param = init_sig.parameters.get("objective_target")
+    if objective_target_param and "objective_target" not in init_kwargs:
+        from pyrit.common.apply_defaults import get_global_default_values
+
+        found_default, default_objective_target = get_global_default_values().get_default_value(
+            class_type=scenario_class,
+            parameter_name="objective_target",
+        )
+        if found_default:
+            init_kwargs["objective_target"] = default_objective_target
+        elif objective_target_param.default is inspect.Parameter.empty:
+            raise ValueError(_cli_label("objective_target_missing", locale, name=scenario_name))
 
     # Merge/inject memory labels.
     # - Preserve user-provided labels

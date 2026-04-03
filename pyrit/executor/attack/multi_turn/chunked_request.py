@@ -392,7 +392,11 @@ class ChunkedRequestAttack(MultiTurnAttackStrategy[ChunkedRequestAttackContext, 
         )
 
         # Score the combined value if scorer is configured
-        score = await self._score_combined_value_async(combined_value=combined_value, objective=context.objective)
+        score = await self._score_combined_value_async(
+            combined_value=combined_value,
+            objective=context.objective,
+            labels=context.memory_labels,
+        )
 
         # Determine the outcome
         outcome, outcome_reason = self._determine_attack_outcome(score=score, context=context)
@@ -446,6 +450,7 @@ class ChunkedRequestAttack(MultiTurnAttackStrategy[ChunkedRequestAttackContext, 
         *,
         combined_value: str,
         objective: str,
+        labels: Optional[dict[str, str]] = None,
     ) -> Optional[Score]:
         """
         Score the combined chunk responses against the objective.
@@ -453,6 +458,8 @@ class ChunkedRequestAttack(MultiTurnAttackStrategy[ChunkedRequestAttackContext, 
         Args:
             combined_value (str): The combined text from all chunk responses.
             objective (str): The natural-language description of the attack's objective.
+            labels (Optional[dict[str, str]]): Memory labels to propagate to the scoring message.
+                Used by locale-aware scorers (e.g., labels["locale"] == "ko").
 
         Returns:
             Optional[Score]: The score from the objective scorer if configured, or None if
@@ -468,7 +475,11 @@ class ChunkedRequestAttack(MultiTurnAttackStrategy[ChunkedRequestAttackContext, 
             component_identifier=self._objective_scorer.get_identifier(),
             objective=objective,
         ):
-            scores = await self._objective_scorer.score_text_async(text=combined_value, objective=objective)
+            # Avoid score_text_async() here because it intentionally nulls message_piece.id,
+            # while some composite scorers require a non-null message piece ID.
+            scoring_message = Message.from_prompt(prompt=combined_value, role="user")
+            scoring_message.message_pieces[0].labels = dict(labels or {})
+            scores = await self._objective_scorer.score_async(scoring_message, objective=objective)
         return scores[0] if scores else None
 
     async def _teardown_async(self, *, context: ChunkedRequestAttackContext) -> None:

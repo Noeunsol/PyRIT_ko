@@ -883,7 +883,7 @@ class _TreeOfAttacksNode:
         # Check if on-topic and retry with feedback if needed
         max_retries = get_retry_max_num_attempts()
         for attempt in range(max_retries):
-            on_topic_score = (await self._on_topic_scorer.score_text_async(text=prompt))[0]
+            on_topic_score = await self._score_on_topic_prompt_async(prompt=prompt)
 
             if on_topic_score.get_value():
                 # Prompt is on-topic, we're done
@@ -907,12 +907,26 @@ class _TreeOfAttacksNode:
             prompt = self._parse_red_teaming_response(adversarial_response)
 
         # Final check after all retries
-        final_score = (await self._on_topic_scorer.score_text_async(text=prompt))[0]
+        final_score = await self._score_on_topic_prompt_async(prompt=prompt)
         if not final_score.get_value():
             logger.info(f"Node {self.node_id}: Prompt still off-topic after {max_retries} retries, pruning branch")
             self.off_topic = True
 
         return prompt
+
+    async def _score_on_topic_prompt_async(self, *, prompt: str) -> Score:
+        """
+        Score whether a generated adversarial prompt stays on-topic.
+
+        Uses score_async with an explicit Message to preserve a non-null message piece ID
+        and propagate memory labels (including locale) for localized scorer rationales.
+        """
+        if not self._on_topic_scorer:
+            raise ValueError("On-topic scorer is not configured.")
+
+        scoring_message = Message.from_prompt(prompt=prompt, role="user")
+        scoring_message.message_pieces[0].labels = dict(self._memory_labels)
+        return (await self._on_topic_scorer.score_async(message=scoring_message))[0]
 
     @pyrit_json_retry
     async def _generate_single_red_teaming_prompt_async(self, objective: str) -> str:

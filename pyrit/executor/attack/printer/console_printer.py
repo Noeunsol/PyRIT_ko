@@ -2,12 +2,52 @@
 # Licensed under the MIT license.
 
 import textwrap
+import unicodedata
 from datetime import datetime
 from typing import Any
 
 from colorama import Back, Fore, Style
 
 from pyrit.common.display_response import display_image_response
+
+
+def _east_asian_len(text: str) -> int:
+    """Calculate display width accounting for East Asian wide characters."""
+    width = 0
+    for ch in text:
+        if unicodedata.east_asian_width(ch) in ("W", "F"):
+            width += 2
+        else:
+            width += 1
+    return width
+
+
+def _cjk_wrap(text: str, width: int) -> list[str]:
+    """Simple CJK-aware word-wrap that splits on spaces and respects display width."""
+    words = text.split(" ")
+    lines: list[str] = []
+    current_line = ""
+    current_width = 0
+
+    for word in words:
+        word_width = _east_asian_len(word)
+        if current_line:
+            # +1 for the space between words
+            if current_width + 1 + word_width <= width:
+                current_line += " " + word
+                current_width += 1 + word_width
+            else:
+                lines.append(current_line)
+                current_line = word
+                current_width = word_width
+        else:
+            current_line = word
+            current_width = word_width
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
 from pyrit.executor.attack.printer.attack_result_printer import AttackResultPrinter
 from pyrit.memory import CentralMemory
 from pyrit.models import AttackOutcome, AttackResult, ConversationType, Score
@@ -464,22 +504,17 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
         if score.score_rationale:
             print(f"{indent}{self._labels['rationale']}")
             # Create a custom wrapper for rationale with proper indentation
-            rationale_wrapper = textwrap.TextWrapper(
-                width=self._width - len(indent) - 2,  # Adjust width to account for indentation
-                initial_indent=indent + "  ",
-                subsequent_indent=indent + "  ",
-                break_long_words=False,
-                break_on_hyphens=False,
-            )
+            rationale_width = self._width - _east_asian_len(indent) - 2
+            rationale_indent = indent + "  "
             # Split by newlines first to preserve them
             lines = score.score_rationale.split("\n")
             for line in lines:
-                if line.strip():  # Only wrap non-empty lines
-                    wrapped_lines = rationale_wrapper.wrap(line)
+                if line.strip():
+                    wrapped_lines = _cjk_wrap(line, rationale_width)
                     for wrapped_line in wrapped_lines:
-                        self._print_colored(wrapped_line, Fore.WHITE)
-                else:  # Print empty lines as-is to preserve formatting
-                    self._print_colored(f"{indent}  ")
+                        self._print_colored(f"{rationale_indent}{wrapped_line}", Fore.WHITE)
+                else:
+                    self._print_colored(f"{rationale_indent}")
 
     def _print_wrapped_text(self, text: str, color: str) -> None:
         """
@@ -493,28 +528,19 @@ class ConsoleAttackResultPrinter(AttackResultPrinter):
             color (str): Colorama color constant to apply to the text
                 (e.g., Fore.BLUE, Fore.RED).
         """
-        # Create a new wrapper for each text to ensure proper width calculation
-        text_wrapper = textwrap.TextWrapper(
-            width=self._width - len(self._indent),  # Adjust width to account for indentation
-            initial_indent="",
-            subsequent_indent=self._indent,
-            break_long_words=True,  # Allow breaking long words to prevent truncation
-            break_on_hyphens=True,
-            expand_tabs=False,
-            replace_whitespace=False,  # Preserve whitespace formatting
-        )
+        wrap_width = self._width - _east_asian_len(self._indent)
 
         # Split by newlines first to preserve them
         lines = text.split("\n")
         for line_num, line in enumerate(lines):
-            if line.strip():  # Only wrap non-empty lines
-                wrapped_lines = text_wrapper.wrap(line)
+            if line.strip():
+                wrapped_lines = _cjk_wrap(line, wrap_width)
                 for i, wrapped_line in enumerate(wrapped_lines):
                     if line_num == 0 and i == 0:
                         self._print_colored(f"{self._indent}{wrapped_line}", color)
                     else:
                         self._print_colored(f"{self._indent * 2}{wrapped_line}", color)
-            else:  # Print empty lines as-is to preserve formatting
+            else:
                 self._print_colored(f"{self._indent}", color)
 
     async def _print_pruned_conversations_async(self, result: AttackResult) -> None:
