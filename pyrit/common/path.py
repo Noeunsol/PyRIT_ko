@@ -52,15 +52,24 @@ LOG_PATH = pathlib.Path(DB_DATA_PATH, "logs.txt").resolve()
 LOG_PATH.touch(exist_ok=True)
 
 DATASETS_PATH = pathlib.Path(PYRIT_PATH, "datasets").resolve()
+PROMPTS_PATH = pathlib.Path(PYRIT_PATH, "prompts").resolve()
 
-EXECUTOR_SEED_PROMPT_PATH = pathlib.Path(DATASETS_PATH, "executors").resolve()
+EXECUTOR_SEED_PROMPT_PATH = pathlib.Path(PROMPTS_PATH, "executors").resolve()
 EXECUTOR_RED_TEAM_PATH = pathlib.Path(EXECUTOR_SEED_PROMPT_PATH, "red_teaming").resolve()
 EXECUTOR_SIMULATED_TARGET_PATH = pathlib.Path(EXECUTOR_SEED_PROMPT_PATH, "simulated_target").resolve()
-CONVERTER_SEED_PROMPT_PATH = pathlib.Path(DATASETS_PATH, "prompt_converters").resolve()
-SCORER_SEED_PROMPT_PATH = pathlib.Path(DATASETS_PATH, "score").resolve()
+CONVERTER_SEED_PROMPT_PATH = pathlib.Path(PROMPTS_PATH, "prompt_converters").resolve()
+SCORER_SEED_PROMPT_PATH = pathlib.Path(PROMPTS_PATH, "score").resolve()
 SCORER_CONTENT_CLASSIFIERS_PATH = pathlib.Path(SCORER_SEED_PROMPT_PATH, "content_classifiers").resolve()
 SCORER_LIKERT_PATH = pathlib.Path(SCORER_SEED_PROMPT_PATH, "likert").resolve()
 SCORER_SCALES_PATH = pathlib.Path(SCORER_SEED_PROMPT_PATH, "scales").resolve()
+
+# Data definition paths under datasets/score/
+SCORER_DATA_PATH = pathlib.Path(DATASETS_PATH, "score").resolve()
+SCORER_CONTENT_CLASSIFIERS_DATA_PATH = pathlib.Path(SCORER_DATA_PATH, "content_classifiers").resolve()
+SCORER_CATEGORIES_DATA_PATH = pathlib.Path(SCORER_DATA_PATH, "categories").resolve()
+SCORER_LIKERT_DATA_PATH = pathlib.Path(SCORER_DATA_PATH, "likert").resolve()
+SCORER_SCALES_DATA_PATH = pathlib.Path(SCORER_DATA_PATH, "scales").resolve()
+SCORER_TRUE_FALSE_DATA_PATH = pathlib.Path(SCORER_DATA_PATH, "true_false_question").resolve()
 HARM_DEFINITION_PATH = pathlib.Path(DATASETS_PATH, "harm_definition").resolve()
 
 JAILBREAK_TEMPLATES_PATH = pathlib.Path(DATASETS_PATH, "jailbreak", "templates").resolve()

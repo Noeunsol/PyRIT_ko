@@ -8,7 +8,7 @@ from typing import Any, Optional, Union
 import yaml
 
 from pyrit.common import verify_and_resolve_path
-from pyrit.common.path import SCORER_SCALES_PATH
+from pyrit.common.path import SCORER_SCALES_DATA_PATH, SCORER_SCALES_PATH
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt, UnvalidatedScore
 from pyrit.prompt_target import PromptChatTarget
@@ -25,9 +25,9 @@ class SelfAskScaleScorer(FloatScaleScorer):
     class ScalePaths(enum.Enum):
         """Enum containing paths to numeric scale YAML configuration files."""
 
-        TREE_OF_ATTACKS_SCALE = Path(SCORER_SCALES_PATH, "tree_of_attacks_scale.yaml").resolve()
-        TASK_ACHIEVED_SCALE = Path(SCORER_SCALES_PATH, "task_achieved_scale.yaml").resolve()
-        CRITERIA_SCALE = Path(SCORER_SCALES_PATH, "criteria_example_scale.yaml").resolve()
+        TREE_OF_ATTACKS_SCALE = Path(SCORER_SCALES_DATA_PATH, "tree_of_attacks_scale.yaml").resolve()
+        TASK_ACHIEVED_SCALE = Path(SCORER_SCALES_DATA_PATH, "task_achieved_scale.yaml").resolve()
+        CRITERIA_SCALE = Path(SCORER_SCALES_DATA_PATH, "criteria_example_scale.yaml").resolve()
 
     class SystemPaths(enum.Enum):
         """Enum containing paths to system prompt YAML configuration files."""

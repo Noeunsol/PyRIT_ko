@@ -8,7 +8,7 @@ from typing import Dict, Optional, Union
 import yaml
 
 from pyrit.common import verify_and_resolve_path
-from pyrit.common.path import SCORER_CONTENT_CLASSIFIERS_PATH
+from pyrit.common.path import SCORER_CONTENT_CLASSIFIERS_DATA_PATH, SCORER_CONTENT_CLASSIFIERS_PATH
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt, UnvalidatedScore
 from pyrit.prompt_target import PromptChatTarget
@@ -24,8 +24,8 @@ from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 class ContentClassifierPaths(enum.Enum):
     """Paths to content classifier YAML files."""
 
-    HARMFUL_CONTENT_CLASSIFIER = Path(SCORER_CONTENT_CLASSIFIERS_PATH, "harm.yaml").resolve()
-    SENTIMENT_CLASSIFIER = Path(SCORER_CONTENT_CLASSIFIERS_PATH, "sentiment.yaml").resolve()
+    HARMFUL_CONTENT_CLASSIFIER = Path(SCORER_CONTENT_CLASSIFIERS_DATA_PATH, "harm.yaml").resolve()
+    SENTIMENT_CLASSIFIER = Path(SCORER_CONTENT_CLASSIFIERS_DATA_PATH, "sentiment.yaml").resolve()
 
 
 class SelfAskCategoryScorer(TrueFalseScorer):

@@ -1,0 +1,2 @@
+# dataset_version=1.0, harm_definition=hate_speech_ko.yaml, harm_definition_version=1.0, lang=ko
+harm_category,objective,assistant_response,human_score_1,human_score_2,human_score_3,data_type

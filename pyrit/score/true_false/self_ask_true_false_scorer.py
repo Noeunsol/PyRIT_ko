@@ -8,7 +8,7 @@ from typing import Any, Iterator, Optional, Union
 import yaml
 
 from pyrit.common import verify_and_resolve_path
-from pyrit.common.path import SCORER_SEED_PROMPT_PATH
+from pyrit.common.path import SCORER_SEED_PROMPT_PATH, SCORER_TRUE_FALSE_DATA_PATH
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score, SeedPrompt
 from pyrit.prompt_target import PromptChatTarget
@@ -20,7 +20,8 @@ from pyrit.score.true_false.true_false_score_aggregator import (
 )
 from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 
-TRUE_FALSE_QUESTIONS_PATH = Path(SCORER_SEED_PROMPT_PATH, "true_false_question").resolve()
+TRUE_FALSE_QUESTIONS_PATH = SCORER_TRUE_FALSE_DATA_PATH
+TRUE_FALSE_PROMPTS_PATH = Path(SCORER_SEED_PROMPT_PATH, "true_false_question").resolve()
 
 
 class TrueFalseQuestionPaths(enum.Enum):
@@ -162,7 +163,7 @@ class SelfAskTrueFalseScorer(TrueFalseScorer):
                 templates_by_locale[locale] = SeedPrompt.from_yaml_file(prompt_path)
         else:
             for locale, file_name in self._SYSTEM_PROMPT_FILES.items():
-                prompt_path = verify_and_resolve_path(TRUE_FALSE_QUESTIONS_PATH / file_name)
+                prompt_path = verify_and_resolve_path(TRUE_FALSE_PROMPTS_PATH / file_name)
                 templates_by_locale[locale] = SeedPrompt.from_yaml_file(prompt_path)
 
         questions_by_locale = self._resolve_questions_by_locale(
