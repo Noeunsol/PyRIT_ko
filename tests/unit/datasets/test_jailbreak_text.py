@@ -5,13 +5,13 @@ import pathlib
 
 import pytest
 
-from pyrit.common.path import DATASETS_PATH
+from pyrit.common.path import JAILBREAK_TEMPLATES_PATH
 from pyrit.datasets import TextJailBreak
 
 
 @pytest.fixture
 def jailbreak_dir():
-    return pathlib.Path(DATASETS_PATH) / "jailbreak" / "templates"
+    return pathlib.Path(JAILBREAK_TEMPLATES_PATH)
 
 
 def test_init_with_template_path(jailbreak_dir):

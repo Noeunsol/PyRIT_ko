@@ -10,6 +10,44 @@ from pyrit.models.scenario_result import ScenarioResult
 from pyrit.scenario.printer.scenario_result_printer import ScenarioResultPrinter
 from pyrit.score.printer import ConsoleScorerPrinter, ScorerPrinter
 
+_SCENARIO_DESCRIPTIONS_KO: dict[str, str] = {
+    "ContentHarms": (
+        "유해 콘텐츠 시나리오. 폭력, 혐오, 성적 콘텐츠, 자해, 사생활 침해, 정보 무결성, "
+        "유출 등 여러 유해 카테고리에 대해 모델 동작을 빠르게 점검할 수 있는 검사들을 포함합니다."
+    ),
+    "Cyber": (
+        "사이버 시나리오. 모델이 멀웨어 생성을 비롯한 사이버 보안 관련 유해 행위를 "
+        "수행하는 데 얼마나 협조적인지 테스트합니다."
+    ),
+    "Scam": (
+        "사기(스캠) 시나리오. 모델이 피싱 이메일이나 사기성 메시지 등 사기 관련 자료를 "
+        "생성하는 능력을 주로 설득 기반 기법으로 평가합니다."
+    ),
+    "Jailbreak": (
+        "탈옥(Jailbreak) 시나리오. 다양한 단일 턴 탈옥 템플릿을 테스트 프롬프트에 적용해 "
+        "모델이 안전장치 우회 공격에 얼마나 취약한지 평가합니다."
+    ),
+    "LeakageScenario": (
+        "유출(Leakage) 시나리오. 모델이 학습 데이터, 개인정보(PII), 지적재산, 시스템 프롬프트, "
+        "API 키 등 기밀 정보를 누출하도록 유도될 수 있는지 다양한 공격 변형으로 테스트합니다."
+    ),
+    "PsychosocialScenario": (
+        "심리사회적 유해 시나리오. 정신 건강 위기나 정서적 취약 상태의 사용자에 대해 "
+        "모델이 어떻게 반응하는지를 평가하여, 사용자의 안녕이나 정신 건강에 해로울 수 있는 "
+        "응답을 점검합니다."
+    ),
+    "RedTeamAgent": (
+        "Red Team Agent 시나리오. 지정된 공격 전략에 따라 여러 AtomicAttack 인스턴스를 "
+        "자동으로 생성하는 사전 구성 시나리오입니다. 다양한 컨버터를 사용하는 단일 턴 공격과 "
+        "다중 턴 공격을 모두 지원합니다."
+    ),
+    "Encoding": (
+        "인코딩 시나리오. 잠재적으로 유해한 텍스트(기본값: 슬러 및 XSS 페이로드)를 다양한 "
+        "방식으로 인코딩하여 모델이 인코딩 기반 공격에 얼마나 견고한지 테스트합니다."
+    ),
+}
+
+
 _SCENARIO_PRINTER_LABELS: dict[str, dict[str, str]] = {
     "en": {
         "header": "SCENARIO RESULTS: {name}",
@@ -152,12 +190,18 @@ class ConsoleScenarioResultPrinter(ScenarioResultPrinter):
         self._print_colored(f"{self._indent * 2}• {self._labels['pyrit_version'].format(version=result.scenario_identifier.pyrit_version)}", Fore.CYAN)
 
         # Format description with text wrapping at 120 characters
-        if result.scenario_identifier.description:
+        # When locale is "ko", prefer Korean override description if available
+        description_text = result.scenario_identifier.description
+        if self._locale == "ko":
+            ko_desc = _SCENARIO_DESCRIPTIONS_KO.get(result.scenario_identifier.name)
+            if ko_desc:
+                description_text = ko_desc
+        if description_text:
             self._print_colored(f"{self._indent * 2}• {self._labels['description']}", Fore.CYAN)
             desc_indent = self._indent * 4
             available_width = 120 - len(desc_indent)
             wrapped_lines = textwrap.wrap(
-                result.scenario_identifier.description, width=available_width, break_long_words=False
+                description_text, width=available_width, break_long_words=False
             )
             for line in wrapped_lines:
                 self._print_colored(f"{desc_indent}{line}", Fore.CYAN)
