@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import inspect
+import os
 import random
 import sys
 from pathlib import Path
@@ -25,21 +26,75 @@ from typing import Any, Optional
 # Menu data
 # ---------------------------------------------------------------------------
 
-PROFILES = {
-    "openai_simple": {
+# Target model catalog. Each entry uses environment variables prefixed with
+# PYRIT_TARGET_<env_prefix>_{ENDPOINT,KEY,MODEL} to construct an OpenAIChatTarget.
+# Special key "no_llm" maps to TextTarget (LLM 호출 없이 변환 결과만 콘솔에 출력).
+TARGET_MODELS = [
+    # (key, env_prefix, label_ko, label_en, category)
+    # category: "llm" 또는 "no_llm"
+    ("gpt-4o-mini", "GPT4O_MINI", "GPT-4o mini (OpenAI)", "GPT-4o mini (OpenAI)", "llm"),
+    ("gpt-4.1-mini", "GPT41_MINI", "GPT-4.1 mini (OpenAI)", "GPT-4.1 mini (OpenAI)", "llm"),
+    ("exaone", "EXAONE", "EXAONE 3.5 (HuggingFace)", "EXAONE 3.5 (HuggingFace)", "llm"),
+    ("no_llm", "", "LLM 호출 없이 변환 결과만 출력", "Output converted text only (no LLM call)", "no_llm"),
+]
+
+
+def _target_env_vars(env_prefix: str) -> tuple[str, str, str]:
+    """Return (endpoint_var, key_var, model_var) for a given target prefix."""
+    return (
+        f"PYRIT_TARGET_{env_prefix}_ENDPOINT",
+        f"PYRIT_TARGET_{env_prefix}_KEY",
+        f"PYRIT_TARGET_{env_prefix}_MODEL",
+    )
+
+
+def _get_available_target_models() -> list[tuple[str, str, str, str, str]]:
+    """Filter TARGET_MODELS to entries whose required env vars are set.
+
+    Loads ~/.pyrit/.env, ~/.pyrit/.env.local, and ./.env.local if present so users
+    don't have to export manually. Files loaded later override earlier ones, matching
+    PyRIT's convention where .env.local takes precedence over .env.
+    Always includes the "no_llm" entry (no env required).
+    """
+    try:
+        from dotenv import load_dotenv as _load_dotenv
+        env_paths = [
+            Path.home() / ".pyrit" / ".env",
+            Path.home() / ".pyrit" / ".env.local",
+            Path(".env.local"),
+        ]
+        for _env_path in env_paths:
+            if _env_path.exists():
+                _load_dotenv(_env_path, override=True)
+    except ImportError:
+        pass
+
+    available: list[tuple[str, str, str, str, str]] = []
+    for entry in TARGET_MODELS:
+        key, env_prefix, _label_ko, _label_en, category = entry
+        if category == "no_llm":
+            available.append(entry)
+            continue
+        endpoint_var, key_var, model_var = _target_env_vars(env_prefix)
+        if all(os.environ.get(v) for v in (endpoint_var, key_var, model_var)):
+            available.append(entry)
+    return available
+
+
+TARGET_PRESETS = {
+    "openai_basic": {
         "initializers": ["openai_objective_target", "simple", "load_default_datasets"],
-        "desc_ko": "OpenAI 기반 간단 설정 (Azure 불필요)",
-        "desc_en": "OpenAI-based simple setup (no Azure needed)",
+        "label_ko": "OpenAI 기본",
+        "label_en": "OpenAI Basic",
+        "desc_ko": "OpenAI + 기본 스코어러 + 데이터셋 (추천)",
+        "desc_en": "OpenAI + default scorers + datasets (simplest, recommended)",
     },
-    "openai_target": {
+    "openai_no_scorer": {
         "initializers": ["openai_objective_target", "load_default_datasets"],
-        "desc_ko": "OpenAI 타겟 + 데이터셋 (스코어러 미포함)",
-        "desc_en": "OpenAI target + datasets (no scorer)",
-    },
-    "airt_full": {
-        "initializers": ["airt", "airt_targets", "load_default_datasets"],
-        "desc_ko": "Azure AIRT 전체 설정 (프로덕션)",
-        "desc_en": "Full Azure AIRT setup (production)",
+        "label_ko": "OpenAI 최소",
+        "label_en": "OpenAI Minimal",
+        "desc_ko": "OpenAI 타겟 + 데이터셋만 (스코어러 없음, 빠른 테스트용)",
+        "desc_en": "OpenAI target + datasets only (no scorer, for quick tests)",
     },
 }
 
@@ -57,7 +112,7 @@ SCENARIOS = [
 # (key, name_ko, name_en, turn_type)
 ATTACKS = [
     # Single-turn
-    ("prompt_sending", "목표 프롬프트를 그대로 전송", "Sends objective prompt as-is", "single-turn"),
+    ("prompt_sending", "목표 프롬프트를 그대로 전송", "Sends Seed prompt as-is", "single-turn"),
     ("flip", "텍스트를 뒤집어서 필터 우회", "Reverses text to bypass filters", "single-turn"),
     ("context_compliance", "허용되는 맥락을 만들어 유도", "Creates permissive context to elicit response", "single-turn"),
     ("many_shot", "대량 예시로 모델 행동 유도", "Floods examples to steer model behavior", "single-turn"),
@@ -68,17 +123,17 @@ ATTACKS = [
     ("red_teaming", "AI가 반복 대화하며 공격 전략 조정", "AI iterates conversations, adjusting strategy", "multi-turn"),
     ("tree_of_attacks", "여러 갈래로 분기하며 최적 공격 탐색", "Branches multiple paths to find best attack", "multi-turn"),
     ("multi_prompt_sending", "여러 메시지를 순서대로 전송", "Sends multiple messages in sequence", "multi-turn"),
-    ("chunked_request", "목표를 조각내어 나눠 보내기", "Splits objective into small chunks", "multi-turn"),
+    ("chunked_request", "목표를 조각내어 나눠 보내기", "Splits Seed into small chunks", "multi-turn"),
 ]
 
 # (class_name, name_ko, name_en, category)
 CONVERTERS = [
     # ── Text → Text: Encoding ──
     ("Base64Converter", "Base64로 변환", "Encode as Base64", "tt_encoding"),
-    ("ROT13Converter", "한글 자모 13칸 밀어 치환", "Shift letters by 13", "tt_encoding"),
+    ("ROT13Converter", "한글 자모를 회전 치환 (자음 7칸 / 모음 5칸)", "Shift letters by 13", "tt_encoding"),
     ("BinaryConverter", "0과 1로 변환", "Convert to binary", "tt_encoding"),
     ("MorseConverter", "한글 모스 부호로 변환", "Convert to Morse code", "tt_encoding"),
-    ("CaesarConverter", "한글 자모을 N칸 밀어 치환", "Shift letters by N positions", "tt_encoding"),
+    ("CaesarConverter", "한글 자모를 N칸 밀어 치환", "Shift letters by N positions", "tt_encoding"),
     ("AtbashConverter", "한글 자모 순서 뒤집어 치환", "Reverse alphabet substitution", "tt_encoding"),
     ("Base2048Converter", "Base2048로 변환", "Encode as Base2048", "tt_encoding"),
     ("AskToDecodeConverter", "인코딩 후 복호화 요청 포함", "Encodes then asks model to decode", "tt_encoding"),
@@ -87,7 +142,7 @@ CONVERTERS = [
     # ── Text → Text: Korean-specific ──
     ("BrailleConverter", "한글 점자로 변환", "Convert to Braille", "tt_korean"),
     ("NatoConverter", "한글 음성부호/NATO 알파벳으로 변환", "Convert to NATO phonetic alphabet", "tt_korean"),
-    ("LeetspeakConverter", "리트스피크(ㄱ→7, ㄹ->Z) 치환", "Leetspeak: replace letters with look-alikes (e→3)", "tt_korean"),
+    ("LeetspeakConverter", "한글 자모를 닮은꼴 기호로 치환 (ㄱ→7, ㄷ→[ 등)", "Leetspeak: replace letters with look-alikes (e→3)", "tt_korean"),
     ("ColloquialWordswapConverter", "한국어 표준어를 구어체/속어로 변환", "Swap Korean formal words with slang", "tt_korean"),
     # ── Text → Text: Transform ──
     ("FlipConverter", "텍스트 순서를 뒤집기", "Reverse text order", "tt_transform"),
@@ -98,8 +153,8 @@ CONVERTERS = [
     ("CharacterSpaceConverter", "모든 문자 사이에 공백 삽입", "Insert spaces between every character", "tt_transform"),
     ("ZalgoConverter", "글자에 장식 기호를 덧붙여 왜곡", "Add combining marks to distort text", "tt_transform"),
     ("ZeroWidthConverter", "보이지 않는 문자 삽입", "Insert invisible zero-width characters", "tt_transform"),
-    ("AnsiAttackConverter", "ANSI 제어 코드로 텍스트 숨기기", "Hide text with ANSI escape codes", "tt_transform"),
-    ("AsciiSmugglerConverter", "보이지 않는 ASCII로 텍스트 은닉", "Smuggle text in invisible ASCII", "tt_transform"),
+    ("AnsiAttackConverter", "ANSI 제어 코드 시나리오 생성 (설명/반복/언이스케이프 요청)", "Hide text with ANSI escape codes", "tt_transform"),
+    ("AsciiSmugglerConverter", "유니코드 태그(U+E0000~)로 텍스트 은닉", "Smuggle text in invisible ASCII", "tt_transform"),
     ("SneakyBitsSmugglerConverter", "비트 조작으로 텍스트 은닉", "Smuggle text via bit manipulation", "tt_transform"),
     ("VariationSelectorSmugglerConverter", "유니코드 변형 선택자로 텍스트 은닉", "Smuggle text via Unicode variation selectors", "tt_transform"),
     ("UnicodeSubstitutionConverter", "유니코드 이스케이프 시퀀스로 변환", "Convert to Unicode escape sequences", "tt_transform"),
@@ -107,7 +162,7 @@ CONVERTERS = [
     ("UrlConverter", "URL 퍼센트 인코딩으로 변환", "Convert to URL percent-encoding", "tt_transform"),
     ("InsertPunctuationConverter", "단어 사이에 구두점 삽입", "Insert punctuation between words", "tt_transform"),
     ("JsonStringConverter", "JSON 문자열 형태로 감싸기", "Wrap as JSON string", "tt_transform"),
-    ("MathObfuscationConverter", "숫자를 수학 표현식으로 변환", "Replace numbers with math expressions", "tt_transform"),
+    ("MathObfuscationConverter", "각 문자를 대수 항등식으로 난독화", "Replace numbers with math expressions", "tt_transform"),
     ("NegationTrapConverter", "이중 부정으로 의미 혼란 유도", "Use double negation to confuse meaning", "tt_transform"),
     ("RepeatTokenConverter", "토큰 반복 삽입으로 난독화", "Repeat tokens to obfuscate", "tt_transform"),
     ("SearchReplaceConverter", "정규식 패턴 검색/치환", "Regex search & replace", "tt_transform"),
@@ -520,16 +575,19 @@ async def run_scenario_mode(locale: str) -> None:
     from pyrit.registry import ScenarioRegistry
 
     registry = ScenarioRegistry.get_registry_singleton()
-    profile_items = [(k, v["desc_ko"], v["desc_en"]) for k, v in PROFILES.items()]
+    target_items = [
+        (k, f"{v['label_ko']} - {v['desc_ko']}", f"{v['label_en']} - {v['desc_en']}")
+        for k, v in TARGET_PRESETS.items()
+    ]
     db_items = [
-        ("InMemory", "메모리(임시)", "In-memory (temporary)"),
-        ("SQLite", "SQLite 파일(영구)", "SQLite file (persistent)"),
+        ("InMemory", "메모리에만 (실행 종료 시 사라짐)", "In-memory (lost on exit)"),
+        ("SQLite", "파일로 저장 (다음 실행에서도 조회 가능)", "Save to file (persistent)"),
     ]
 
     scenario_name: str = SCENARIOS[0][0]
     strategies: Optional[list[str]] = None
     initializer_names: list[str] = []
-    selected_profile_key: str = profile_items[0][0]
+    selected_target_key: str = target_items[0][0]
     concurrency: int = 5
     db: str = db_items[0][0]
 
@@ -571,14 +629,14 @@ async def run_scenario_mode(locale: str) -> None:
             continue
 
         if step == 2:
-            print_menu(profile_items, locale=locale, header=_L("프로필 선택", "Select Profile", locale))
+            print_menu(target_items, locale=locale, header=_L("타겟 선택", "Select Target", locale))
             try:
-                pidx = ask_choice(_L("선택: ", "Choice: ", locale), len(profile_items), allow_back=True, locale=locale)
+                pidx = ask_choice(_L("선택: ", "Choice: ", locale), len(target_items), allow_back=True, locale=locale)
             except BackNavigationRequested:
                 step = 1
                 continue
-            selected_profile_key = profile_items[pidx - 1][0]
-            initializer_names = list(PROFILES.values())[pidx - 1]["initializers"]
+            selected_target_key = target_items[pidx - 1][0]
+            initializer_names = TARGET_PRESETS[selected_target_key]["initializers"]
             step = 3
             continue
 
@@ -596,7 +654,7 @@ async def run_scenario_mode(locale: str) -> None:
         if step == 4:
             print_menu(
                 db_items, locale=locale,
-                header=_L("데이터베이스 선택", "Select Database", locale),
+                header=_L("결과 저장 방식 선택", "Select Result Storage", locale),
                 suffixes={1: _L(" (기본)", " (default)", locale)},
             )
             try:
@@ -613,10 +671,10 @@ async def run_scenario_mode(locale: str) -> None:
             (_L("모드", "Mode", locale), _L("시나리오", "Scenario", locale)),
             (_L("시나리오", "Scenario", locale), scenario_name),
             (_L("전략", "Strategies", locale), strategies if strategies else _L("기본값", "Default", locale)),
-            (_L("프로필", "Profile", locale), selected_profile_key),
+            (_L("타겟", "Target", locale), selected_target_key),
             (_L("초기화기", "Initializers", locale), initializer_names),
             (_L("언어(locale)", "Locale", locale), locale),
-            (_L("데이터베이스", "Database", locale), db),
+            (_L("결과 저장 방식", "Result Storage", locale), db),
             (_L("동시 실행 수", "Max concurrency", locale), concurrency),
         ],
     )
@@ -815,8 +873,8 @@ async def run_custom_mode(locale: str) -> None:
 
     _HAS_BUILTIN_CONVERTER = {"flip", "context_compliance", "many_shot", "role_play", "skeleton_key"}
     db_items = [
-        ("InMemory", "메모리(임시)", "In-memory (temporary)"),
-        ("SQLite", "SQLite 파일(영구)", "SQLite file (persistent)"),
+        ("InMemory", "메모리에만 (실행 종료 시 사라짐)", "In-memory (lost on exit)"),
+        ("SQLite", "파일로 저장 (다음 실행에서도 조회 가능)", "Save to file (persistent)"),
     ]
 
     attack_info = ATTACKS[0]
@@ -829,7 +887,7 @@ async def run_custom_mode(locale: str) -> None:
     objective_from_dataset = False
     objective_from_file = False
     db: str = db_items[0][0]
-    target_key: str = "OpenAIChatTarget"
+    target_key: str = "no_llm"
 
     step = 0
     while True:
@@ -978,32 +1036,44 @@ async def run_custom_mode(locale: str) -> None:
 
         # ── 4. Target ──
         if step == 4:
-            target_items = [
-                ("OpenAIChatTarget", "OpenAI API (LLM 응답 생성)", "OpenAI API (LLM response)", locale),
-                ("TextTarget", "변환 결과만 출력 (LLM 미사용)", "Output conversion result only (no LLM)", locale),
-            ]
+            available_targets = _get_available_target_models()
             print(f"\n{'=' * 60}")
-            print(f"  {_L('타겟 설정', 'Target Setup', locale)}")
+            print(f"  {_L('타겟 선택', 'Select Target', locale)}")
             print("=" * 60)
-            for ti, t in enumerate(target_items, 1):
-                desc = t[1] if locale == "ko" else t[2]
-                print(f"  {ti}. {t[0]} - {desc}")
+            current_cat = ""
+            display_items: list[tuple[str, str, str, str, str]] = []
+            for entry in available_targets:
+                key, _env_prefix, label_ko, label_en, category = entry
+                if category != current_cat:
+                    current_cat = category
+                    if category == "llm":
+                        header = _L("[LLM 사용 - 실제 모델에 전송]", "[LLM-based - send to actual model]", locale)
+                    else:
+                        header = _L("[LLM 미사용 - 디버깅/미리보기]", "[No LLM - debug/preview]", locale)
+                    print(f"\n  {header}")
+                display_items.append(entry)
+                idx = len(display_items)
+                desc = label_ko if locale == "ko" else label_en
+                print(f"   {idx:>2}. {key:<20s} - {desc}")
+            print()
             try:
-                tidx = ask_choice(_L("선택: ", "Choice: ", locale), len(target_items), allow_back=True, locale=locale)
+                tidx = ask_choice(
+                    _L("선택: ", "Choice: ", locale), len(display_items), allow_back=True, locale=locale
+                )
             except BackNavigationRequested:
                 step = 3
                 continue
-            target_key = target_items[tidx - 1][0]
+            target_key = display_items[tidx - 1][0]
 
             # Warn about incompatible converter + target combinations
             _FILE_OUTPUT_CONVERTERS = {"PDFConverter"}
             file_converters_selected = _FILE_OUTPUT_CONVERTERS & set(converter_selections)
-            if file_converters_selected and target_key == "OpenAIChatTarget":
+            if file_converters_selected and target_key != "no_llm":
                 names = ", ".join(file_converters_selected)
-                msg_ko = f"{names}은(는) 파일을 출력하므로 OpenAIChatTarget과 호환되지 않습니다."
-                msg_en = f"{names} outputs files, incompatible with OpenAIChatTarget."
+                msg_ko = f"{names}은(는) 파일을 출력하므로 LLM 타겟과 호환되지 않습니다."
+                msg_en = f"{names} outputs files, incompatible with LLM targets."
                 print(f"\n  ⚠️  {_L(msg_ko, msg_en, locale)}")
-                print(f"  ⚠️  {_L('TextTarget을 선택하거나 해당 컨버터를 제거하세요.', 'Please select TextTarget or remove the converter.', locale)}")
+                print(f"  ⚠️  {_L('no_llm을 선택하거나 해당 컨버터를 제거하세요.', 'Please select no_llm or remove the converter.', locale)}")
                 continue
 
             step = 5
@@ -1013,7 +1083,7 @@ async def run_custom_mode(locale: str) -> None:
         if step == 5:
             print_menu(
                 db_items, locale=locale,
-                header=_L("데이터베이스 선택", "Select Database", locale),
+                header=_L("결과 저장 방식 선택", "Select Result Storage", locale),
                 suffixes={1: _L(" (기본)", " (default)", locale)},
             )
             try:
@@ -1031,7 +1101,7 @@ async def run_custom_mode(locale: str) -> None:
             objective_from_dataset = False
             objective_from_file = False
             print(f"\n{'=' * 60}")
-            print(f"  {_L('목표(Objective) 입력', 'Enter Objective', locale)}")
+            print(f"  {_L('목표(Seed) 입력', 'Enter Seed', locale)}")
             print("=" * 60)
 
             try:
@@ -1051,10 +1121,10 @@ async def run_custom_mode(locale: str) -> None:
                 else:
                     print(f"  1. {_L('직접 입력', 'Direct input', locale)}")
                     print(f"  2. {_L('데이터셋에서 선택', 'Select from dataset', locale)}")
-                    print(f"  3. {_L('직접 파일 추가', 'Load from file', locale)}")
+                    print(f"  3. {_L('직접 파일 추가 (.csv, .prompt, .yaml, .yml)', 'Load from file (.csv, .prompt, .yaml, .yml)', locale)}")
                     oidx = ask_choice(_L("선택: ", "Choice: ", locale), 3, allow_back=True, locale=locale)
                     if oidx == 1:
-                        obj = ask_input(_L("목표 입력", "Enter objective", locale), allow_back=True, locale=locale)
+                        obj = ask_input(_L("목표 입력", "Enter Seed", locale), allow_back=True, locale=locale)
                         objectives = [obj]
                     elif oidx == 2:
                         objective_from_dataset = True  # resolved after init
@@ -1072,11 +1142,20 @@ async def run_custom_mode(locale: str) -> None:
     await initialize_pyrit_async(memory_db_type=memory_db_type, initializers=[LoadDefaultDatasets()])
 
     # ── 7. Create instances (env vars now loaded) ──
-    if target_key == "TextTarget":
+    if target_key == "no_llm":
         from pyrit.prompt_target import TextTarget
         target = TextTarget()
     else:
-        target = OpenAIChatTarget()
+        target_entry = next((m for m in TARGET_MODELS if m[0] == target_key), None)
+        if target_entry is None:
+            raise ValueError(f"Unknown target key: {target_key}")
+        _, env_prefix, *_ = target_entry
+        endpoint_var, key_var, model_var = _target_env_vars(env_prefix)
+        target = OpenAIChatTarget(
+            endpoint=os.environ[endpoint_var],
+            api_key=os.environ[key_var],
+            model_name=os.environ[model_var],
+        )
 
     # Resolve dataset objectives if needed
     if objective_from_dataset:
@@ -1099,14 +1178,14 @@ async def run_custom_mode(locale: str) -> None:
                 while True:
                     print(f"  1. {_L('직접 입력', 'Direct input', locale)}")
                     print(f"  2. {_L('데이터셋에서 선택', 'Select from dataset', locale)}")
-                    print(f"  3. {_L('직접 파일 추가', 'Load from file', locale)}")
+                    print(f"  3. {_L('직접 파일 추가 (.csv, .prompt, .yaml, .yml)', 'Load from file (.csv, .prompt, .yaml, .yml)', locale)}")
                     try:
                         oidx = ask_choice(_L("선택: ", "Choice: ", locale), 3, allow_back=True, locale=locale)
                     except BackNavigationRequested:
                         continue
                     if oidx == 1:
                         try:
-                            obj = ask_input(_L("목표 입력", "Enter objective", locale), allow_back=True, locale=locale)
+                            obj = ask_input(_L("목표 입력", "Enter Seed", locale), allow_back=True, locale=locale)
                         except BackNavigationRequested:
                             continue
                         objectives = [obj]
@@ -1131,14 +1210,14 @@ async def run_custom_mode(locale: str) -> None:
                 continue
             sampled = random.sample(list(seeds), count)
             objectives = [s.value for s in sampled]
-            print(_L(f"  {count}개 목표 랜덤 로드 완료", f"  Loaded {count} random objectives", locale))
+            print(_L(f"  {count}개 목표 랜덤 로드 완료", f"  Loaded {count} random Seeds", locale))
             objective_from_dataset = False
 
     # Resolve file-based objectives if needed
     while objective_from_file:
         try:
             file_path = ask_input(
-                _L("파일 경로 입력 (.csv, .prompt, .yaml)", "Enter file path (.csv, .prompt, .yaml)", locale),
+                _L("파일 경로 입력 (.csv, .prompt, .yaml, .yml)", "Enter file path (.csv, .prompt, .yaml, .yml)", locale),
                 allow_back=True,
                 locale=locale,
             )
@@ -1265,9 +1344,18 @@ async def run_custom_mode(locale: str) -> None:
             (_L("스코어러", "Scorer", locale), effective_scorer_key if effective_scorer_key else _L("없음", "None", locale)),
             (_L("타겟", "Target", locale), target_key),
             (_L("언어(locale)", "Locale", locale), locale),
-            (_L("데이터베이스", "Database", locale), db),
+            (_L("결과 저장 방식", "Result Storage", locale), db),
             (_L("최대 턴 수", "Max turns", locale), extra_attack_kwargs.get("max_turns")),
-            (_L("목표 수", "Objective count", locale), len(objectives)),
+            (
+                _L("목표(Seed)", "Seed", locale),
+                (objectives[0] if len(objectives[0]) <= 80 else objectives[0][:80] + "...")
+                if len(objectives) == 1
+                else _L(
+                    f"{len(objectives)}개 (예: {objectives[0][:60]}{'...' if len(objectives[0]) > 60 else ''})",
+                    f"{len(objectives)} items (e.g., {objectives[0][:60]}{'...' if len(objectives[0]) > 60 else ''})",
+                    locale,
+                ),
+            ),
         ],
     )
 
@@ -1323,12 +1411,26 @@ async def main() -> None:
         locale_idx = ask_choice("언어 선택 | Language: ", 2)
         locale = "ko" if locale_idx == 1 else "en"
 
+        if locale == "ko":
+            mode_items = [
+                ("시나리오 기반",
+                 "미리 정의된 시나리오를 골라 한 번에 실행 (초보자 추천)",
+                 ""),
+                ("커스텀 공격",
+                 "공격 방식 + 컨버터 + 스코어러 + 타겟을 직접 조합하여 실행",
+                 ""),
+            ]
+        else:
+            mode_items = [
+                ("Scenario-based",
+                 "",
+                 "Pick a preconfigured scenario and run it as-is (recommended for beginners)"),
+                ("Custom attack",
+                 "",
+                 "Manually combine attack + converters + scorer + target"),
+            ]
         while True:
-            print(f"\n{'=' * 60}")
-            print(f"  {_L('실행 모드 선택', 'Select Mode', locale)}")
-            print("=" * 60)
-            print(f"  1. {_L('시나리오 기반 (간편 실행)', 'Scenario-based (easy)', locale)}")
-            print(f"  2. {_L('커스텀 공격 (자유 조합)', 'Custom attack (mix & match)', locale)}")
+            print_menu(mode_items, locale=locale, header=_L("실행 모드 선택", "Select Mode", locale))
             try:
                 mode = ask_choice(_L("선택: ", "Choice: ", locale), 2, allow_back=True, locale=locale)
             except BackNavigationRequested:
