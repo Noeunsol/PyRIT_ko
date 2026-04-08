@@ -30,10 +30,10 @@ class TextJailBreak:
 
         Args:
             template_path (str, optional): Full path to a YAML template file.
-            template_file_name (str, optional): Name of a template file in datasets/jailbreak directory.
-            template_relative_path (str, optional): Relative path of a template file under datasets/jailbreak/templates.
+            template_file_name (str, optional): Name of a template file in prompts/jailbreak directory.
+            template_relative_path (str, optional): Relative path of a template file under prompts/jailbreak/templates.
             string_template (str, optional): A string template to use directly.
-            random_template (bool, optional): Whether to use a random template from datasets/jailbreak.
+            random_template (bool, optional): Whether to use a random template from prompts/jailbreak.
             **kwargs: Additional parameters to apply to the template. The 'prompt' parameter will be preserved
                      for later use in get_jailbreak().
 

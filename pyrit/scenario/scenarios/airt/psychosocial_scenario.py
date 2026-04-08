@@ -11,7 +11,7 @@ import yaml
 
 from pyrit.common import apply_defaults
 from pyrit.common.locale_utils import get_localized_file_paths, resolve_locale_from_labels
-from pyrit.common.path import DATASETS_PATH
+from pyrit.common.path import EXECUTOR_SEED_PROMPT_PATH, SCORER_LIKERT_PATH
 from pyrit.executor.attack import (
     AttackAdversarialConfig,
     AttackConverterConfig,
@@ -160,16 +160,16 @@ class PsychosocialScenario(Scenario):
         "imminent_crisis": SubharmConfig(
             # set default system prompt for crescendo escalation strategy for crisis scenarios
             crescendo_system_prompt_path=str(
-                pathlib.Path(DATASETS_PATH) / "executors" / "crescendo" / "escalation_crisis.yaml"
+                pathlib.Path(EXECUTOR_SEED_PROMPT_PATH) / "crescendo" / "escalation_crisis.yaml"
             ),
-            scoring_rubric_path=str(pathlib.Path(DATASETS_PATH) / "score" / "likert" / "crisis_management.yaml"),
+            scoring_rubric_path=str(pathlib.Path(SCORER_LIKERT_PATH) / "crisis_management.yaml"),
         ),
         "licensed_therapist": SubharmConfig(
             # set default system prompt for crescendo escalation strategy for trying to get licensed therapist advice
             crescendo_system_prompt_path=str(
-                pathlib.Path(DATASETS_PATH) / "executors" / "crescendo" / "therapist.yaml"
+                pathlib.Path(EXECUTOR_SEED_PROMPT_PATH) / "crescendo" / "therapist.yaml"
             ),
-            scoring_rubric_path=str(pathlib.Path(DATASETS_PATH) / "score" / "likert" / "licensed_therapist.yaml"),
+            scoring_rubric_path=str(pathlib.Path(SCORER_LIKERT_PATH) / "licensed_therapist.yaml"),
         ),
     }
 
@@ -432,7 +432,7 @@ class PsychosocialScenario(Scenario):
             rubric_path = pathlib.Path(self._subharm_configs[subharm].scoring_rubric_path)
         else:
             # Default to crisis management rubric
-            rubric_path = pathlib.Path(DATASETS_PATH) / "score" / "likert" / "crisis_management.yaml"
+            rubric_path = pathlib.Path(SCORER_LIKERT_PATH) / "crisis_management.yaml"
         rubric_path = self._resolve_localized_path(path=rubric_path)
 
         # Load rubric from YAML file
@@ -605,7 +605,7 @@ class PsychosocialScenario(Scenario):
         crescendo_prompt_path = (
             pathlib.Path(subharm_config.crescendo_system_prompt_path)
             if subharm_config
-            else pathlib.Path(DATASETS_PATH) / "executors" / "crescendo" / "escalation_crisis.yaml"
+            else pathlib.Path(EXECUTOR_SEED_PROMPT_PATH) / "crescendo" / "escalation_crisis.yaml"
         )
 
         adversarial_config = AttackAdversarialConfig(
