@@ -9,54 +9,75 @@
 # ---
 
 # %% [markdown]
-# # 4. Contributing Datasets to PyRIT
+# # 4. PyRIT에 데이터셋 기여하기
 #
-# PyRIT is designed as a flexible framework that doesn't dictate what you should test, but instead makes it easy to test whatever you need. One of the most common contributions to PyRIT is adding new datasets that others can benefit from.
+# PyRIT는 무엇을 테스트해야 하는지 강제하지 않고, 필요한 테스트를 유연하게 수행하도록 설계된 프레임워크입니다.
+# 가장 흔한 기여 방식 중 하나가 새로운 데이터셋 추가입니다.
 #
-# This guide explains how to contribute datasets to PyRIT's source code, whether you're adding:
-# - **Jailbreak templates**: Attack patterns that help bypass safety measures
-# - **Harm benchmarks**: Test cases for evaluating model safety (`SeedObjectives` or `SeedPrompts`)
-# - **System prompts**: Templates for adversarial models, scorers, and converters
+# 이 문서는 아래와 같은 데이터셋을 PyRIT 소스에 기여하는 방법을 설명합니다.
+# - **Jailbreak 템플릿**: 안전장치 우회를 유도하는 패턴
+# - **유해성 벤치마크**: 모델 안전성 평가용 케이스(`SeedObjective`/`SeedPrompt`)
+# - **시스템 프롬프트**: adversarial model/scorer/converter 템플릿
 #
-# There are three primary ways to include datasets in PyRIT:
+# PyRIT에 데이터셋을 포함하는 대표 방식은 3가지입니다.
 #
-# ## Method 1: YAML Files
+# ## 방법 1: YAML 파일
 #
-# YAML files are ideal when the dataset has a compatible license and would be broadly useful to the PyRIT community. Benefits include:
-# - Version control integration
-# - Easy review and modification
-# - Automatic loading via built-in providers
+# 라이선스가 호환되고 PyRIT 커뮤니티에 널리 재사용될 수 있는 데이터셋은 YAML로 포함하는 것이 좋습니다.
+# 장점:
+# - 버전 관리와 코드 리뷰 용이
+# - 수정/확장 간단
+# - 내장 provider를 통한 자동 로딩
 #
-# ### Common Locations for YAML Files
+# ### YAML 파일 주요 위치
 #
-# **Jailbreak Templates:**
-# - Location: `pyrit/datasets/jailbreak/templates/`
-# - Usage: Automatically included via `TextJailBreak` classes and used in converters like `TextJailBreakConverter`
+# **Jailbreak 템플릿**
+# - 위치: `pyrit/datasets/jailbreak/templates/`
+# - 사용처: `TextJailBreak` 계열 및 `TextJailBreakConverter`
 #
-# **Harm Datasets:**
-# - Location: `pyrit/datasets/seed_datasets/local/`
-# - Usage: Automatically loaded with `SeedDatasetProvider` for use in various attack scenarios
+# **유해성 데이터셋**
+# - 위치: `pyrit/datasets/seed_datasets/local/`
+# - 사용처: `SeedDatasetProvider`를 통한 자동 로드
 #
-# For details on YAML format, see [Seed Programming](./2_seed_programming.ipynb).
+# YAML 형식 상세는 [Seed Programming](./2_seed_programming.ipynb)을 참고하세요.
 #
-# ## Method 2: Remote Dataset Loaders
+# ## 방법 2: 원격 데이터셋 로더
 #
-# Remote datasets are preferable when:
-# - Licensing requires attribution or limits redistribution
-# - The dataset updates frequently and you want the latest version
-# - The dataset is large and better hosted externally
+# 아래 조건에서는 원격 로더가 적합합니다.
+# - 라이선스상 재배포 제약이 있는 경우
+# - 원본 데이터셋이 자주 업데이트되는 경우
+# - 데이터셋 규모가 커서 외부 호스팅이 더 적합한 경우
 #
-# Remote datasets are typically fetched from URLs or HuggingFace. To add one, create a `_RemoteDatasetLoader` subclass with helper functions for parsing, caching, and downloading. These loaders are automatically discovered by `SeedDatasetProvider`.
+# 보통 URL/HuggingFace에서 가져오며, `_RemoteDatasetLoader` 서브클래스를 구현해
+# 파싱/캐시/다운로드 로직을 넣습니다. 해당 로더는 `SeedDatasetProvider`가 자동 발견합니다.
 #
-# ### Example: DarkBench Remote Loader
+# ### 예시: DarkBench 원격 로더
 #
-# Below is a simplified version of the [`DarkBenchDataset`](../../../pyrit/datasets/seed_datasets/remote/darkbench_dataset.py) loader.
+# 아래 코드는 [`DarkBenchDataset`](../../../pyrit/datasets/seed_datasets/remote/darkbench_dataset.py)의 단순화 버전입니다.
 
 # %%
+import sys
+
+# Prevent shadowing HuggingFace `datasets` with local `pyrit/datasets`.
+bad_path = "/Users/selectstar/PyRIT_ko/src/pyrit"
+if bad_path in sys.path:
+    sys.path = [p for p in sys.path if p != bad_path]
+
+datasets_mod = sys.modules.get("datasets")
+if datasets_mod and str(getattr(datasets_mod, "__file__", "")).startswith(bad_path):
+    del sys.modules["datasets"]
+
+if "/Users/selectstar/PyRIT_ko/src" not in sys.path:
+    sys.path.insert(0, "/Users/selectstar/PyRIT_ko/src")
+
+from pyrit.common.locale_utils import NotebookLocale
 from pyrit.datasets.seed_datasets.remote.remote_dataset_loader import (
     _RemoteDatasetLoader,
 )
 from pyrit.models import SeedDataset, SeedPrompt
+
+# 언어 스위치: "ko" 또는 "en"
+L = NotebookLocale("ko")
 
 
 class SimpleDarkBench(_RemoteDatasetLoader):
@@ -65,7 +86,7 @@ class SimpleDarkBench(_RemoteDatasetLoader):
         return "dark_bench"
 
     async def fetch_dataset(self, *, cache: bool = True) -> SeedDataset:
-        # Fetch from HuggingFace
+        # HuggingFace에서 원격 데이터셋 로드
         data = await self._fetch_from_huggingface(
             dataset_name="apart/darkbench",
             config="default ",
@@ -74,13 +95,18 @@ class SimpleDarkBench(_RemoteDatasetLoader):
             data_files="darkbench.tsv",
         )
 
-        # Process into SeedPrompts
+        # 로케일별로 사용 컬럼 선택 (ko 컬럼이 없으면 en 컬럼으로 fallback)
+        def select_value(item: dict, en_key: str, ko_key: str) -> str:
+            if L.locale == "ko":
+                return str(item.get(ko_key) or item.get(en_key) or "")
+            return str(item.get(en_key) or "")
+
         seed_prompts = [
             SeedPrompt(
-                value=item["Example"],
+                value=select_value(item, "Example", "Example_ko"),
                 data_type="text",
                 dataset_name=self.dataset_name,
-                harm_categories=[item["Deceptive Pattern"]],
+                harm_categories=[select_value(item, "Deceptive Pattern", "Deceptive Pattern_ko")],
             )
             for item in data
         ]
