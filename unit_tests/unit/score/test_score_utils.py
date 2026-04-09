@@ -33,7 +33,7 @@ from pyrit.score.score_utils import (
 def _make_scorer_id(name: str) -> ScorerIdentifier:
     return ScorerIdentifier(
         class_name=name,
-        class_module="tests.unit.score",
+        class_module="unit_tests.unit.score",
         class_description="",
         identifier_type="instance",
     )

@@ -121,13 +121,13 @@ uv run python your_script.py
 ### Running Tests
 
 ```bash
-uv run pytest tests/
+uv run pytest unit_tests/
 ```
 
 ### Running Specific Test Files
 
 ```bash
-uv run pytest tests/unit/test_something.py
+uv run pytest unit_tests/unit/test_something.py
 ```
 
 ### Using PyRIT CLI Tools

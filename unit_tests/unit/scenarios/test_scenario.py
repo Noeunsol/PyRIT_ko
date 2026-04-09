@@ -18,7 +18,7 @@ from pyrit.score import Scorer
 # Reusable test scorer identifier
 _TEST_SCORER_ID = ScorerIdentifier(
     class_name="MockScorer",
-    class_module="tests.unit.scenarios",
+    class_module="unit_tests.unit.scenarios",
     class_description="",
     identifier_type="instance",
 )

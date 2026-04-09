@@ -21,7 +21,7 @@ def _mock_scorer_id(name: str = "MockScorer") -> ScorerIdentifier:
     """Helper to create ScorerIdentifier for tests."""
     return ScorerIdentifier(
         class_name=name,
-        class_module="tests.unit.score",
+        class_module="unit_tests.unit.score",
         class_description="",
         identifier_type="instance",
     )

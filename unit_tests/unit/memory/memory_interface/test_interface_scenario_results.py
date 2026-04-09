@@ -57,7 +57,7 @@ def create_scenario_result(
     # Use ScorerIdentifier directly instead of deprecated dict/mock_scorer
     scorer_identifier = ScorerIdentifier(
         class_name="TestScorer",
-        class_module="tests.unit.memory",
+        class_module="unit_tests.unit.memory",
         class_description="",
         identifier_type="instance",
     )

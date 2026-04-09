@@ -14,22 +14,22 @@ PyRIT test files can be run using `pytest`.
   * To run all tests (both unit and integration), you can pass a directory:
 
       ```
-      pytest tests
+      pytest unit_tests
       ```
 
   * To run all unit tests you also can pass the unit test directory:
 
       ```
-      pytest tests/unit
+      pytest unit_tests/unit
       ```
 
   * To run tests from a specific file (e.g. test_aml_online_endpoint.py), from the PyRIT directory, use:
 
      ```bash
-     pytest tests\test_aml_online_endpoint_chat.py
+     pytest unit_tests\test_aml_online_endpoint_chat.py
      ```
 
   * To execute a specific test (`test_get_headers_with_empty_api_key`) within the test module(`test_aml_online_endpoint.py`),
      ```bash
-     pytest tests\test_aml_online_endpoint_chat.py::test_get_headers_with_empty_api_key
+     pytest unit_tests\test_aml_online_endpoint_chat.py::test_get_headers_with_empty_api_key
      ```

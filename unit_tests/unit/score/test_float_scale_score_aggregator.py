@@ -14,7 +14,7 @@ from pyrit.score.float_scale.float_scale_score_aggregator import (
 # Reusable ScorerIdentifier for tests
 _TEST_SCORER_ID = ScorerIdentifier(
     class_name="UnitTestScorer",
-    class_module="tests.unit.score",
+    class_module="unit_tests.unit.score",
     class_description="",
     identifier_type="instance",
 )

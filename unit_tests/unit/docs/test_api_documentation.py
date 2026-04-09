@@ -19,7 +19,7 @@ import pytest
 def get_api_rst_path() -> Path:
     """Get the path to the api.rst file."""
     # Start from this test file and navigate to doc/api.rst
-    # tests/unit/docs -> tests/unit -> tests -> workspace_root
+    # unit_tests/unit/docs -> unit_tests/unit -> unit_tests -> workspace_root
     test_dir = Path(__file__).parent
     workspace_root = test_dir.parent.parent.parent
     return workspace_root / "doc" / "api.rst"

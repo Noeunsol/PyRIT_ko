@@ -1,6 +1,6 @@
 # 7. Integration Tests
 
-Integration testing is often optional, but is important for us to test interaction with other systems (and in our terminology this is also lumped with end-to-end tests). These tests are found in the `tests/integration` directory.
+Integration testing is often optional, but is important for us to test interaction with other systems (and in our terminology this is also lumped with end-to-end tests). These tests are found in the `unit_tests/integration` directory.
 
 Unlike unit tests, these tests can use real secrets. To test locally, these secrets should be configured as usual and it will make use of your `.env`.
 

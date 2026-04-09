@@ -25,7 +25,7 @@ def _test_scorer_id(name: str = "TestScorer") -> ScorerIdentifier:
     """Helper to create ScorerIdentifier for tests."""
     return ScorerIdentifier(
         class_name=name,
-        class_module="tests.unit.memory",
+        class_module="unit_tests.unit.memory",
         class_description="",
         identifier_type="instance",
     )

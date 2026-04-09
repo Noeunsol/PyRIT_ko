@@ -2,10 +2,10 @@
 
 CMD:=uv run -m
 PYMODULE:=pyrit
-TESTS:=tests
-UNIT_TESTS:=tests/unit
-INTEGRATION_TESTS:=tests/integration
-END_TO_END_TESTS:=tests/end_to_end
+TESTS:=unit_tests
+UNIT_TESTS:=unit_tests/unit
+INTEGRATION_TESTS:=unit_tests/integration
+END_TO_END_TESTS:=unit_tests/end_to_end
 
 all: pre-commit
 

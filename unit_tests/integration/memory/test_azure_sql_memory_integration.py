@@ -49,7 +49,7 @@ def get_test_scorer_identifier(**kwargs) -> ScorerIdentifier:
     """
     return ScorerIdentifier(
         class_name=kwargs.get("class_name", "TestScorer"),
-        class_module=kwargs.get("class_module", "tests.integration.memory.test_azure_sql_memory_integration"),
+        class_module=kwargs.get("class_module", "unit_tests.integration.memory.test_azure_sql_memory_integration"),
         class_description=kwargs.get("class_description", "Test scorer for integration testing"),
         identifier_type=kwargs.get("identifier_type", "instance"),
         scorer_type=kwargs.get("scorer_type", "true_false"),

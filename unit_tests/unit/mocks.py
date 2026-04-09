@@ -22,20 +22,20 @@ def get_mock_scorer_identifier() -> ScorerIdentifier:
     """
     return ScorerIdentifier(
         class_name="MockScorer",
-        class_module="tests.unit.mocks",
+        class_module="unit_tests.unit.mocks",
         class_description="Mock scorer for testing",
         identifier_type="instance",
     )
 
 
-def get_mock_target_identifier(name: str = "MockTarget", module: str = "tests.unit.mocks") -> TargetIdentifier:
+def get_mock_target_identifier(name: str = "MockTarget", module: str = "unit_tests.unit.mocks") -> TargetIdentifier:
     """
     Returns a mock TargetIdentifier for use in tests where the specific
     target identity doesn't matter.
 
     Args:
         name: The class name for the mock target. Defaults to "MockTarget".
-        module: The module path for the mock target. Defaults to "tests.unit.mocks".
+        module: The module path for the mock target. Defaults to "unit_tests.unit.mocks".
 
     Returns:
         A TargetIdentifier configured with the provided name and module.
