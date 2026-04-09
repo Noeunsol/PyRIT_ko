@@ -140,19 +140,12 @@ await ConsoleAttackResultPrinter().print_conversation_async(result=result)  # ty
 # The `PDFConverter` can also inject text into existing PDF documents at specified locations.
 
 # %%
-import tempfile
 from pathlib import Path
 
-import requests
+from pyrit.common.path import DATASETS_PATH
 
-# Download a sample PDF
-url = "https://raw.githubusercontent.com/Azure/PyRIT/main/pyrit/datasets/prompt_converters/pdf_converters/fake_CV.pdf"
-
-with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-    response = requests.get(url)
-    tmp_file.write(response.content)
-
-cv_pdf_path = Path(tmp_file.name)
+# Load a sample PDF from local datasets
+cv_pdf_path = Path(DATASETS_PATH) / "seed_datasets" / "local" / "examples" / "pdf" / "fake_CV.pdf"
 
 # Define injection items
 injection_items = [

@@ -8,7 +8,7 @@ from typing import Any, Optional, cast
 import requests
 
 from pyrit.common.apply_defaults import REQUIRED_VALUE, apply_defaults
-from pyrit.common.path import JAILBREAK_TEMPLATES_PATH
+from pyrit.common.path import DATASETS_PATH, JAILBREAK_TEMPLATES_PATH
 from pyrit.executor.attack.core.attack_config import AttackConverterConfig, AttackScoringConfig
 from pyrit.executor.attack.core.attack_parameters import AttackParameters
 from pyrit.executor.attack.single_turn.prompt_sending import PromptSendingAttack
@@ -42,7 +42,7 @@ def fetch_many_shot_jailbreaking_dataset_ko() -> list[dict[str, str]]:
     Returns:
         list[dict[str, str]]: A list of Korean many-shot jailbreaking examples.
     """
-    source = JAILBREAK_TEMPLATES_PATH / "multi_parameter" / "many_shot_examples_ko.json"
+    source = DATASETS_PATH / "jailbreak" / "many_shot" / "many_shot_examples_ko.json"
     with source.open("r", encoding="utf-8") as file:
         return cast(list[dict[str, str]], json.load(file))
 

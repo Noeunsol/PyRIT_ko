@@ -140,19 +140,12 @@ await ConsoleAttackResultPrinter().print_conversation_async(result=result)  # ty
 # `PDFConverter`는 기존 PDF 문서의 지정된 위치에 텍스트를 삽입할 수도 있습니다.
 
 # %%
-import tempfile
 from pathlib import Path
 
-import requests
+from pyrit.common.path import DATASETS_PATH
 
-# 샘플 PDF 다운로드
-url = "https://raw.githubusercontent.com/Azure/PyRIT/main/pyrit/datasets/prompt_converters/pdf_converters/fake_CV.pdf"
-
-with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-    response = requests.get(url)
-    tmp_file.write(response.content)
-
-cv_pdf_path = Path(tmp_file.name)
+# 로컬 데이터셋에서 샘플 PDF 로드
+cv_pdf_path = Path(DATASETS_PATH) / "seed_datasets" / "local" / "examples" / "pdf" / "fake_CV.pdf"
 
 # 삽입할 항목 정의
 injection_items = [
