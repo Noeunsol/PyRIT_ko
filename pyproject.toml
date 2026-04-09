@@ -161,7 +161,7 @@ pyrit_shell = "pyrit.cli.pyrit_shell:main"
 addopts = [
     "--import-mode=importlib",
 ]
-pythonpath = ["."]
+pythonpath = ["src", "."]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 
@@ -178,7 +178,11 @@ exclude = ["doc/code/"]
 requires = ["setuptools>=64.0.0", "wheel>=0.46.2"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["pyrit", "pyrit.*"]
 
 [tool.setuptools.package-data]

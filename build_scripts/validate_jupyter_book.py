@@ -70,13 +70,14 @@ def validate_api_rst_modules(modules: List[Tuple[str, List[str]]], repo_root: Pa
     """
     errors = []
 
+    src_root = repo_root / "src"
     for module_name, members in modules:
         # Check if module file exists
-        # Convert module name to path: pyrit.analytics -> pyrit/analytics/__init__.py
+        # Convert module name to path: pyrit.analytics -> src/pyrit/analytics/__init__.py
         module_path = module_name.replace(".", os.sep)
         possible_paths = [
-            repo_root / f"{module_path}.py",
-            repo_root / module_path / "__init__.py",
+            src_root / f"{module_path}.py",
+            src_root / module_path / "__init__.py",
         ]
 
         # For pyrit.scenario.* modules, also check in pyrit.scenario.scenarios.*
@@ -87,8 +88,8 @@ def validate_api_rst_modules(modules: List[Tuple[str, List[str]]], repo_root: Pa
             scenarios_module_path = scenarios_path.replace(".", os.sep)
             possible_paths.extend(
                 [
-                    repo_root / f"{scenarios_module_path}.py",
-                    repo_root / scenarios_module_path / "__init__.py",
+                    src_root / f"{scenarios_module_path}.py",
+                    src_root / scenarios_module_path / "__init__.py",
                 ]
             )
 
@@ -277,9 +278,10 @@ def main():
     api_rst = doc_root / "api.rst"
     toc_yml = doc_root / "_toc.yml"
 
-    # Add repo root to sys.path so we can import pyrit modules
-    if str(repo_root) not in sys.path:
-        sys.path.insert(0, str(repo_root))
+    # Add src dir to sys.path so we can import pyrit modules
+    src_root = repo_root / "src"
+    if str(src_root) not in sys.path:
+        sys.path.insert(0, str(src_root))
 
     # Ensure required files exist
     if not api_rst.exists():

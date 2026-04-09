@@ -14,7 +14,7 @@ def get_default_data_path(dir: str) -> pathlib.Path:
         pathlib.Path: The resolved absolute path to the data directory.
     """
     if in_git_repo():
-        return pathlib.Path(PYRIT_PATH, "..", dir).resolve()
+        return pathlib.Path(HOME_PATH, dir).resolve()
     else:
         return pathlib.Path(user_data_dir(dir, "pyrit")).resolve()
 
@@ -33,11 +33,11 @@ PYRIT_PATH = pathlib.Path(__file__, "..", "..").resolve()
 
 CONFIGURATION_DIRECTORY_PATH = pathlib.Path.home() / ".pyrit"
 
-# Points to the root of the project
-HOME_PATH = pathlib.Path(PYRIT_PATH, "..").resolve()
+# Points to the root of the project (src/pyrit -> src -> repo root)
+HOME_PATH = pathlib.Path(PYRIT_PATH, "..", "..").resolve()
 
-DOCS_PATH = pathlib.Path(PYRIT_PATH, "..", "doc").resolve()
-DOCS_CODE_PATH = pathlib.Path(PYRIT_PATH, "..", "doc", "code").resolve()
+DOCS_PATH = pathlib.Path(HOME_PATH, "doc").resolve()
+DOCS_CODE_PATH = pathlib.Path(HOME_PATH, "doc", "code").resolve()
 
 # Path to where all the seed prompt entry and prompt memory entry files and database file will be stored
 DB_DATA_PATH = get_default_data_path("dbdata")
@@ -52,7 +52,7 @@ LOG_PATH = pathlib.Path(DB_DATA_PATH, "logs.txt").resolve()
 LOG_PATH.touch(exist_ok=True)
 
 DATASETS_PATH = pathlib.Path(PYRIT_PATH, "datasets").resolve()
-PROMPTS_PATH = pathlib.Path(PYRIT_PATH, "..", "prompts").resolve()
+PROMPTS_PATH = pathlib.Path(HOME_PATH, "prompts").resolve()
 
 EXECUTOR_SEED_PROMPT_PATH = pathlib.Path(PROMPTS_PATH, "executors").resolve()
 EXECUTOR_RED_TEAM_PATH = pathlib.Path(EXECUTOR_SEED_PROMPT_PATH, "red_teaming").resolve()

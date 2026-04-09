@@ -1,6 +1,9 @@
 {
     "include": [
-      "pyrit"
+      "src/pyrit"
+    ],
+    "extraPaths": [
+      "src"
     ],
     "exclude": [
       "**/.git",
