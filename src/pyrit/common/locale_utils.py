@@ -58,9 +58,10 @@ def infer_localized_path_pair(*, path: Path) -> tuple[Path, Path]:
 
     Convention:
     - English file: `name.yaml`
-    - Korean file: `name_ko.yaml`
+    - Korean file: `name_ko.yaml` (preferred)
+    - Korean file: `name-ko.yaml` (legacy/alternate)
     """
-    if path.stem.endswith("_ko"):
+    if path.stem.endswith("_ko") or path.stem.endswith("-ko"):
         return path.with_name(f"{path.stem[:-3]}{path.suffix}"), path
     return path, path.with_name(f"{path.stem}_ko{path.suffix}")
 
@@ -89,11 +90,15 @@ def get_localized_file_paths(
     supported = tuple(dict.fromkeys(supported_locales))
     localized_paths = {locale: resolved_path for locale in supported}
     english_candidate, korean_candidate = infer_localized_path_pair(path=resolved_path)
+    korean_hyphen_candidate = english_candidate.with_name(f"{english_candidate.stem}-ko{english_candidate.suffix}")
 
     if "en" in localized_paths and english_candidate.exists():
         localized_paths["en"] = english_candidate.resolve()
-    if "ko" in localized_paths and korean_candidate.exists():
-        localized_paths["ko"] = korean_candidate.resolve()
+    if "ko" in localized_paths:
+        if korean_candidate.exists():
+            localized_paths["ko"] = korean_candidate.resolve()
+        elif korean_hyphen_candidate.exists():
+            localized_paths["ko"] = korean_hyphen_candidate.resolve()
 
     return localized_paths
 

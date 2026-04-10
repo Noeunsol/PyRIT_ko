@@ -32,15 +32,7 @@ import os
 import pathlib
 import sys
 
-# Prevent shadowing HuggingFace `datasets` with local `pyrit/datasets`.
-bad_path = "/Users/selectstar/PyRIT_ko/src/pyrit"
-if bad_path in sys.path:
-    sys.path = [p for p in sys.path if p != bad_path]
-
-datasets_mod = sys.modules.get("datasets")
-if datasets_mod and str(getattr(datasets_mod, "__file__", "")).startswith(bad_path):
-    del sys.modules["datasets"]
-
+# 노트북에서 로컬 PyRIT 소스를 우선 참조
 if "/Users/selectstar/PyRIT_ko/src" not in sys.path:
     sys.path.insert(0, "/Users/selectstar/PyRIT_ko/src")
 
@@ -204,7 +196,7 @@ print(system_prompt.value)
 #
 # #### YAML 예시
 #
-# 아래는 `pyrit_example_dataset`에 포함된
+# 아래는 로케일별 예시 데이터셋(`pyrit_example_dataset` / `pyrit_example_dataset_ko`)에 포함된
 # [`illegal-multimodal-group.prompt`](../../../pyrit/datasets/seed_datasets/local/examples/illegal-multimodal-group.prompt) 예시입니다.
 # 모든 Seed의 `sequence`가 0이라 한 번에 함께 전송됩니다.
 #
@@ -255,11 +247,13 @@ from pyrit.common.path import DATASETS_PATH
 from pyrit.models import SeedDataset
 
 # 권장 방식은 fetch_datasets_async()지만, 여기서는 파일 직접 로드 예시를 사용
-# datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=["pyrit_example_dataset"])
-dataset = SeedDataset.from_yaml_file(
-    DATASETS_PATH / "seed_datasets" / "local" / "examples" / "illegal-multimodal-group.prompt"
-)
+dataset_name = L.pick(en="pyrit_example_dataset", ko="pyrit_example_dataset_ko")
+# datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=[dataset_name])
+dataset_path = L.yaml_path(DATASETS_PATH / "seed_datasets" / "local" / "examples" / "illegal-multimodal-group.prompt")
+dataset = SeedDataset.from_yaml_file(dataset_path)
 
+print(L.pick(en="Dataset name:", ko="데이터셋 이름:"), dataset_name)
+print(L.pick(en="Resolved YAML path:", ko="선택된 YAML 경로:"), dataset_path)
 print(L.pick(en="Number of seed groups:", ko="SeedGroup 개수:"), len(dataset.seed_groups))
 
 for seed in dataset.seeds:

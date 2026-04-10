@@ -38,13 +38,18 @@
 
 # %%
 from pyrit.datasets import SeedDatasetProvider
+from pyrit.common.locale_utils import NotebookLocale
 from pyrit.memory import CentralMemory
 from pyrit.setup import IN_MEMORY, initialize_pyrit_async
+
+# Switch locale here if needed ("en" or "ko")
+L = NotebookLocale("ko")
+dataset_name = L.pick(en="pyrit_example_dataset", ko="pyrit_example_dataset_ko")
 
 await initialize_pyrit_async(memory_db_type=IN_MEMORY)  # type: ignore
 
 # Seed Prompts can be created directly, loaded from yaml files, or fetched from built-in datasets
-datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=["pyrit_example_dataset"])  # type: ignore
+datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=[dataset_name])  # type: ignore
 
 
 print(datasets[0].seeds[0].value)
@@ -54,12 +59,12 @@ await memory.add_seed_datasets_to_memory_async(datasets=datasets, added_by="test
 
 
 # Retrieve the dataset from memory
-seeds = memory.get_seeds(dataset_name="pyrit_example_dataset")
+seeds = memory.get_seeds(dataset_name=dataset_name)
 print(f"Number of prompts in dataset: {len(seeds)}")
 
 # Note we can add it again without creating duplicates
 await memory.add_seed_datasets_to_memory_async(datasets=datasets, added_by="test")  # type: ignore
-seeds = memory.get_seeds(dataset_name="pyrit_example_dataset")
+seeds = memory.get_seeds(dataset_name=dataset_name)
 print(f"Number of prompts in dataset after re-adding: {len(seeds)}")
 
 # %% [markdown]
@@ -70,7 +75,8 @@ print(f"Number of prompts in dataset after re-adding: {len(seeds)}")
 #
 # Once seeds are stored in memory, you can query them using various criteria. Let's start by exploring what datasets are available.
 #
-# The example below shows the dataset we just uploaded (`pyrit_example_dataset`), but `get_seed_dataset_names()` returns all datasets in memory.
+# The example below shows the dataset we just uploaded (`pyrit_example_dataset` or `pyrit_example_dataset_ko`),
+# but `get_seed_dataset_names()` returns all datasets in memory.
 
 # %%
 all_dataset_names = memory.get_seed_dataset_names()
@@ -98,14 +104,14 @@ def print_group(seed_group):
 
 
 # Get all seeds in the dataset we just uploaded
-seed_groups = memory.get_seed_groups(dataset_name="pyrit_example_dataset")
-print("First seed from pyrit_example_dataset:")
+seed_groups = memory.get_seed_groups(dataset_name=dataset_name)
+print(f"First seed from {dataset_name}:")
 print("----------")
 print_group(seed_groups[0])
 
 # Filter by SeedObjectives
-seed_groups = memory.get_seed_groups(dataset_name="pyrit_example_dataset", is_objective=True, group_length=[1])
-print("First SeedObjective from pyrit_example_dataset without a seedprompt:")
+seed_groups = memory.get_seed_groups(dataset_name=dataset_name, is_objective=True, group_length=[1])
+print(f"First SeedObjective from {dataset_name} without a seedprompt:")
 print("----------")
 print_group(seed_groups[0])
 
@@ -118,6 +124,6 @@ print_group(seed_groups[0])
 
 # Filter by image seeds
 print("First image seed in the dataset")
-seed_groups = memory.get_seed_groups(data_types=["image_path"], dataset_name="pyrit_example_dataset")
+seed_groups = memory.get_seed_groups(data_types=["image_path"], dataset_name=dataset_name)
 print("----------")
 print_group(seed_groups[0])

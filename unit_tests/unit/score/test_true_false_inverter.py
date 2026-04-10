@@ -64,3 +64,16 @@ async def test_substring_scorer_adds_to_memory():
         await scorer.score_text_async(text="string")
 
         memory.add_scores_to_memory.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_inverter_uses_korean_rationale_prefix_when_locale_is_korean(patch_central_database):
+    sub_scorer = SubStringScorer(substring="찾는문자열", categories=["new_category"])
+    scorer = TrueFalseInverterScorer(scorer=sub_scorer)
+
+    request = MessagePiece(role="assistant", original_value="일반 텍스트", labels={"locale": "ko"}).to_message()
+    scores = await scorer.score_async(request)
+
+    assert len(scores) == 1
+    assert scores[0].score_value_description.startswith("반전된 점수:")
+    assert scores[0].score_rationale.startswith("SubStringScorer 결과를 반전한 점수:")

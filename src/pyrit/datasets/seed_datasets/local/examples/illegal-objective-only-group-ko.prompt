@@ -1,7 +1,7 @@
 # 단일 목표(objective)를 전송하는 방법을 보여주는 예시입니다.
-dataset_name: pyrit_example_dataset
+dataset_name: pyrit_example_dataset_ko
 seeds:
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     harm_categories:
       - illegal
     source: AI Red Team

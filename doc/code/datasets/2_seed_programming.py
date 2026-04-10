@@ -163,7 +163,7 @@ print(system_prompt.value)
 #
 # #### YAML Example
 #
-# Below is an example from [`illegal-multimodal-group.prompt`](../../../pyrit/datasets/seed_datasets/local/examples/illegal-multimodal-group.prompt), available as part of `pyrit_example_dataset`. This defines a single `SeedGroup` where all seeds have `sequence` 0, meaning they're sent together:
+# Below is an example from [`illegal-multimodal-group.prompt`](../../../pyrit/datasets/seed_datasets/local/examples/illegal-multimodal-group.prompt), available as part of `pyrit_example_dataset` (or `pyrit_example_dataset_ko` when using the localized `_ko` file). This defines a single `SeedGroup` where all seeds have `sequence` 0, meaning they're sent together:
 #
 # ```yaml
 # dataset_name: pyrit_example_dataset
@@ -213,6 +213,7 @@ from pyrit.models import SeedDataset
 
 # The prefered way to do this is fetch_datasets_async, but in this case we'll load the file directly
 # datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=["pyrit_example_dataset"])
+# localized Korean variant: ["pyrit_example_dataset_ko"]
 dataset = SeedDataset.from_yaml_file(
     DATASETS_PATH / "seed_datasets" / "local" / "examples" / "illegal-multimodal-group.prompt"
 )

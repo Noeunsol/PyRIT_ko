@@ -1,7 +1,7 @@
 # 멀티모달(텍스트, 이미지) 그룹에서 목표(objective)를 설정하는 방법을 보여주는 예시입니다.
-dataset_name: pyrit_example_dataset
+dataset_name: pyrit_example_dataset_ko
 seeds:
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     harm_categories:
       - illegal
     source: AI Red Team
@@ -10,7 +10,7 @@ seeds:
     sequence: 0
     prompt_group_alias: group_1
     role: user
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     harm_categories:
       - illegal
     source: AI Red Team
@@ -20,7 +20,7 @@ seeds:
     sequence: 1
     prompt_group_alias: group_1
     role: user
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     source: AI Red Team
     value: |
       {{ datasets_path }}/seed_datasets/local/examples/multimodal_data/roakey_potion.png

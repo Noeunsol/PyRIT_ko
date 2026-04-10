@@ -6,12 +6,24 @@ from typing import Optional
 
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import ChatMessageRole, Message, MessagePiece, Score
+from pyrit.score.score_utils import resolve_scorer_locale
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 
 
 class TrueFalseInverterScorer(TrueFalseScorer):
     """A scorer that inverts a true false score."""
+    _SUPPORTED_LOCALES = ("en", "ko")
+    _LOCALIZED_MESSAGES = {
+        "en": {
+            "inverted_score_description_prefix": "Inverted score: ",
+            "inverted_score_rationale_prefix": "Inverted score from {scorer_type} result: {score_value}",
+        },
+        "ko": {
+            "inverted_score_description_prefix": "반전된 점수: ",
+            "inverted_score_rationale_prefix": "{scorer_type} 결과를 반전한 점수: {score_value}",
+        },
+    }
 
     def __init__(self, *, scorer: TrueFalseScorer, validator: Optional[ScorerPromptValidator] = None) -> None:
         """
@@ -43,6 +55,10 @@ class TrueFalseInverterScorer(TrueFalseScorer):
             score_aggregator=self._score_aggregator.__name__,
         )
 
+    def _resolve_locale(self, *, message: Message) -> str:
+        labels = message.message_pieces[0].labels if message.message_pieces else None
+        return resolve_scorer_locale(labels=labels, supported_locales=self._SUPPORTED_LOCALES)
+
     async def _score_async(
         self,
         message: Message,
@@ -70,14 +86,19 @@ class TrueFalseInverterScorer(TrueFalseScorer):
 
         # TrueFalseScorers only have a single score
         inv_score = scores[0]
+        locale = self._resolve_locale(message=message)
+        localized = self._LOCALIZED_MESSAGES.get(locale, self._LOCALIZED_MESSAGES["en"])
 
         inv_score.score_value = str(True) if not inv_score.get_value() else str(False)
-        inv_score.score_value_description = "Inverted score: " + str(inv_score.score_value_description)
+        inv_score.score_value_description = (
+            localized["inverted_score_description_prefix"] + str(inv_score.score_value_description)
+        )
 
         scorer_type = self._scorer.get_identifier().class_name
-        inv_score.score_rationale = (
-            f"Inverted score from {scorer_type} result: {inv_score.score_value}\n{inv_score.score_rationale}"
+        rationale_prefix = localized["inverted_score_rationale_prefix"].format(
+            scorer_type=scorer_type, score_value=inv_score.score_value
         )
+        inv_score.score_rationale = f"{rationale_prefix}\n{inv_score.score_rationale}"
 
         inv_score.id = uuid.uuid4()
 

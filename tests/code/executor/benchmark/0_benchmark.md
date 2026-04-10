@@ -1,5 +1,5 @@
-# Benchmark
+# 벤치마크 (Benchmark)
 
-The Benchmark component is used to evaluate model performance and safety. For example, the [Q&A Benchmark](./1_qa_benchmark.ipynb) strategy evaluates a target model's ability to answer questions from a provided dataset. This can give more insight into model ability over different criteria areas.
+Benchmark 컴포넌트는 모델의 성능과 안전성을 평가할 때 사용합니다. 예를 들어 [Q&A Benchmark](./1_qa_benchmark.ipynb) 전략은 제공된 데이터셋 질문에 대해 타겟 모델이 얼마나 정확히 답하는지 측정합니다. 이를 통해 평가 기준(도메인/주제)별 모델 역량을 더 세밀하게 파악할 수 있습니다.
 
-All benchmarks have configurable converter and scoring configurations and custom contexts, and produce a result that can be further analyzed.
+모든 benchmark는 converter/scoring 설정과 사용자 정의 컨텍스트를 구성할 수 있으며, 실행 결과는 후속 분석에 활용할 수 있습니다.

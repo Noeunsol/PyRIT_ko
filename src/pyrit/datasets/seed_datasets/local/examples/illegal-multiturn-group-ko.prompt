@@ -1,7 +1,7 @@
 # 단일 모달리티(텍스트)를 사용하는 멀티턴 SeedGroup의 예시입니다.
-dataset_name: pyrit_example_dataset
+dataset_name: pyrit_example_dataset_ko
 seeds:
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     harm_categories:
       - illegal
     source: AI Red Team
@@ -10,7 +10,7 @@ seeds:
     sequence: 0
     prompt_group_alias: group_1
     role: user
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     harm_categories:
       - illegal
     source: AI Red Team
@@ -19,7 +19,7 @@ seeds:
     sequence: 1
     prompt_group_alias: group_1
     role: system
-  - dataset_name: pyrit_example_dataset
+  - dataset_name: pyrit_example_dataset_ko
     harm_categories:
       - illegal
     source: AI Red Team

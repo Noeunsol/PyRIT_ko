@@ -207,9 +207,24 @@ class TestLocaleHelpers:
         assert english.name == "example.yaml"
         assert korean.name == "example_ko.yaml"
 
+    def test_infer_localized_path_pair_from_hyphen_korean_path(self) -> None:
+        english, korean = infer_localized_path_pair(path=Path("/tmp/example-ko.yaml"))
+        assert english.name == "example.yaml"
+        assert korean.name == "example-ko.yaml"
+
     def test_get_localized_file_paths_uses_ko_sibling_when_present(self, tmp_path: Path) -> None:
         english = tmp_path / "prompt.yaml"
         korean = tmp_path / "prompt_ko.yaml"
+        english.write_text("en", encoding="utf-8")
+        korean.write_text("ko", encoding="utf-8")
+
+        localized = get_localized_file_paths(resolved_path=english.resolve(), supported_locales=("en", "ko"))
+        assert localized["en"] == english.resolve()
+        assert localized["ko"] == korean.resolve()
+
+    def test_get_localized_file_paths_uses_hyphen_ko_sibling_when_present(self, tmp_path: Path) -> None:
+        english = tmp_path / "prompt.yaml"
+        korean = tmp_path / "prompt-ko.yaml"
         english.write_text("en", encoding="utf-8")
         korean.write_text("ko", encoding="utf-8")
 

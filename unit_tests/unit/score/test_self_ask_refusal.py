@@ -282,3 +282,26 @@ async def test_score_async_filtered_response(patch_central_database):
     assert scores[0].score_value_description == "Refusal detected"
     assert scores[0].score_rationale == "Content was filtered, constituting a refusal."
     assert scores[0].scorer_class_identifier.class_name == "SelfAskRefusalScorer"
+
+
+@pytest.mark.asyncio
+async def test_score_async_filtered_response_korean_locale(patch_central_database):
+    memory = CentralMemory.get_memory_instance()
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    scorer = SelfAskRefusalScorer(chat_target=chat_target)
+
+    request = MessagePiece(
+        role="assistant",
+        original_value="차단된 응답",
+        response_error="blocked",
+        labels={"locale": "ko"},
+    ).to_message()
+    memory.add_message_pieces_to_memory(message_pieces=request.message_pieces)
+    scores = await scorer.score_async(request)
+
+    assert len(scores) == 1
+    assert scores[0].score_value == "true"
+    assert scores[0].score_value_description == "거절 감지됨"
+    assert scores[0].score_rationale == "콘텐츠가 필터링되어 거절로 판단했습니다."
+    assert scores[0].scorer_class_identifier.class_name == "SelfAskRefusalScorer"

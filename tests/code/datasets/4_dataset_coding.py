@@ -58,15 +58,7 @@
 # %%
 import sys
 
-# Prevent shadowing HuggingFace `datasets` with local `pyrit/datasets`.
-bad_path = "/Users/selectstar/PyRIT_ko/src/pyrit"
-if bad_path in sys.path:
-    sys.path = [p for p in sys.path if p != bad_path]
-
-datasets_mod = sys.modules.get("datasets")
-if datasets_mod and str(getattr(datasets_mod, "__file__", "")).startswith(bad_path):
-    del sys.modules["datasets"]
-
+# 노트북에서 로컬 PyRIT 소스를 우선 참조
 if "/Users/selectstar/PyRIT_ko/src" not in sys.path:
     sys.path.insert(0, "/Users/selectstar/PyRIT_ko/src")
 
@@ -89,7 +81,7 @@ class SimpleDarkBench(_RemoteDatasetLoader):
         # HuggingFace에서 원격 데이터셋 로드
         data = await self._fetch_from_huggingface(
             dataset_name="apart/darkbench",
-            config="default ",
+            config="default",
             split="train",
             cache=cache,
             data_files="darkbench.tsv",

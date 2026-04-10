@@ -24,15 +24,7 @@
 # %%
 import sys
 
-# Prevent shadowing HuggingFace `datasets` with local `pyrit/datasets`.
-bad_path = "/Users/selectstar/PyRIT_ko/src/pyrit"
-if bad_path in sys.path:
-    sys.path = [p for p in sys.path if p != bad_path]
-
-datasets_mod = sys.modules.get("datasets")
-if datasets_mod and str(getattr(datasets_mod, "__file__", "")).startswith(bad_path):
-    del sys.modules["datasets"]
-
+# 노트북에서 로컬 PyRIT 소스를 우선 참조
 if "/Users/selectstar/PyRIT_ko/src" not in sys.path:
     sys.path.insert(0, "/Users/selectstar/PyRIT_ko/src")
 
@@ -46,6 +38,13 @@ all_dataset_names = SeedDatasetProvider.get_all_dataset_names()
 print(L.pick(en="Built-in dataset names:", ko="내장 데이터셋 이름:"))
 print(all_dataset_names)
 
+
+def localized_dataset_name(base_name: str) -> str:
+    ko_name = f"{base_name}_ko"
+    if L.locale == "ko" and ko_name in all_dataset_names:
+        return ko_name
+    return base_name
+
 # %% [markdown]
 # ## 특정 데이터셋만 로드하기
 #
@@ -53,7 +52,11 @@ print(all_dataset_names)
 # 반환 타입은 `SeedDataset` 리스트이며, 내부에 Seed 정보가 포함됩니다.
 
 # %%
-datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=["airt_illegal", "airt_malware"])  # type: ignore
+requested_base_names = ["airt_illegal", "airt_malware"]
+selected_dataset_names = [localized_dataset_name(name) for name in requested_base_names]
+print(L.pick(en="Selected datasets:", ko="선택된 데이터셋:"), selected_dataset_names)
+
+datasets = await SeedDatasetProvider.fetch_datasets_async(dataset_names=selected_dataset_names)  # type: ignore
 
 for dataset in datasets:
     print(f"\n{L.pick(en='Dataset', ko='데이터셋')}: {dataset.dataset_name}")
