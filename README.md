@@ -1,39 +1,173 @@
 <p align="center"><img src="./doc/roakey.png" width="150"></p>
 
-# Python Risk Identification Tool for generative AI (PyRIT)
+# PyRIT_ko
 
-The Python Risk Identification Tool for generative AI (PyRIT) is an open source
-framework built to empower security professionals and engineers to proactively
-identify risks in generative AI systems.
+PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실험 저장소입니다.  
+이 문서는 현재 저장소 상태를 반영하며, 이후 실험/구조 변경에 따라 계속 업데이트됩니다.
 
-- Check out our [website](https://azure.github.io/PyRIT/) for more information
-  about how to use, install, or contribute to PyRIT.
-- Visit our [Discord server](https://discord.gg/9fMpq3tc8u) to chat with the team and community.
+---
 
-## Trademarks
+## 1. 레포지토리 설명
 
-This project may contain trademarks or logos for projects, products, or services.
-Authorized use of Microsoft trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must
-not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's
-policies.
+- 원본 프레임워크: [Azure/PyRIT](https://github.com/Azure/PyRIT)
+- 목적: 한국어 환경에서 공격(Attack) - 변환(Converter) - 평가(Scorer) 흐름을 빠르게 실험
+- 현재 특징:
+  - `tests/`에 단계별 튜토리얼(00~05) 정리
+  - `main.py`로 대화형 실행(시나리오 모드/커스텀 모드)
+  - `01_custom_tutorial`에서 SQLite(`pyrit.db`) 결과 테이블 조회 지원
+  - 한국어 문서(`doc_ko/`) 및 한국어 데이터셋(`*_ko`) 포함
 
-## Citing PyRIT
+---
 
-If you use PyRIT in your research, please cite our preprint paper as follows:
+## 2. 데이터 셋
 
+이 저장소의 데이터셋은 주로 `src/pyrit/datasets/` 아래에 있습니다.
+
+| 구분 | 경로 | 예시 파일 | 용도 |
+|---|---|---|---|
+| Seed 데이터셋 | `src/pyrit/datasets/seed_datasets/local/` | `adv_bench_ko.prompt`, `harmbench_ko.csv` | 공격 목표 프롬프트 입력 |
+| Garak 계열 시드 | `src/pyrit/datasets/seed_datasets/local/garak/` | `access_shell_commands_ko.prompt`, `web_html_js_ko.prompt` | 특정 공격군 실험 |
+| 평가셋 | `src/pyrit/datasets/scorer_evals/` | `refusal_ko.csv`, `harm/hate_speech_ko.csv` | 스코어러 동작/품질 평가 |
+| Lexicon | `src/pyrit/datasets/lexicons/` | `languages_most_spoken_ko.yaml`, `fairness/gendered_professions_ko.yaml` | 카테고리/어휘 기반 보조 데이터 |
+| Jailbreak 예시 | `src/pyrit/datasets/jailbreak/` | `many_shot/many_shot_examples_ko.json` | 다중 예시 기반 공격 |
+
+참고:
+- 한국어 리소스는 `*_ko` 접미사 파일로 관리되는 경우가 많습니다.
+
+---
+
+## 3. 구체적인 설명
+
+### 3.1 핵심 컴포넌트
+
+- Attack: 목표를 전달하는 전략 (예: `PromptSending`, `Crescendo`, `RedTeaming`)
+- Converter: 프롬프트 변형/난독화 (예: `Base64`, `ROT13(ko)`, `Leetspeak(ko)`)
+- Target: 테스트 대상 모델 (예: OpenAIChatTarget)
+- Scorer: 성공/실패/유해성 판단 (예: Refusal, Scale, Likert)
+- Scenario: 여러 원자적 공격을 묶어 캠페인 실행
+- Memory: 실행 결과 저장 (`InMemory`, `SQLite`, `AzureSQL`)
+
+### 3.2 튜토리얼 구성(`tests/`)
+
+- `00_pyrit_overview.md`: 구조 개요
+- `01_custom_tutorial.ipynb`: 공격/변환기/스코어러 조합 실행 + SQLite 결과 조회
+- `02_attack_comparison.ipynb`: 공격 전략 비교
+- `03_converter_comparison.ipynb`: 변환기 비교
+- `04_scorer_comparison.ipynb`: 스코어러 비교
+- `05_scenario_walkthrough.ipynb`: 시나리오 기반 종합 실행
+
+---
+
+## 4. 파이프라인 설명 및 실행
+
+### 4.1 파이프라인
+
+```text
+Objective
+  -> Attack
+    -> Converter (선택)
+      -> Target LLM
+        -> Scorer
+          -> Memory (InMemory / SQLite)
 ```
-@misc{munoz2024pyritframeworksecurityrisk,
-      title={PyRIT: A Framework for Security Risk Identification and Red Teaming in Generative AI Systems},
-      author={Gary D. Lopez Munoz and Amanda J. Minnich and Roman Lutz and Richard Lundeen and Raja Sekhar Rao Dheekonda and Nina Chikanov and Bolor-Erdene Jagdagdorj and Martin Pouliot and Shiven Chawla and Whitney Maxwell and Blake Bullwinkel and Katherine Pratt and Joris de Gruyter and Charlotte Siska and Pete Bryan and Tori Westerhoff and Chang Kawaguchi and Christian Seifert and Ram Shankar Siva Kumar and Yonatan Zunger},
-      year={2024},
-      eprint={2410.02828},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR},
-      url={https://arxiv.org/abs/2410.02828},
-}
+
+### 4.2 설치
+
+```bash
+git clone <repo-url>
+cd PyRIT_ko
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
-Additionally, please cite the tool itself following the `CITATION.cff` file in the root of this repository.
+### 4.3 실행 방법
+
+1) 튜토리얼 실행
+
+```bash
+jupyter lab
+```
+
+권장 시작점:
+- `tests/01_custom_tutorial.ipynb`
+
+2) 대화형 실행기
+
+```bash
+python main.py
+```
+
+3) CLI 엔트리포인트
+
+```bash
+pyrit_scan --help
+pyrit_shell --help
+```
+
+### 4.4 SQLite 결과 저장/조회
+
+`tests/01_custom_tutorial`에서 아래 설정 시:
+
+```python
+MEMORY_DB_TYPE = SQLITE
+```
+
+- `pyrit.db`에 결과가 저장되고
+- 최신 실행 결과/테이블 row count를 표 형식으로 확인할 수 있습니다.
+
+---
+
+## 5. 이슈
+
+- 이 저장소는 튜토리얼/문서/실험 구성이 계속 변경되는 작업 브랜치 성격이 있습니다.
+- 튜토리얼 파일은 `ipynb` + `py`(jupytext 페어)로 함께 관리되므로, 수정 시 동기화가 필요합니다.
+- 모델 실행 시 API 키가 없으면 타겟 호출이 실패합니다.
+  - `OPENAI_API_KEY` 또는 `OPENAI_CHAT_KEY`
+- `InMemory` 모드에서는 `.db` 파일이 남지 않습니다.
+  - DB 분석이 필요하면 `SQLITE` 사용
+
+---
+
+## 6. Requirements
+
+### 6.1 Python 버전
+
+- `>=3.10, <3.14` (권장: 3.11)
+
+### 6.2 주요 의존성(발췌)
+
+- `openai`, `SQLAlchemy`, `transformers`, `datasets`, `fastapi`, `uvicorn`
+- 개발/노트북: `pytest`, `jupyter`, `jupytext`, `ruff`, `mypy`
+
+정확한 전체 목록은 아래를 기준으로 확인:
+- `pyproject.toml`
+
+### 6.3 테스트 명령 예시
+
+```bash
+.venv/bin/python -m pytest -q unit_tests/unit
+```
+
+---
+
+## 7. 폴더 구조
+
+```text
+PyRIT_ko/
+├── src/pyrit/                    # PyRIT 코어 라이브러리
+│   ├── prompt_converter/         # 변환기 구현
+│   ├── executor/                 # 공격/실행 로직
+│   ├── scenario/                 # 시나리오 실행 로직
+│   ├── memory/                   # SQLite/AzureSQL 메모리
+│   ├── score/                    # 스코어러
+│   ├── cli/                      # pyrit_scan, pyrit_shell
+│   └── datasets/                 # 시드/평가/렉시콘 데이터셋
+├── prompts/                      # 프롬프트 템플릿
+├── tests/                        # 튜토리얼 데모(00~05)
+├── doc/                          # 기본 문서
+├── doc_ko/                       # 한국어 문서
+├── main.py                       # 대화형 실행 엔트리포인트
+├── pyproject.toml                # 패키지/의존성 정의
+└── Makefile                      # 테스트/빌드 보조 명령
+```
