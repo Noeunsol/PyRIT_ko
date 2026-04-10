@@ -100,3 +100,33 @@ def test_leetspeak_input_supported():
     converter = LeetspeakConverter()
     assert converter.input_supported("text") is True
     assert converter.input_supported("audio_path") is False
+
+
+@pytest.mark.parametrize(
+    "input_text,expected_output",
+    [
+        ("귀멍커거지", "커댕귀지거"),
+        ("식위", "싀읶"),
+        ("돼태", "태EH"),
+    ],
+)
+def test_leetspeak_korean_deterministic_token_substitution(input_text, expected_output):
+    converter = LeetspeakConverter(locale="ko", deterministic=True)
+    result = asyncio.run(converter.convert_async(prompt=input_text))
+    assert result.output_text == expected_output
+
+
+@pytest.mark.parametrize(
+    "input_text,valid_outputs",
+    [
+        ("개", {"7ㅐ", "7H"}),
+        ("새", {"AH", "Aㅐ"}),
+        ("끼", {"77ㅣ", "77l"}),
+        ("니", {"Lㅣ", "Ll"}),
+        ("면", {"띤", "댼"}),
+    ],
+)
+def test_leetspeak_korean_non_deterministic_multi_candidates(input_text, valid_outputs):
+    converter = LeetspeakConverter(locale="ko", deterministic=False)
+    result = asyncio.run(converter.convert_async(prompt=input_text))
+    assert result.output_text in valid_outputs

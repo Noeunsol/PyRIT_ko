@@ -142,7 +142,7 @@ CONVERTERS = [
     # ── Text → Text: Korean-specific ──
     ("BrailleConverter", "한글 점자로 변환", "Convert to Braille", "tt_korean"),
     ("NatoConverter", "한글 음성부호/NATO 알파벳으로 변환", "Convert to NATO phonetic alphabet", "tt_korean"),
-    ("LeetspeakConverter", "한글 자모를 닮은꼴 기호로 치환 (ㄱ→7, ㄷ→[ 등)", "Leetspeak: replace letters with look-alikes (e→3)", "tt_korean"),
+    ("LeetspeakConverter", "한글 자모를 닮은꼴 기호로 치환 (귀->커, 비->네 등)", "Leetspeak: replace letters with look-alikes (e→3)", "tt_korean"),
     ("ColloquialWordswapConverter", "한국어 표준어를 구어체/속어로 변환", "Swap Korean formal words with slang", "tt_korean"),
     # ── Text → Text: Transform ──
     ("FlipConverter", "텍스트 순서를 뒤집기", "Reverse text order", "tt_transform"),

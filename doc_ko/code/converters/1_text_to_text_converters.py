@@ -184,9 +184,9 @@ math_obf = MathObfuscationConverter()
 print("Math Obfuscation (en):", await math_obf.convert_async(prompt=prompt_en))  # type: ignore
 
 # --- [ko] 한국어 내재화 지원 변환기 ---
-# Leetspeak: locale="ko"로 야민정음 스타일 자모 치환 (ㅅ→4, ㅇ→0, ㅣ→1 등)
+# Leetspeak: locale="ko"로 야민정음 스타일 직접 치환 (예: 귀→커, 멍→댕)
 print("Leetspeak (en):", await LeetspeakConverter().convert_async(prompt=prompt_en))  # type: ignore
-print("Leetspeak (ko):", await LeetspeakConverter(locale="ko").convert_async(prompt="사이트"))  # type: ignore
+print("Leetspeak (ko):", await LeetspeakConverter(locale="ko").convert_async(prompt="귀멍"))  # type: ignore
 
 # ColloquialWordswap: locale="ko"로 한국어 구어체 치환 (father→아빠/아부지 등)
 print("Colloquial (en):", await ColloquialWordswapConverter().convert_async(prompt="my father told me"))  # type: ignore

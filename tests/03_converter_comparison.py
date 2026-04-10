@@ -31,7 +31,7 @@
 # | 카테고리 | 설명 | 예시 |
 # |---------|------|------|
 # | **인코딩** | 텍스트를 다른 형식으로 인코딩 | Base64, Binary, Morse, NATO |
-# | **한국어 전용** | 한글 자모 분해 기반 변환 | ROT13(ko), 야민정음, 점자, 구어체 |
+# | **한국어 전용** | 한글 지원 변환 | ROT13(ko), 야민정음, 점자, 구어체 |
 # | **텍스트 변형** | 문자 조작/난독화 | Unicode, ZeroWidth, 문자교체 |
 # | **토큰 스머글링** | 보이지 않는 문자에 텍스트 은닉 | AsciiSmuggler, SneakyBits |
 # | **LLM 기반** | AI가 의미를 보존하면서 변환 | 번역, 어조 변경, 설득 기법 |
@@ -109,7 +109,7 @@ print(f"[AskToDecode (Base64)]\n  {decode_result.output_text[:120]}...\n")
 # ---
 # # 2. 한국어 전용 변환기 (`locale=L.locale`)
 #
-# 한글 자모(초성/중성/종성)를 분해하여 변환합니다.
+# 한국어 로케일에 맞는 규칙으로 변환합니다.
 # `locale=L.locale`를 지정하면 한국어 전용 로직이 활성화됩니다.
 #
 # 아래에서 **en vs ko** 비교를 통해 차이를 확인합니다.
@@ -122,7 +122,7 @@ print(f"[AskToDecode (Base64)]\n  {decode_result.output_text[:120]}...\n")
 # | **Morse** | 영문 모스 부호 | 한글 모스 부호 |
 # | **NATO** | NATO 음성 부호 | 한국어 통신 부호 (잉어, 아버지, 나폴리...) |
 # | **Braille** | 영문 점자 | 한국 점자 규정 (2024 개정) |
-# | **Leetspeak** | 영문 대체 (e→3) | 야민정음 (ㄱ→7, ㄷ→[) |
+# | **Leetspeak** | 영문 대체 (e→3) | 야민정음 직접 치환 (예: 귀→커, 멍→댕) |
 # | **ColloquialWordswap** | 영문 구어체 | 한국어 표준어→속어 |
 
 # %%
@@ -165,7 +165,7 @@ print(f"  (ko) 안녕 → {(await BrailleConverter(locale=L.locale).convert_asyn
 
 print("\nLeetspeak")
 print(f"  (en) {PROMPT_EN} → {(await LeetspeakConverter().convert_async(prompt=PROMPT_EN)).output_text}")  # type: ignore
-print(f"  (ko) 사이트 → {(await LeetspeakConverter(locale=L.locale).convert_async(prompt='사이트')).output_text}")  # type: ignore
+print(f"  (ko) 귀여운 멍멍이 보고싶다. → {(await LeetspeakConverter(locale=L.locale).convert_async(prompt='귀여운 멍멍이 보고싶다.')).output_text}")  # type: ignore
 
 print("\nColloquialWordswap")
 print(f"  (en) my father told me → {(await ColloquialWordswapConverter().convert_async(prompt='my father told me')).output_text}")  # type: ignore
