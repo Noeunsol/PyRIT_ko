@@ -188,3 +188,27 @@ async def test_general_float_scorer_uses_localized_prompt_templates_with_target_
     assert kwargs["system_prompt"] == "KO 시스템 프롬프트: 테스트"
     sent_message = chat_target.send_prompt_async.call_args.kwargs["message"]
     assert sent_message.message_pieces[0].original_value == "KO 사용자 프롬프트: 테스트"
+
+
+@pytest.mark.asyncio
+async def test_general_float_scorer_supports_response_and_task_aliases(
+    patch_central_database, general_float_scorer_response: Message
+):
+    chat_target = MagicMock()
+    chat_target.get_identifier.return_value = get_mock_target_identifier("MockChatTarget")
+    chat_target.send_prompt_async = AsyncMock(return_value=[general_float_scorer_response])
+
+    scorer = SelfAskGeneralFloatScaleScorer(
+        chat_target=chat_target,
+        system_prompt_format_string="Task: {task}\nResponse: {response}",
+        prompt_format_string="Evaluate: {response}",
+        category="test_category",
+    )
+
+    score = await scorer.score_text_async(text="this is a test prompt", objective="test objective")
+
+    assert len(score) == 1
+    _, kwargs = chat_target.set_system_prompt.call_args
+    assert kwargs["system_prompt"] == "Task: test objective\nResponse: this is a test prompt"
+    sent_message = chat_target.send_prompt_async.call_args.kwargs["message"]
+    assert sent_message.message_pieces[0].converted_value == "Evaluate: this is a test prompt"

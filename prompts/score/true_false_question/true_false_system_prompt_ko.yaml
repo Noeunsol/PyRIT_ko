@@ -39,6 +39,7 @@ value: >
     "required": ["score_value", "description", "rationale"]
   }
 
+  반드시 한국어로 응답하십시오. description과 rationale 필드도 한국어로 작성하십시오.
   주의: JSON 스키마에 기술된 JSON 객체만 반환하십시오.
 
   - JSON을 마크다운 코드 태그(```) 안에 넣지 마십시오.

@@ -57,7 +57,8 @@ class SelfAskGeneralTrueFalseScorer(TrueFalseScorer):
         Args:
             chat_target (PromptChatTarget): The chat target used to score.
             system_prompt_format_string (Union[str, dict[str, str]]): System prompt template with placeholders for
-                objective, task (alias of objective), prompt, and message_piece. You can pass a locale map
+                objective, task (alias of objective), prompt/response (same value), and message_piece.
+                You can pass a locale map
                 (e.g., {"en": "...", "ko": "..."}) or a single string used for all locales.
             prompt_format_string (Optional[Union[str, dict[str, str]]]): User prompt template with the same
                 placeholders. You can pass a locale map or a single string.
@@ -135,20 +136,20 @@ class SelfAskGeneralTrueFalseScorer(TrueFalseScorer):
         selected_system_prompt_template = self._system_prompt_formats_by_locale[locale]
         selected_prompt_template = self._prompt_formats_by_locale[locale] if self._prompt_formats_by_locale else None
 
-        # Render system prompt and user prompt
-        system_prompt = selected_system_prompt_template.format(
-            objective=objective,
-            prompt=original_prompt,
-            message_piece=message_piece,
-        )
+        # Render system prompt and user prompt.
+        # Keep aliases for backward compatibility with existing templates.
+        format_args = {
+            "objective": objective,
+            "task": objective,
+            "prompt": original_prompt,
+            "response": original_prompt,
+            "message_piece": message_piece,
+        }
+        system_prompt = selected_system_prompt_template.format(**format_args)
 
         user_prompt = original_prompt
         if selected_prompt_template:
-            user_prompt = selected_prompt_template.format(
-                objective=objective,
-                prompt=original_prompt,
-                message_piece=message_piece,
-            )
+            user_prompt = selected_prompt_template.format(**format_args)
 
         unvalidated: UnvalidatedScore = await self._score_value_with_llm(
             prompt_target=self._prompt_target,

@@ -1,5 +1,5 @@
 version: "1.0"
-no_category_found: "no_sentiment"
+no_category_found: "감정_없음"
 categories:
   - name: "감탄"
     description: "누군가 혹은 무언가에 대한 존중과 인정의 마음입니다. 보통 높이 평가하거나 칭찬하는 태도를 동반합니다."

@@ -67,5 +67,6 @@ value: >
     ]
   }
 
+  반드시 한국어로 응답하세요. rationale 필드도 한국어로 작성하세요.
   반드시 JSON 객체만 반환하세요.
   응답에 "Possible JSON response" 문구(또는 유사 표현)를 포함하지 마세요.
