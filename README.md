@@ -8,8 +8,10 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 ---
 
 ## 1. 레포지토리 설명
-
 - 원본 프레임워크: [Azure/PyRIT](https://github.com/Azure/PyRIT)
+- 연관 프로젝트: Attack Method 유형 확대 - 기본 Attacker 구축
+- 담당자: 노은솔
+- 작성일: 2026-04-10
 - 목적: 한국어 환경에서 공격(Attack) - 변환(Converter) - 평가(Scorer) 흐름을 빠르게 실험
 - 현재 특징:
   - `tests/`에 단계별 튜토리얼(00~05) 정리
@@ -21,18 +23,64 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 
 ## 2. 데이터 셋
 
-이 저장소의 데이터셋은 주로 `src/pyrit/datasets/` 아래에 있습니다.
+이 저장소의 데이터 리소스는 크게 `datasets`와 `prompts`로 나뉩니다.
 
-| 구분 | 경로 | 예시 파일 | 용도 |
-|---|---|---|---|
-| Seed 데이터셋 | `src/pyrit/datasets/seed_datasets/local/` | `adv_bench_ko.prompt`, `harmbench_ko.csv` | 공격 목표 프롬프트 입력 |
-| Garak 계열 시드 | `src/pyrit/datasets/seed_datasets/local/garak/` | `access_shell_commands_ko.prompt`, `web_html_js_ko.prompt` | 특정 공격군 실험 |
-| 평가셋 | `src/pyrit/datasets/scorer_evals/` | `refusal_ko.csv`, `harm/hate_speech_ko.csv` | 스코어러 동작/품질 평가 |
-| Lexicon | `src/pyrit/datasets/lexicons/` | `languages_most_spoken_ko.yaml`, `fairness/gendered_professions_ko.yaml` | 카테고리/어휘 기반 보조 데이터 |
-| Jailbreak 예시 | `src/pyrit/datasets/jailbreak/` | `many_shot/many_shot_examples_ko.json` | 다중 예시 기반 공격 |
+### 2.1 데이터셋 (`src/pyrit/datasets/`)
+
+- Seed 데이터셋
+  - 경로: `src/pyrit/datasets/seed_datasets/local/`
+  - 예시: `adv_bench_ko.prompt`, `harmbench_ko.csv`
+  - 용도: 공격 목표(입력 프롬프트) 소스
+
+- Garak 계열 시드
+  - 경로: `src/pyrit/datasets/seed_datasets/local/garak/`
+  - 예시: `access_shell_commands_ko.prompt`, `web_html_js_ko.prompt`
+  - 용도: 특정 공격군 실험용 시드
+
+- 평가셋
+  - 경로: `src/pyrit/datasets/scorer_evals/`
+  - 예시: `refusal_ko.csv`, `harm/hate_speech_ko.csv`
+  - 용도: 스코어러 품질/행동 검증
+
+- Lexicon
+  - 경로: `src/pyrit/datasets/lexicons/`
+  - 예시: `languages_most_spoken_ko.yaml`, `fairness/gendered_professions_ko.yaml`
+  - 용도: 카테고리/어휘 기반 보조 데이터
+
+- Jailbreak 예시
+  - 경로: `src/pyrit/datasets/jailbreak/`
+  - 예시: `many_shot/many_shot_examples_ko.json`
+  - 용도: 다중 예시 기반 공격 실험
+
+### 2.2 프롬프트 리소스 (`prompts/`)
+
+- 공격 실행 프롬프트
+  - 경로: `prompts/executors/`
+  - 예시: `red_teaming/*_ko.yaml`, `crescendo/*_ko.yaml`
+  - 용도: 공격 전략별 시스템/유도 프롬프트
+
+- 변환기 프롬프트
+  - 경로: `prompts/prompt_converters/`
+  - 예시: `tone_converter_ko.yaml`, `translation_converter_ko.yaml`
+  - 용도: LLM 기반 변환기 동작 지시
+
+- 점수 평가 프롬프트
+  - 경로: `prompts/score/`
+  - 예시: `refusal/*_ko.yaml`, `likert/*_ko.yaml`
+  - 용도: 스코어러 평가 기준/질문
+
+- 탈옥 템플릿
+  - 경로: `prompts/jailbreak/templates/`
+  - 예시: `*_ko.yaml` 다수
+  - 용도: 템플릿 기반 우회 입력 생성
+
+- 유해 카테고리 정의
+  - 경로: `prompts/harm_definition/`
+  - 예시: `harm_ko.yaml`, `cyber_ko.yaml`
+  - 용도: 카테고리별 정책/정의 텍스트
 
 참고:
-- 한국어 리소스는 `*_ko` 접미사 파일로 관리되는 경우가 많습니다.
+- 한국어 리소스는 보통 `*_ko` 접미사 파일로 관리됩니다.
 
 ---
 
