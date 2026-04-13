@@ -119,26 +119,31 @@ Objective
           -> Memory (InMemory / SQLite)
 ```
 
-### 4.2 설치
+### 4.2 환경 설정
 
 ```bash
-git clone <repo-url>
-cd PyRIT_ko
-python -m venv .venv
-source .venv/bin/activate
+# 1. conda 환경 생성 및 활성화
+conda create -n pyrit_ko python=3.11 -y
+conda activate pyrit_ko
+
+# 2. 패키지 설치
 pip install -e ".[dev]"
+
+# 3. API 키 설정
+mkdir -p ~/.pyrit
+cp .env_example ~/.pyrit/.env
+cp .env_local_example ~/.pyrit/.env.local
+# ~/.pyrit/.env.local에서 OPENAI_CHAT_KEY에 실제 API 키 입력
+
+# 4. VSCode에서 노트북 실행
+# tests/*.ipynb 열고 커널을 pyrit_ko (conda)로 선택
 ```
 
 ### 4.3 실행 방법
 
-1) 튜토리얼 실행
+1) 튜토리얼 실행 (권장)
 
-```bash
-jupyter lab
-```
-
-권장 시작점:
-- `tests/01_custom_tutorial.ipynb`
+VSCode에서 `tests/01_custom_tutorial.ipynb` 열고 커널을 `pyrit_ko`로 선택하여 실행
 
 2) 대화형 실행기
 
@@ -171,7 +176,7 @@ MEMORY_DB_TYPE = SQLITE
 - 이 저장소는 튜토리얼/문서/실험 구성이 계속 변경되는 작업 브랜치 성격이 있습니다.
 - 튜토리얼 파일은 `ipynb` + `py`(jupytext 페어)로 함께 관리되므로, 수정 시 동기화가 필요합니다.
 - 모델 실행 시 API 키가 없으면 타겟 호출이 실패합니다.
-  - `OPENAI_API_KEY` 또는 `OPENAI_CHAT_KEY`
+  - `~/.pyrit/.env.local`에 `OPENAI_CHAT_KEY` 설정 필요
 - `InMemory` 모드에서는 `.db` 파일이 남지 않습니다.
   - DB 분석이 필요하면 `SQLITE` 사용
 
@@ -188,13 +193,12 @@ MEMORY_DB_TYPE = SQLITE
 - `openai`, `SQLAlchemy`, `transformers`, `datasets`, `fastapi`, `uvicorn`
 - 개발/노트북: `pytest`, `jupyter`, `jupytext`, `ruff`, `mypy`
 
-정확한 전체 목록은 아래를 기준으로 확인:
-- `pyproject.toml`
+정확한 전체 목록은 `pyproject.toml`의 `dependencies` 및 `[project.optional-dependencies]` 참조
 
 ### 6.3 테스트 명령 예시
 
 ```bash
-.venv/bin/python -m pytest -q unit_tests/unit
+python -m pytest -q unit_tests/unit
 ```
 
 ---
@@ -213,9 +217,12 @@ PyRIT_ko/
 │   └── datasets/                 # 시드/평가/렉시콘 데이터셋
 ├── prompts/                      # 프롬프트 템플릿
 ├── tests/                        # 튜토리얼 데모(00~05)
+├── tutorials/                    # 영어/한국어 비교 테스트
+├── unit_tests/                   # 단위/통합 테스트
+├── assets/                       # doc 튜토리얼용 이미지/미디어/스코어러 yaml
 ├── doc/                          # 기본 문서
 ├── doc_ko/                       # 한국어 문서
+├── frontend/                     # 웹 UI (React + TypeScript)
 ├── main.py                       # 대화형 실행 엔트리포인트
-├── pyproject.toml                # 패키지/의존성 정의
-└── Makefile                      # 테스트/빌드 보조 명령
+└── pyproject.toml                # 패키지/의존성 정의
 ```
