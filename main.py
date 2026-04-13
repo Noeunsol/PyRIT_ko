@@ -30,22 +30,14 @@ from typing import Any, Optional
 # PYRIT_TARGET_<env_prefix>_{ENDPOINT,KEY,MODEL} to construct an OpenAIChatTarget.
 # Special key "no_llm" maps to TextTarget (LLM 호출 없이 변환 결과만 콘솔에 출력).
 TARGET_MODELS = [
-    # (key, env_prefix, label_ko, label_en, category)
-    # category: "llm" 또는 "no_llm"
-    ("gpt-4o-mini", "GPT4O_MINI", "GPT-4o mini (OpenAI)", "GPT-4o mini (OpenAI)", "llm"),
-    ("gpt-4.1-mini", "GPT41_MINI", "GPT-4.1 mini (OpenAI)", "GPT-4.1 mini (OpenAI)", "llm"),
-    ("exaone", "EXAONE", "EXAONE 3.5 (HuggingFace)", "EXAONE 3.5 (HuggingFace)", "llm"),
+    # (key, model_env_var, label_ko, label_en, category)
+    # category: "llm" (OpenAI API), "huggingface" (로컬), "no_llm"
+    # llm 타겟은 OPENAI_CHAT_ENDPOINT / OPENAI_CHAT_KEY를 공유하고, 모델명만 env_var에서 읽음
+    ("gpt-4o-mini", "OPENAI_CHAT_GPT4O_MINI_MODEL", "GPT-4o mini (OpenAI)", "GPT-4o mini (OpenAI)", "llm"),
+    ("gpt-4.1-mini", "OPENAI_CHAT_GPT41_MINI_MODEL", "GPT-4.1 mini (OpenAI)", "GPT-4.1 mini (OpenAI)", "llm"),
+    ("exaone", "", "EXAONE 3.5 (HuggingFace, 로컬)", "EXAONE 3.5 (HuggingFace, local)", "huggingface"),
     ("no_llm", "", "LLM 호출 없이 변환 결과만 출력", "Output converted text only (no LLM call)", "no_llm"),
 ]
-
-
-def _target_env_vars(env_prefix: str) -> tuple[str, str, str]:
-    """Return (endpoint_var, key_var, model_var) for a given target prefix."""
-    return (
-        f"PYRIT_TARGET_{env_prefix}_ENDPOINT",
-        f"PYRIT_TARGET_{env_prefix}_KEY",
-        f"PYRIT_TARGET_{env_prefix}_MODEL",
-    )
 
 
 def _get_available_target_models() -> list[tuple[str, str, str, str, str]]:
@@ -54,7 +46,7 @@ def _get_available_target_models() -> list[tuple[str, str, str, str, str]]:
     Loads ~/.pyrit/.env, ~/.pyrit/.env.local, and ./.env.local if present so users
     don't have to export manually. Files loaded later override earlier ones, matching
     PyRIT's convention where .env.local takes precedence over .env.
-    Always includes the "no_llm" entry (no env required).
+    Always includes the "no_llm" and "huggingface" entries (no env required).
     """
     try:
         from dotenv import load_dotenv as _load_dotenv
@@ -71,12 +63,12 @@ def _get_available_target_models() -> list[tuple[str, str, str, str, str]]:
 
     available: list[tuple[str, str, str, str, str]] = []
     for entry in TARGET_MODELS:
-        key, env_prefix, _label_ko, _label_en, category = entry
-        if category == "no_llm":
+        key, model_env_var, _label_ko, _label_en, category = entry
+        if category in ("no_llm", "huggingface"):
             available.append(entry)
             continue
-        endpoint_var, key_var, model_var = _target_env_vars(env_prefix)
-        if all(os.environ.get(v) for v in (endpoint_var, key_var, model_var)):
+        # llm 타겟: OPENAI_CHAT_ENDPOINT + OPENAI_CHAT_KEY + 모델별 환경변수가 있어야 함
+        if all(os.environ.get(v) for v in ("OPENAI_CHAT_ENDPOINT", "OPENAI_CHAT_KEY", model_env_var)):
             available.append(entry)
     return available
 
@@ -1126,7 +1118,9 @@ async def run_custom_mode(locale: str) -> None:
                 if category != current_cat:
                     current_cat = category
                     if category == "llm":
-                        header = _L("[LLM 사용 - 실제 모델에 전송]", "[LLM-based - send to actual model]", locale)
+                        header = _L("[LLM 사용 - OpenAI API]", "[LLM-based - OpenAI API]", locale)
+                    elif category == "huggingface":
+                        header = _L("[LLM 사용 - HuggingFace 로컬]", "[LLM-based - HuggingFace local]", locale)
                     else:
                         header = _L("[LLM 미사용 - 디버깅/미리보기]", "[No LLM - debug/preview]", locale)
                     print(f"\n  {header}")
@@ -1228,13 +1222,25 @@ async def run_custom_mode(locale: str) -> None:
         target_entry = next((m for m in TARGET_MODELS if m[0] == target_key), None)
         if target_entry is None:
             raise ValueError(f"Unknown target key: {target_key}")
-        _, env_prefix, *_ = target_entry
-        endpoint_var, key_var, model_var = _target_env_vars(env_prefix)
-        target = OpenAIChatTarget(
-            endpoint=os.environ[endpoint_var],
-            api_key=os.environ[key_var],
-            model_name=os.environ[model_var],
-        )
+        _, model_env_var, _label_ko, _label_en, category = target_entry
+        if category == "huggingface":
+            from pyrit.prompt_target import HuggingFaceChatTarget
+            HUGGINGFACE_MODELS = {
+                "exaone": "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct",
+            }
+            target = HuggingFaceChatTarget(
+                model_id=HUGGINGFACE_MODELS[target_key],
+                use_cuda=True,
+                trust_remote_code=True,
+                hf_access_token="",
+                max_new_tokens=256,
+            )
+        else:
+            target = OpenAIChatTarget(
+                endpoint=os.environ["OPENAI_CHAT_ENDPOINT"],
+                api_key=os.environ["OPENAI_CHAT_KEY"],
+                model_name=os.environ[model_env_var],
+            )
 
     # Resolve dataset objectives if needed
     if objective_from_dataset:
