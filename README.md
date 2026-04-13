@@ -182,23 +182,95 @@ MEMORY_DB_TYPE = SQLITE
 
 ---
 
-## 6. Requirements
+## 6. 의존성
+
+> 모든 의존성은 `pyproject.toml`에 정의되어 있으며, `pip install -e ".[dev]"`로 한 번에 설치됩니다.
 
 ### 6.1 Python 버전
 
 - `>=3.10, <3.14` (권장: 3.11)
 
-### 6.2 주요 의존성(발췌)
+### 6.2 기본 의존성 (`pip install -e .`)
 
-- `openai`, `SQLAlchemy`, `transformers`, `datasets`, `fastapi`, `uvicorn`
-- 개발/노트북: `pytest`, `jupyter`, `jupytext`, `ruff`, `mypy`
+```text
+# AI/ML
+openai>=2.2.0
+transformers>=4.52.4
+datasets>=3.6.0
+numpy>=1.26.0
+scipy>=1.15.3
 
-정확한 전체 목록은 `pyproject.toml`의 `dependencies` 및 `[project.optional-dependencies]` 참조
+# 웹/API
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+httpx[http2]>=0.27.2
+websockets>=14.0
 
-### 6.3 테스트 명령 예시
+# 데이터/DB
+SQLAlchemy>=2.0.41
+pyodbc>=5.1.0
+pandas>=2.0.0
+pypdf>=6.6.2
+reportlab>=4.4.4
 
-```bash
-python -m pytest -q unit_tests/unit
+# 텍스트 변환 (Converter용)
+base2048>=0.1.3
+confusables>=1.2.0
+confusable-homoglyphs>=3.3.1
+ecoji>=0.1.1
+art>=6.5.0
+segno>=1.6.6
+
+# 유틸리티
+pydantic>=2.11.5
+jinja2>=3.1.6
+python-dotenv>=1.0.1
+pillow>=12.1.0
+tqdm>=4.67.1
+tenacity>=9.1.2
+aiofiles>=24,<25
+appdirs>=1.4.0
+colorama>=0.4.6
+termcolor>=2.4.0
+tinytag>=2.1.1
+treelib>=1.7.1
+```
+
+### 6.3 개발/노트북 의존성 (`pip install -e ".[dev]"`)
+
+```text
+# 노트북 실행
+jupyter>=1.1.1
+ipykernel>=6.29.5
+jupytext>=1.17.1
+jupyter-book==1.0.4
+
+# 테스트
+pytest>=8.3.5
+pytest-asyncio>=1.0.0
+pytest-cov>=6.1.1
+pytest-timeout>=2.4.0
+pytest-xdist>=3.6.1
+mock-alchemy>=0.2.6
+respx>=0.22.0
+
+# 코드 품질
+ruff>=0.14.4
+mypy>=1.16.0
+pre-commit>=4.2.0
+```
+
+### 6.4 Azure 의존성 (`pip install -e ".[azure]"`)
+
+```text
+# Azure 환경 필요 시에만 설치
+azure-core>=1.38.0
+azure-identity>=1.19.0
+azure-ai-contentsafety>=1.0.0
+azure-storage-blob>=12.19.0
+msal>=1.0.0
+msal-extensions>=1.0.0
+PyJWT>=2.0.0
 ```
 
 ---
