@@ -6,9 +6,13 @@ Scoring functionality for evaluating AI model responses across various dimension
 including harm detection, objective completion, and content classification.
 """
 
+try:
+    from pyrit.score.float_scale.azure_content_filter_scorer import AzureContentFilterScorer
+except ImportError:
+    pass
+
 from pyrit.score.batch_scorer import BatchScorer
 from pyrit.score.conversation_scorer import ConversationScorer, create_conversation_scorer
-from pyrit.score.float_scale.azure_content_filter_scorer import AzureContentFilterScorer
 from pyrit.score.float_scale.float_scale_score_aggregator import (
     FloatScaleScoreAggregator,
     FloatScaleScorerAllCategories,

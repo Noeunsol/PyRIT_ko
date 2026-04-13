@@ -19,9 +19,13 @@ from pyrit.prompt_converter.ascii_art_converter import AsciiArtConverter
 from pyrit.prompt_converter.ask_to_decode_converter import AskToDecodeConverter
 from pyrit.prompt_converter.atbash_converter import AtbashConverter
 from pyrit.prompt_converter.audio_frequency_converter import AudioFrequencyConverter
-from pyrit.prompt_converter.azure_speech_audio_to_text_converter import AzureSpeechAudioToTextConverter
-from pyrit.prompt_converter.azure_speech_text_to_audio_converter import AzureSpeechTextToAudioConverter
 from pyrit.prompt_converter.base64_converter import Base64Converter
+
+try:
+    from pyrit.prompt_converter.azure_speech_audio_to_text_converter import AzureSpeechAudioToTextConverter
+    from pyrit.prompt_converter.azure_speech_text_to_audio_converter import AzureSpeechTextToAudioConverter
+except ImportError:
+    pass
 from pyrit.prompt_converter.base2048_converter import Base2048Converter
 from pyrit.prompt_converter.bin_ascii_converter import BinAsciiConverter
 from pyrit.prompt_converter.binary_converter import BinaryConverter

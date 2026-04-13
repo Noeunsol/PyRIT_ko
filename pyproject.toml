@@ -105,6 +105,9 @@ dev = [
 huggingface = [
     "torch>=2.7.0",
 ]
+streamlit = [
+    "streamlit>=1.38.0",
+]
 gcg = [
     "accelerate>=1.7.0",
     "azure-ai-ml>=1.27.1",

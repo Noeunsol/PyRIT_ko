@@ -10,11 +10,6 @@ from typing import Optional, Union
 from urllib.parse import urlparse
 
 import aiofiles
-from azure.core.exceptions import ClientAuthenticationError, ResourceNotFoundError
-from azure.storage.blob import ContentSettings
-from azure.storage.blob.aio import ContainerClient as AsyncContainerClient
-
-from pyrit.auth import AzureStorageAuth
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +154,7 @@ class AzureBlobStorageIO(StorageIO):
 
         self._container_url: str = container_url
         self._sas_token = sas_token
-        self._client_async: AsyncContainerClient = None
+        self._client_async = None
 
     async def _create_container_client_async(self) -> None:
         """
@@ -167,6 +162,9 @@ class AzureBlobStorageIO(StorageIO):
         AZURE_STORAGE_ACCOUNT_SAS_TOKEN environment variable or the init sas_token parameter, it will be used
         for authentication. Otherwise, a delegation SAS token will be created using Entra ID authentication.
         """
+        from azure.storage.blob.aio import ContainerClient as AsyncContainerClient
+        from pyrit.auth import AzureStorageAuth
+
         if not self._sas_token:
             logger.info("SAS token not provided. Creating a delegation SAS token using Entra ID authentication.")
             sas_token = await AzureStorageAuth.get_sas_token(self._container_url)
@@ -185,6 +183,8 @@ class AzureBlobStorageIO(StorageIO):
             data (bytes): Byte representation of content to upload to container.
             content_type (str): Content type to upload.
         """
+        from azure.storage.blob import ContentSettings
+
         content_settings = ContentSettings(content_type=f"{content_type}")  # type: ignore[no-untyped-call, unused-ignore]
         logger.info(msg="\nUploading to Azure Storage as blob:\n\t" + file_name)
 
@@ -196,6 +196,8 @@ class AzureBlobStorageIO(StorageIO):
                 overwrite=True,
             )
         except Exception as exc:
+            from azure.core.exceptions import ClientAuthenticationError
+
             if isinstance(exc, ClientAuthenticationError):
                 logger.exception(
                     msg="Authentication failed. Please check that the container existence in the "
@@ -294,8 +296,12 @@ class AzureBlobStorageIO(StorageIO):
             blob_client = self._client_async.get_blob_client(blob=blob_name)
             await blob_client.get_blob_properties()
             return True
-        except ResourceNotFoundError:
-            return False
+        except Exception as e:
+            from azure.core.exceptions import ResourceNotFoundError
+
+            if isinstance(e, ResourceNotFoundError):
+                return False
+            raise
         finally:
             await self._client_async.close()  # type: ignore[no-untyped-call, unused-ignore]
             self._client_async = None
@@ -309,8 +315,12 @@ class AzureBlobStorageIO(StorageIO):
             blob_client = self._client_async.get_blob_client(blob=blob_name)
             blob_properties = await blob_client.get_blob_properties()
             return blob_properties.size > 0
-        except ResourceNotFoundError:
-            return False
+        except Exception as e:
+            from azure.core.exceptions import ResourceNotFoundError
+
+            if isinstance(e, ResourceNotFoundError):
+                return False
+            raise
         finally:
             await self._client_async.close()  # type: ignore[no-untyped-call, unused-ignore]
             self._client_async = None

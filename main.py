@@ -1011,8 +1011,7 @@ async def run_custom_mode(locale: str) -> None:
                     rp_name = _ROLE_PLAYS[rpidx - 1][0]
                     base_path = (
                         pathlib.Path(__file__).parent
-                        / "pyrit"
-                        / "datasets"
+                        / "prompts"
                         / "executors"
                         / "role_play"
                         / f"{rp_name}.yaml"
@@ -1457,10 +1456,13 @@ async def run_custom_mode(locale: str) -> None:
 
     # multi_prompt_sending: send all messages at once
     if attack_key == "multi_prompt_sending":
-        from pyrit.models import Message
+        from pyrit.models import Message, MessagePiece
+        objective_text = objectives[0] if objectives else ""
+        msg_texts = objectives[1:] if len(objectives) > 1 else objectives
         attack = attack_class(**init_kwargs)
-        user_msgs = [Message(role="user", content=m) for m in objectives]
-        result = await attack.execute_async(user_messages=user_msgs, memory_labels=memory_labels)
+        user_msgs = [Message([MessagePiece(role="user", original_value=m)]) for m in msg_texts]
+        result = await attack.execute_async(
+            objective=objective_text, user_messages=user_msgs, memory_labels=memory_labels)
         await printer.print_result_async(result=result)
     else:
         # All other attacks: one execution per objective

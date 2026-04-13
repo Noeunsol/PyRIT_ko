@@ -95,7 +95,22 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 - Scenario: 여러 원자적 공격을 묶어 캠페인 실행
 - Memory: 실행 결과 저장 (`InMemory`, `SQLite`, `AzureSQL`)
 
-### 3.2 튜토리얼 구성(`tests/`)
+### 3.2 지원 모델
+
+`main.py`의 대화형 실행기에서 선택할 수 있는 타겟 모델:
+
+| 키 | 모델 | 카테고리 | 필요 환경변수 |
+|---|---|---|---|
+| `gpt-4o-mini` | GPT-4o mini | OpenAI API | `OPENAI_CHAT_ENDPOINT`, `OPENAI_CHAT_KEY`, `OPENAI_CHAT_GPT4O_MINI_MODEL` |
+| `gpt-4.1-mini` | GPT-4.1 mini | OpenAI API | `OPENAI_CHAT_ENDPOINT`, `OPENAI_CHAT_KEY`, `OPENAI_CHAT_GPT41_MINI_MODEL` |
+| `exaone` | EXAONE 3.5 | HuggingFace (로컬) | 없음 (로컬 실행) |
+| `no_llm` | — | 텍스트 출력만 | 없음 |
+
+- OpenAI 모델 사용 시 `~/.pyrit/.env.local`에 API 키 설정 필요
+- EXAONE은 HuggingFace를 통해 로컬에서 실행되며 별도 API 키 불필요 (`pip install -e ".[huggingface]"`로 torch 추가 설치 필요)
+- Azure 환경이 필요한 경우 `pip install -e ".[azure]"`로 추가 의존성 설치
+
+### 3.3 튜토리얼 구성(`tests/`)
 
 - `00_pyrit_overview.md`: 구조 개요
 - `01_custom_tutorial.ipynb`: 공격/변환기/스코어러 조합 실행 + SQLite 결과 조회
@@ -260,7 +275,14 @@ mypy>=1.16.0
 pre-commit>=4.2.0
 ```
 
-### 6.4 Azure 의존성 (`pip install -e ".[azure]"`)
+### 6.4 HuggingFace 의존성 (`pip install -e ".[huggingface]"`)
+
+```text
+# EXAONE 등 로컬 모델 실행 시 설치
+torch>=2.7.0
+```
+
+### 6.5 Azure 의존성 (`pip install -e ".[azure]"`)
 
 ```text
 # Azure 환경 필요 시에만 설치

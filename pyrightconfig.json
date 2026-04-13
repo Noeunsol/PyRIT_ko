@@ -13,7 +13,8 @@
       ".venv",
       "pyrit.egg-info",
       ".mypy_cache",
-      ".pytest_cache"
+      ".pytest_cache",
+      "streamlit"
     ],
     "reportMissingImports": true
   }

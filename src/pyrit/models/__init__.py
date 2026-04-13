@@ -50,7 +50,12 @@ from pyrit.models.seeds import (
 
 # Keep old module-level imports working (deprecated, will be removed)
 # These are re-exported from the seeds submodule
-from pyrit.models.storage_io import AzureBlobStorageIO, DiskStorageIO, StorageIO
+from pyrit.models.storage_io import DiskStorageIO, StorageIO
+
+try:
+    from pyrit.models.storage_io import AzureBlobStorageIO
+except ImportError:
+    pass
 from pyrit.models.strategy_result import StrategyResult, StrategyResultT
 
 __all__ = [

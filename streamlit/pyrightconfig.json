@@ -1,0 +1,9 @@
+{
+  "include": ["."],
+  "extraPaths": [".", "../src"],
+  "reportMissingModuleSource": false,
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportAttributeAccessIssue": false,
+  "typeCheckingMode": "off"
+}
