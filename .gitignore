@@ -195,13 +195,9 @@ doc/_autosummary/
 # Ignore DS_STORE files
 **/.DS_Store
 
-# Ignore data directory in Docker folder
-/docker/data/
-/docker/data/*
-
-# Ignore notebooks directory in Docker folder
-/docker/notebooks/
-/docker/notebooks/*
+# SQLite DB files
+*.db
+*.db-journal
 
 # Custom user instructions
 .github/instructions/user-custom.instructions.md
