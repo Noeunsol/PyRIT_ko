@@ -268,6 +268,11 @@ async def initialize_pyrit_async(
     # (like prompt targets) that require central memory to be initialized
     memory: MemoryInterface
 
+    # Reset singleton cache so a fresh instance is created with the correct db_path.
+    # Without this, switching between InMemory and SQLite (or vice versa) returns the
+    # previously cached singleton instance pointing to the wrong database.
+    SQLiteMemory.reset_instance()
+
     if memory_db_type == IN_MEMORY:
         logger.info("Using in-memory SQLite database.")
         memory = SQLiteMemory(db_path=":memory:", **memory_instance_kwargs)

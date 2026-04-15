@@ -154,6 +154,15 @@ class SimpleInitializer(PyRITInitializer):
                 value=default_objective_scorer_config,
             )
 
+        # Also register objective_scorer directly for Scenario subclasses (e.g. airt.*
+        # scenarios) whose __init__ accepts objective_scorer as a separate parameter
+        # and falls back to Azure-only defaults when it is None.
+        set_default_value(
+            class_type=Scenario,
+            parameter_name="objective_scorer",
+            value=default_objective_scorer,
+        )
+
     def _setup_adversarial_targets(self) -> None:
         """Set up the adversarial target configurations for attacks."""
         adversarial_config = AttackAdversarialConfig(
@@ -165,8 +174,16 @@ class SimpleInitializer(PyRITInitializer):
         # Set global variable for easy access
         set_global_variable(name="adversarial_config", value=adversarial_config)
 
+        # Register adversarial_chat for Scenario subclasses (e.g. airt.* scenarios)
+        # whose __init__ accepts adversarial_chat and falls back to Azure-only defaults
+        # when it is None.
+        set_default_value(
+            class_type=Scenario,
+            parameter_name="adversarial_chat",
+            value=adversarial_config.target,
+        )
+
         # Set default adversarial configuration for Crescendo attacks
-        # (Simple config only sets up Crescendo by default)
         set_default_value(
             class_type=CrescendoAttack,
             parameter_name="attack_adversarial_config",

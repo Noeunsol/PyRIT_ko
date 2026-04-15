@@ -53,6 +53,123 @@ SCENARIOS = [
     ("garak.encoding", "Base64·모스부호 등으로 필터 우회 시도", "Bypasses filters via encoding"),
 ]
 
+# Scenario preflight blueprint (main-screen summary before execution)
+# key -> {attacks, scorer, converter} as (ko, en)
+SCENARIO_BLUEPRINTS: dict[str, dict[str, tuple[str, str]]] = {
+    "foundry.red_team_agent": {
+        "attacks": (
+            "전략 조합에 따라 PromptSending(기본), Crescendo/RedTeaming/TreeOfAttacks(PAIR·TAP) 멀티턴 실행",
+            "Runs PromptSending by default, or Crescendo/RedTeaming/TreeOfAttacks (PAIR/TAP) for multi-turn strategies",
+        ),
+        "scorer": (
+            "기본 objective scorer: AzureContentFilter(0.5+) AND 비거부(SelfAskRefusal Inverter) 조합",
+            "Default objective scorer: AzureContentFilter (0.5+) AND non-refusal (SelfAskRefusal Inverter)",
+        ),
+        "converter": (
+            "전략에 따라 Base64/ROT13/Flip/Jailbreak 등 다수 컨버터를 단일 공격과 조합",
+            "Composes many converters (Base64/ROT13/Flip/Jailbreak, etc.) with the selected attack strategy",
+        ),
+    },
+    "airt.content_harms": {
+        "attacks": (
+            "각 harm 카테고리별 PromptSending + RolePlay(movie_script) + ManyShotJailbreak (+ user_messages가 있으면 MultiPromptSending)",
+            "Per harm category: PromptSending + RolePlay (movie_script) + ManyShotJailbreak (+ MultiPromptSending when user_messages exist)",
+        ),
+        "scorer": (
+            "기본 objective scorer: 비거부(SelfAskRefusal Inverter)",
+            "Default objective scorer: non-refusal (SelfAskRefusal Inverter)",
+        ),
+        "converter": (
+            "별도 컨버터 체인 없이 공격 기법 자체를 사용",
+            "Uses built-in attack behaviors rather than a separate converter chain",
+        ),
+    },
+    "airt.cyber": {
+        "attacks": (
+            "single_turn=PromptSending, multi_turn=RedTeaming",
+            "single_turn=PromptSending, multi_turn=RedTeaming",
+        ),
+        "scorer": (
+            "기본 objective scorer: malware True/False + 비거부(backstop) Composite(AND)",
+            "Default objective scorer: malware True/False + non-refusal backstop (AND composite)",
+        ),
+        "converter": (
+            "기본 제공 컨버터 없음",
+            "No dedicated converter chain by default",
+        ),
+    },
+    "airt.jailbreak": {
+        "attacks": (
+            "PromptSending + TextJailbreak 템플릿(기본 n=3, 랜덤)",
+            "PromptSending + TextJailbreak templates (default n=3, sampled)",
+        ),
+        "scorer": (
+            "기본 objective scorer: 비거부(SelfAskRefusal Inverter)",
+            "Default objective scorer: non-refusal (SelfAskRefusal Inverter)",
+        ),
+        "converter": (
+            "TextJailbreakConverter 사용 (템플릿별 atomic attack 생성)",
+            "Uses TextJailbreakConverter (one atomic attack per template)",
+        ),
+    },
+    "airt.scam": {
+        "attacks": (
+            "context_compliance / role_play(persuasion_script_written) / persuasive_rta(RedTeaming) 조합",
+            "Combines context_compliance, role_play (persuasion_script_written), and persuasive_rta (RedTeaming)",
+        ),
+        "scorer": (
+            "기본 objective scorer: scams True/False + 비거부(backstop) Composite(AND)",
+            "Default objective scorer: scams True/False + non-refusal backstop (AND composite)",
+        ),
+        "converter": (
+            "독립 컨버터 체인 없음 (공격별 내부 전략 사용)",
+            "No separate converter pipeline (uses attack-internal strategies)",
+        ),
+    },
+    "airt.leakage_scenario": {
+        "attacks": (
+            "first_letter(Prompt+FirstLetterConverter), image(Prompt+AddImageTextConverter), role_play, crescendo",
+            "first_letter (Prompt+FirstLetterConverter), image (Prompt+AddImageTextConverter), role_play, crescendo",
+        ),
+        "scorer": (
+            "기본 objective scorer: leakage True/False + 비거부(backstop) Composite(AND)",
+            "Default objective scorer: leakage True/False + non-refusal backstop (AND composite)",
+        ),
+        "converter": (
+            "전략별 FirstLetterConverter / AddImageTextConverter 사용",
+            "Uses strategy-specific FirstLetterConverter / AddImageTextConverter",
+        ),
+    },
+    "airt.psychosocial_scenario": {
+        "attacks": (
+            "single_turn=PromptSending(Tone soften)+RolePlay(movie_script), multi_turn=Crescendo",
+            "single_turn=PromptSending (Tone soften)+RolePlay (movie_script), multi_turn=Crescendo",
+        ),
+        "scorer": (
+            "기본 objective scorer: 대화 기반 FloatScale(리커트 루브릭) + threshold 1.0",
+            "Default objective scorer: conversation-based FloatScale (Likert rubric) + threshold 1.0",
+        ),
+        "converter": (
+            "ToneConverter(soften) 사용",
+            "Uses ToneConverter (soften)",
+        ),
+    },
+    "garak.encoding": {
+        "attacks": (
+            "인코딩별 PromptSending 실행 + AskToDecode 템플릿 변형을 추가로 생성",
+            "Runs PromptSending per encoding and adds AskToDecode template variants",
+        ),
+        "scorer": (
+            "기본 objective scorer: DecodingScorer(categories=['encoding_scenario'])",
+            "Default objective scorer: DecodingScorer(categories=['encoding_scenario'])",
+        ),
+        "converter": (
+            "Base64/Base2048/ROT13/Morse/AsciiSmuggler 등 인코딩 컨버터 + AskToDecodeConverter",
+            "Encoding converters (Base64/Base2048/ROT13/Morse/AsciiSmuggler, etc.) + AskToDecodeConverter",
+        ),
+    },
+}
+
 # ---------------------------------------------------------------------------
 # Attacks
 # ---------------------------------------------------------------------------
@@ -335,7 +452,7 @@ LABELS: dict[str, dict[str, str]] = {
         "scenario": "시나리오 기반",
         "attack": "공격 방식",
         "attack_params": "공격 파라미터",
-        "converters": "변환기 (Converter)",
+        "converters": "변환 전략 (Converter)",
         "scorer": "스코어러 (Scorer)",
         "target": "타겟 모델",
         "db": "결과 저장",
@@ -351,9 +468,9 @@ LABELS: dict[str, dict[str, str]] = {
         "turns": "턴 수",
         "exec_time": "실행 시간",
         "no_scorer": "스코어러 없음",
-        "no_converter": "변환기 없음",
+        "no_converter": "변환 전략 없음",
         "recommended": "추천",
-        "warning_builtin": "⚠️ 이 공격은 자체 변환 로직 포함 — 변환기 없이 실행 권장",
+        "warning_builtin": "⚠️ 이 공격은 자체 변환 로직 포함 — 변환 전략 없이 실행 권장",
         "single_turn": "싱글 턴",
         "multi_turn": "멀티 턴",
         "inmemory": "InMemory (RAM, 휘발성)",

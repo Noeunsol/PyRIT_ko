@@ -479,6 +479,8 @@ class ChunkedRequestAttack(MultiTurnAttackStrategy[ChunkedRequestAttackContext, 
             # while some composite scorers require a non-null message piece ID.
             scoring_message = Message.from_prompt(prompt=combined_value, role="user")
             scoring_message.message_pieces[0].labels = dict(labels or {})
+            # Persist synthetic scoring message so score.message_piece_id resolves in memory.
+            self._memory.add_message_to_memory(request=scoring_message)
             scores = await self._objective_scorer.score_async(scoring_message, objective=objective)
         return scores[0] if scores else None
 

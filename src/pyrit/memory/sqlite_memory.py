@@ -13,6 +13,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, sessionmaker
 from sqlalchemy.orm.session import Session
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import TextClause
 
 from pyrit.common.path import DB_DATA_PATH
@@ -91,8 +92,16 @@ class SQLiteMemory(MemoryInterface, metaclass=Singleton):
             SQLAlchemyError: If there's an issue creating the engine.
         """
         try:
-            # Create the SQLAlchemy engine.
-            engine = create_engine(f"sqlite:///{self.db_path}", echo=has_echo)
+            # For in-memory SQLite, use StaticPool so all sessions share the same
+            # connection (and thus the same database).  Without this, each session
+            # opens a separate connection that creates its own empty in-memory DB,
+            # causing data written in one session to be invisible in another.
+            extra_kwargs: dict[str, Any] = {}
+            if self.db_path == ":memory:":
+                extra_kwargs["connect_args"] = {"check_same_thread": False}
+                extra_kwargs["poolclass"] = StaticPool
+
+            engine = create_engine(f"sqlite:///{self.db_path}", echo=has_echo, **extra_kwargs)
             logger.info(f"Engine created successfully for database: {self.db_path}")
             return engine
         except SQLAlchemyError as e:

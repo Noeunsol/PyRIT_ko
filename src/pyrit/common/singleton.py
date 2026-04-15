@@ -22,3 +22,7 @@ class Singleton(abc.ABCMeta):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+    def reset_instance(cls) -> None:
+        """Remove the cached singleton instance so the next call creates a fresh one."""
+        cls._instances.pop(cls, None)

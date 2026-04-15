@@ -149,9 +149,6 @@ mkdir -p ~/.pyrit
 cp .env_example ~/.pyrit/.env
 cp .env_local_example ~/.pyrit/.env.local
 # ~/.pyrit/.env.local에서 OPENAI_CHAT_KEY에 실제 API 키 입력
-
-# 4. VSCode에서 노트북 실행
-# tests/*.ipynb 열고 커널을 pyrit_ko (conda)로 선택
 ```
 
 ### 4.3 실행 방법
@@ -175,8 +172,6 @@ pyrit_shell --help
 
 ### 4.4 SQLite 결과 저장/조회
 
-`tests/01_custom_tutorial`에서 아래 설정 시:
-
 ```python
 MEMORY_DB_TYPE = SQLITE
 ```
@@ -188,7 +183,6 @@ MEMORY_DB_TYPE = SQLITE
 
 ## 5. 이슈
 
-- 이 저장소는 튜토리얼/문서/실험 구성이 계속 변경되는 작업 브랜치 성격이 있습니다.
 - 튜토리얼 파일은 `ipynb` + `py`(jupytext 페어)로 함께 관리되므로, 수정 시 동기화가 필요합니다.
 - 모델 실행 시 API 키가 없으면 타겟 호출이 실패합니다.
   - `~/.pyrit/.env.local`에 `OPENAI_CHAT_KEY` 설정 필요

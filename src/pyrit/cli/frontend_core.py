@@ -393,16 +393,33 @@ async def run_scenario_async(
             initializer_class = context.initializer_registry.get_class(name)
             initializer_instances.append(initializer_class())
 
-    _apply_openai_frontend_env_fallbacks()
-
-    # Re-initialize PyRIT with the scenario-specific initializers
-    # This resets memory and applies initializer defaults
+    # Re-initialize PyRIT: load env files and set up memory first, WITHOUT
+    # running initializers yet.  Initializers are deferred so that the env-var
+    # fallback mapping below can run after .env files are loaded but before
+    # initializer validation checks for required variables.
     await initialize_pyrit_async(
         memory_db_type=context._database,
-        initialization_scripts=context._initialization_scripts,
-        initializers=initializer_instances,
+        initialization_scripts=None,
+        initializers=None,
         env_files=context._env_files,
     )
+
+    # Map common OpenAI env vars (OPENAI_CHAT_*, OPENAI_CLI_*) to the
+    # DEFAULT_OPENAI_FRONTEND_* variables expected by scenario initializers.
+    # This must happen AFTER env files are loaded (which may set these to
+    # empty strings via unresolved interpolation) and BEFORE initializers
+    # validate that the variables are present.
+    _apply_openai_frontend_env_fallbacks()
+
+    # Now run initializers (and initialization_scripts) with env fully resolved
+    from pyrit.setup.initialization import _execute_initializers_async, _load_initializers_from_scripts
+
+    all_initializers = list(initializer_instances) if initializer_instances else []
+    if context._initialization_scripts:
+        script_initializers = _load_initializers_from_scripts(script_paths=context._initialization_scripts)
+        all_initializers.extend(script_initializers)
+    if all_initializers:
+        await _execute_initializers_async(initializers=all_initializers)
 
     # Get scenario class
     scenario_class = context.scenario_registry.get_class(scenario_name)

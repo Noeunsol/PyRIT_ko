@@ -926,6 +926,8 @@ class _TreeOfAttacksNode:
 
         scoring_message = Message.from_prompt(prompt=prompt, role="user")
         scoring_message.message_pieces[0].labels = dict(self._memory_labels)
+        # Persist synthetic scoring message so score.message_piece_id resolves in memory.
+        self._memory.add_message_to_memory(request=scoring_message)
         return (await self._on_topic_scorer.score_async(message=scoring_message))[0]
 
     @pyrit_json_retry

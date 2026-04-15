@@ -332,7 +332,21 @@ class MemoryInterface(abc.ABC):
                 message_piece_id = score.message_piece_id
                 pieces = self.get_message_pieces(prompt_ids=[str(message_piece_id)])
                 if not pieces:
-                    logging.error(f"MessagePiece with ID {message_piece_id} not found in memory.")
+                    scorer_name = (
+                        score.scorer_class_identifier.class_name
+                        if getattr(score, "scorer_class_identifier", None)
+                        else "unknown"
+                    )
+                    logging.warning(
+                        "MessagePiece with ID %s not found in memory. "
+                        "Saving score without message_piece_id (scorer=%s, objective=%s).",
+                        message_piece_id,
+                        scorer_name,
+                        score.objective,
+                    )
+                    # Keep the score instead of dropping it when the referenced piece
+                    # is missing (e.g., synthetic scoring prompts).
+                    score.message_piece_id = None
                     continue
                 # auto-link score to the original prompt id if the prompt is a duplicate
                 if pieces[0].original_prompt_id != pieces[0].id:
