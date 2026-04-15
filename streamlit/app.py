@@ -15,6 +15,7 @@ import random
 import time
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import pandas as pd
 import streamlit as st
@@ -25,6 +26,7 @@ from config import (
     CONVERTER_CAT_LABELS,
     CONVERTER_CHOICES,
     CONVERTER_EXTRA_PARAMS,
+    CONVERTER_TOGGLE_PARAMS,
     CONVERTERS,
     HAS_BUILTIN_CONVERTER,
     HUGGINGFACE_MODELS,
@@ -77,15 +79,97 @@ def get_available_targets() -> list[tuple[str, str, str, str, str]]:
         if category in ("no_llm", "huggingface"):
             available.append(entry)
             continue
-        if all(os.environ.get(v) for v in ("OPENAI_CHAT_ENDPOINT", "OPENAI_CHAT_KEY", model_env_var)):
+        endpoint = os.environ.get("OPENAI_CHAT_ENDPOINT")
+        api_key = os.environ.get("OPENAI_CHAT_KEY")
+        model_name = os.environ.get(model_env_var)
+        if _is_valid_endpoint(endpoint) and _is_valid_api_key(api_key) and _is_valid_model_name(model_name):
             available.append(entry)
     return available
 
 
 def get_available_converters(locale: str) -> list[tuple[str, str, str, str]]:
     if locale == "ko":
-        return [c for c in CONVERTERS if c[3] != "tt_en_only"]
+        hidden_for_ko = {"AsciiSmugglerConverter"}
+        return [c for c in CONVERTERS if c[3] != "tt_en_only" and c[0] not in hidden_for_ko]
     return CONVERTERS
+
+
+def _is_placeholder_env_value(value: Optional[str]) -> bool:
+    if value is None:
+        return True
+    v = value.strip().strip('"').strip("'")
+    if not v:
+        return True
+    lv = v.lower()
+    if lv in {"xxxxx", "deployment-name", "your-api-key", "your-endpoint", "your-deployment-name"}:
+        return True
+    if "xxxxx" in lv or "deployment-name" in lv:
+        return True
+    if lv.startswith("sk-xxxxx") or lv.startswith("gsk_xxxxx"):
+        return True
+    return False
+
+
+def _is_valid_endpoint(value: Optional[str]) -> bool:
+    if _is_placeholder_env_value(value):
+        return False
+    assert value is not None
+    parsed = urlparse(value.strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _is_valid_model_name(value: Optional[str]) -> bool:
+    if _is_placeholder_env_value(value):
+        return False
+    assert value is not None
+    return len(value.strip()) >= 2
+
+
+def _is_valid_api_key(value: Optional[str]) -> bool:
+    if _is_placeholder_env_value(value):
+        return False
+    assert value is not None
+    # Accept both platform-style (sk-...) and Azure-style opaque keys.
+    return len(value.strip()) >= 12 and " " not in value.strip()
+
+
+def _sync_scenario_target_env(*, selected_model_env_var: str) -> None:
+    """
+    Ensure scenario internals (objective target / adversarial target / scorer target)
+    use the model selected in the Streamlit UI.
+
+    Some scenarios build scorer/adversarial targets from AZURE_OPENAI_GPT4O_UNSAFE_CHAT_*.
+    If those vars are unset or still placeholders from example env files, they can fail with
+    DNS errors (e.g. nodename not known). In that case, fallback to selected OPENAI_CHAT_*.
+    """
+    selected_endpoint = os.environ.get("OPENAI_CHAT_ENDPOINT", "")
+    selected_key = os.environ.get("OPENAI_CHAT_KEY", "")
+    selected_model = os.environ.get(selected_model_env_var, "")
+
+    os.environ["DEFAULT_OPENAI_FRONTEND_ENDPOINT"] = selected_endpoint
+    os.environ["DEFAULT_OPENAI_FRONTEND_KEY"] = selected_key
+    os.environ["DEFAULT_OPENAI_FRONTEND_MODEL"] = selected_model
+
+    unsafe_target_sets = [
+        (
+            "AZURE_OPENAI_GPT4O_UNSAFE_CHAT_ENDPOINT",
+            "AZURE_OPENAI_GPT4O_UNSAFE_CHAT_KEY",
+            "AZURE_OPENAI_GPT4O_UNSAFE_CHAT_MODEL",
+        ),
+        (
+            "AZURE_OPENAI_GPT4O_UNSAFE_CHAT_ENDPOINT2",
+            "AZURE_OPENAI_GPT4O_UNSAFE_CHAT_KEY2",
+            "AZURE_OPENAI_GPT4O_UNSAFE_CHAT_MODEL2",
+        ),
+    ]
+
+    for endpoint_var, key_var, model_var in unsafe_target_sets:
+        if not _is_valid_endpoint(os.environ.get(endpoint_var)):
+            os.environ[endpoint_var] = selected_endpoint
+        if not _is_valid_api_key(os.environ.get(key_var)):
+            os.environ[key_var] = selected_key
+        if not _is_valid_model_name(os.environ.get(model_var)):
+            os.environ[model_var] = selected_model
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +221,8 @@ def create_target(target_key: str):
 
 def create_converter_instance(class_name: str, params: dict[str, Any], locale: str):
     import pyrit.prompt_converter as mod
+    from pyrit.prompt_converter.text_selection_strategy import WordProportionSelectionStrategy
+
     cls = getattr(mod, class_name)
     kwargs: dict[str, Any] = {}
     if class_name in LLM_CONVERTERS:
@@ -149,18 +235,38 @@ def create_converter_instance(class_name: str, params: dict[str, Any], locale: s
         param_name = CONVERTER_CHOICES[class_name][0]
         if param_name in params:
             val = params[param_name]
-            if param_name == "encode_spaces":
+            if param_name in ("encode_spaces", "unicode_tags", "embed_in_base"):
                 val = str(val).lower() == "true"
             kwargs[param_name] = val
     if class_name in CONVERTER_EXTRA_PARAMS:
         for param_name, _, _, _ in CONVERTER_EXTRA_PARAMS[class_name]:
             if param_name in params:
                 val = params[param_name]
-                if param_name in ("caesar_offset", "times_to_repeat"):
+                if param_name in ("caesar_offset", "times_to_repeat", "max_iterations"):
                     val = int(val)
+                elif param_name == "word_proportion":
+                    val = float(val)
+                elif param_name in ("unicode_tags", "encode_spaces", "embed_in_base"):
+                    val = str(val).lower() == "true"
                 elif param_name == "denylist":
                     val = [w.strip() for w in str(val).split(",") if w.strip()]
                 kwargs[param_name] = val
+
+    if class_name in CONVERTER_TOGGLE_PARAMS:
+        for param_name, _, _, _ in CONVERTER_TOGGLE_PARAMS[class_name]:
+            if param_name in params:
+                val = params[param_name]
+                if not isinstance(val, bool):
+                    val = str(val).lower() == "true"
+                kwargs[param_name] = val
+
+    if class_name == "SuffixAppendConverter" and "suffix" not in kwargs:
+        raise ValueError("SuffixAppendConverter requires a non-empty 'suffix' value.")
+
+    if class_name == "CharSwapConverter":
+        word_proportion = kwargs.pop("word_proportion", 1.0)
+        kwargs["word_selection_strategy"] = WordProportionSelectionStrategy(proportion=word_proportion)
+
     if class_name == "TextJailbreakConverter":
         from pyrit.datasets import TextJailBreak
         templates = TextJailBreak.get_all_jailbreak_templates(n=1, locale=locale)
@@ -281,9 +387,25 @@ async def run_custom_attack_async(
         )
 
     if converter_configs:
-        instances = [create_converter_instance(name, params, locale) for name, params in converter_configs]
-        init_kwargs["attack_converter_config"] = AttackConverterConfig(
-            request_converters=[PromptConverterConfiguration(converters=instances)])
+        request_instances: list[Any] = []
+        response_instances: list[Any] = []
+
+        for name, params in converter_configs:
+            instance = create_converter_instance(name, params, locale)
+            action = str(params.get("action", "")).lower()
+            if action == "decode":
+                response_instances.append(instance)
+            else:
+                request_instances.append(instance)
+
+        attack_converter_kwargs: dict[str, Any] = {}
+        if request_instances:
+            attack_converter_kwargs["request_converters"] = [PromptConverterConfiguration(converters=request_instances)]
+        if response_instances:
+            attack_converter_kwargs["response_converters"] = [PromptConverterConfiguration(converters=response_instances)]
+
+        if attack_converter_kwargs:
+            init_kwargs["attack_converter_config"] = AttackConverterConfig(**attack_converter_kwargs)
 
     selected_converter_names = {name for name, _ in converter_configs}
     qr_mode = attack_key == "prompt_sending" and "QRCodeConverter" in selected_converter_names
@@ -361,9 +483,7 @@ async def run_scenario_async(
     if entry:
         _, model_env_var, _, _, category = entry
         if category == "llm" and model_env_var:
-            os.environ["DEFAULT_OPENAI_FRONTEND_ENDPOINT"] = os.environ.get("OPENAI_CHAT_ENDPOINT", "")
-            os.environ["DEFAULT_OPENAI_FRONTEND_KEY"] = os.environ.get("OPENAI_CHAT_KEY", "")
-            os.environ["DEFAULT_OPENAI_FRONTEND_MODEL"] = os.environ.get(model_env_var, "")
+            _sync_scenario_target_env(selected_model_env_var=model_env_var)
 
     initializer_names = ["openai_objective_target", "simple", "load_default_datasets"]
     context = frontend_core.FrontendCore(database=db, initializer_names=initializer_names, locale=locale)
@@ -1190,16 +1310,31 @@ def sidebar_custom_mode() -> dict[str, Any]:
         has_param_ui = (
             cls_name in CONVERTER_CHOICES
             or cls_name in CONVERTER_EXTRA_PARAMS
+            or cls_name in CONVERTER_TOGGLE_PARAMS
             or cls_name in LLM_CONVERTERS
         )
         if has_param_ui:
             with st.expander(cls_name, expanded=False):
+                if cls_name in CONVERTER_TOGGLE_PARAMS:
+                    for pname, lko, len_, default in CONVERTER_TOGGLE_PARAMS[cls_name]:
+                        params[pname] = st.toggle(
+                            lko if locale == "ko" else len_,
+                            value=default,
+                            key=f"ct_{cls_name}_{pname}",
+                        )
                 if cls_name in CONVERTER_CHOICES:
                     pname, lko, len_, choices = CONVERTER_CHOICES[cls_name]
                     labels = [c[1] if locale == "ko" else c[2] for c in choices]
                     values = [c[0] for c in choices]
                     sel = st.selectbox(lko if locale == "ko" else len_, labels, key=f"cc_{cls_name}")
                     params[pname] = values[labels.index(sel)]
+                    if pname == "action":
+                        st.caption(
+                            LD(
+                                "ℹ️ action=encode는 요청(request)에 적용되고, action=decode는 응답(response)에 적용됩니다.",
+                                "ℹ️ action=encode is applied to requests, and action=decode is applied to responses.",
+                            )
+                        )
                 if cls_name in CONVERTER_EXTRA_PARAMS:
                     for pname, lko, len_, default in CONVERTER_EXTRA_PARAMS[cls_name]:
                         val = st.text_input(
@@ -1211,6 +1346,20 @@ def sidebar_custom_mode() -> dict[str, Any]:
                             params[pname] = val
                 if cls_name in LLM_CONVERTERS:
                     st.caption(LD("🤖 LLM 기반", "🤖 LLM-based"))
+                if cls_name == "SneakyBitsSmugglerConverter":
+                    st.caption(
+                        LD(
+                            "ℹ️ encode 결과는 보이지 않는 문자(U+2062/U+2064)라 화면에서 비어 보일 수 있습니다.",
+                            "ℹ️ Encoded output uses invisible chars (U+2062/U+2064), so it may look empty.",
+                        )
+                    )
+                if cls_name == "AsciiSmugglerConverter":
+                    st.caption(
+                        LD(
+                            "ℹ️ AsciiSmuggler는 ASCII printable 문자(0x20~0x7E)만 은닉합니다. 한글은 인코딩되지 않아 출력이 비어 보일 수 있습니다.",
+                            "ℹ️ AsciiSmuggler only smuggles ASCII printable chars (0x20-0x7E). Non-ASCII text can appear empty after encoding.",
+                        )
+                    )
         converter_configs.append((cls_name, params))
     cfg["converter_configs"] = converter_configs
 

@@ -20,6 +20,7 @@ from pyrit.executor.attack.multi_turn.multi_turn_attack_strategy import (
     MultiTurnAttackContext,
     MultiTurnAttackStrategy,
 )
+from pyrit.memory.central_memory import CentralMemory
 from pyrit.models import (
     AttackOutcome,
     AttackResult,
@@ -177,6 +178,7 @@ class ChunkedRequestAttack(MultiTurnAttackStrategy[ChunkedRequestAttackContext, 
             context_type=ChunkedRequestAttackContext,
             params_type=ChunkedRequestAttackParameters,
         )
+        self._memory = CentralMemory.get_memory_instance()
 
         # Store chunk configuration
         self._chunk_size = chunk_size

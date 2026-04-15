@@ -183,7 +183,7 @@ MEMORY_DB_TYPE = SQLITE
 
 ## 5. 이슈
 
-- 튜토리얼 파일은 `ipynb` + `py`(jupytext 페어)로 함께 관리되므로, 수정 시 동기화가 필요합니다.
+- 튜토리얼 파일은 `ipynb` 기준으로 관리됩니다.
 - 모델 실행 시 API 키가 없으면 타겟 호출이 실패합니다.
   - `~/.pyrit/.env.local`에 `OPENAI_CHAT_KEY` 설정 필요
 - `InMemory` 모드에서는 `.db` 파일이 남지 않습니다.

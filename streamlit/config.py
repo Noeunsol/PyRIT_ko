@@ -355,7 +355,11 @@ LLM_CONVERTERS = {
 # class_name -> [(param_name, label_ko, label_en, default)]
 CONVERTER_EXTRA_PARAMS: dict[str, list[tuple[str, str, str, str | None]]] = {
     "CaesarConverter": [("caesar_offset", "시저 암호 이동값", "Caesar offset", "3")],
-    "SuffixAppendConverter": [("suffix", "추가할 접미사", "Suffix to append", None)],
+    "CharSwapConverter": [
+        ("max_iterations", "문자 교환 반복 횟수", "Swap iterations", "1"),
+        ("word_proportion", "변환 단어 비율 (0~1)", "Word proportion (0-1)", "1.0"),
+    ],
+    "SuffixAppendConverter": [("suffix", "추가할 접미사", "Suffix to append", "!!!")],
     "RepeatTokenConverter": [
         ("token_to_repeat", "반복할 토큰", "Token to repeat", "!!"),
         ("times_to_repeat", "반복 횟수", "Times to repeat", "10"),
@@ -366,6 +370,20 @@ CONVERTER_EXTRA_PARAMS: dict[str, list[tuple[str, str, str, str | None]]] = {
     ],
     "DenylistConverter": [
         ("denylist", "금지어 (쉼표 구분)", "Banned words (comma-separated)", None),
+    ],
+}
+
+# Converters with boolean toggle params
+# class_name -> [(param_name, label_ko, label_en, default_bool)]
+CONVERTER_TOGGLE_PARAMS: dict[str, list[tuple[str, str, str, bool]]] = {
+    "AsciiSmugglerConverter": [
+        ("unicode_tags", "유니코드 태그 래핑", "Wrap with unicode tags", False),
+    ],
+    "UnicodeReplacementConverter": [
+        ("encode_spaces", "공백도 유니코드로 치환", "Encode spaces too", False),
+    ],
+    "VariationSelectorSmugglerConverter": [
+        ("embed_in_base", "기본 문자(😊)에 숨김 삽입", "Embed hidden payload in base char", True),
     ],
 }
 
@@ -401,13 +419,13 @@ CONVERTER_CHOICES: dict[str, tuple[str, str, str, list[tuple[str, str, str]]]] =
         ("hex", "Hex", "Hex"), ("quoted-printable", "Quoted-Printable", "Quoted-Printable"),
         ("UUencode", "UUencode", "UUencode"),
     ]),
-    "UnicodeReplacementConverter": ("encode_spaces", "공백 치환", "Encode Spaces", [
-        ("false", "아니오", "No"), ("true", "예", "Yes"),
-    ]),
     "SneakyBitsSmugglerConverter": ("action", "동작", "Action", [
         ("encode", "인코드", "Encode"), ("decode", "디코드", "Decode"),
     ]),
     "VariationSelectorSmugglerConverter": ("action", "동작", "Action", [
+        ("encode", "인코드", "Encode"), ("decode", "디코드", "Decode"),
+    ]),
+    "AsciiSmugglerConverter": ("action", "동작", "Action", [
         ("encode", "인코드", "Encode"), ("decode", "디코드", "Decode"),
     ]),
     "RepeatTokenConverter": ("token_insert_mode", "삽입 모드", "Insert Mode", [

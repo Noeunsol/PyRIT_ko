@@ -8,7 +8,7 @@ This attack was developed based on techniques discovered and validated
 during Crucible CTF red teaming exercises using PyRIT.
 """
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -352,3 +352,20 @@ class TestChunkedRequestAttack:
 
         assert outcome.value == "failure"
         assert reason == "scorer 기준으로 목표를 달성하지 못했습니다"
+
+    @pytest.mark.asyncio
+    async def test_score_combined_value_async_persists_message_before_scoring(self):
+        """Test scoring path persists synthetic message in memory and returns first score."""
+        mock_target = Mock()
+        mock_score = Mock(spec=Score)
+        mock_scorer = Mock(spec=TrueFalseScorer)
+        mock_scorer.score_async = AsyncMock(return_value=[mock_score])
+        scoring_config = AttackScoringConfig(objective_scorer=mock_scorer)
+        attack = ChunkedRequestAttack(objective_target=mock_target, attack_scoring_config=scoring_config)
+
+        with patch.object(attack._memory, "add_message_to_memory") as mock_add_to_memory:
+            result = await attack._score_combined_value_async(combined_value="chunk-a\nchunk-b", objective="test objective")
+
+        assert result == mock_score
+        mock_add_to_memory.assert_called_once()
+        mock_scorer.score_async.assert_awaited_once()
