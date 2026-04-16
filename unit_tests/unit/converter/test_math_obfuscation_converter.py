@@ -151,3 +151,25 @@ def test_math_obfuscation_full_defaults():
     # Hint should be on first line only
     lines = result.output_text.split(MathObfuscationConverter.DEFAULT_SUFFIX)[0].splitlines()
     assert MathObfuscationConverter.DEFAULT_HINT in lines[0]
+
+
+def test_math_obfuscation_full_defaults_korean_locale():
+    """Korean locale should use Korean defaults for hint and suffix."""
+    converter = MathObfuscationConverter(rng=random.Random(0), locale="ko")
+
+    result = asyncio.run(converter.convert_async(prompt="안녕"))
+
+    assert MathObfuscationConverter.DEFAULT_HINT_KO in result.output_text
+    assert MathObfuscationConverter.DEFAULT_SUFFIX_KO in result.output_text
+    assert MathObfuscationConverter.DEFAULT_HINT not in result.output_text
+    assert MathObfuscationConverter.DEFAULT_SUFFIX not in result.output_text
+
+
+def test_math_obfuscation_full_defaults_korean_locale_prefix():
+    """Locale values like ko-KR should also resolve to Korean defaults."""
+    converter = MathObfuscationConverter(rng=random.Random(0), locale="ko-KR")
+
+    result = asyncio.run(converter.convert_async(prompt="A"))
+
+    assert MathObfuscationConverter.DEFAULT_HINT_KO in result.output_text
+    assert MathObfuscationConverter.DEFAULT_SUFFIX_KO in result.output_text

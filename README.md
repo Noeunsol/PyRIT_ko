@@ -3,15 +3,14 @@
 # PyRIT_ko
 
 PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실험 저장소입니다.  
-이 문서는 현재 저장소 상태를 반영하며, 이후 실험/구조 변경에 따라 계속 업데이트됩니다.
 
 ---
 
 ## 1. 레포지토리 설명
 - 원본 프레임워크: [Azure/PyRIT](https://github.com/Azure/PyRIT)
 - 연관 프로젝트: Attack Method 유형 확대 - 기본 Attacker 구축
-- 담당자: 노은솔
-- 작성일: 2026-04-10
+- 담당자: 노은솔, 정민재
+- 작성일: 2026-04-16
 - 목적: 한국어 환경에서 공격(Attack) - 변환(Converter) - 평가(Scorer) 흐름을 빠르게 실험
 - 현재 특징:
   - `tests/`에 단계별 튜토리얼(00~05) 정리
@@ -59,10 +58,10 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
   - 예시: `red_teaming/*_ko.yaml`, `crescendo/*_ko.yaml`
   - 용도: 공격 전략별 시스템/유도 프롬프트
 
-- 변환기 프롬프트
+- 변환 전략 프롬프트
   - 경로: `prompts/prompt_converters/`
   - 예시: `tone_converter_ko.yaml`, `translation_converter_ko.yaml`
-  - 용도: LLM 기반 변환기 동작 지시
+  - 용도: LLM 기반 변환 전략 동작 지시
 
 - 점수 평가 프롬프트
   - 경로: `prompts/score/`
@@ -113,11 +112,11 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 ### 3.3 튜토리얼 구성(`tests/`)
 
 - `00_pyrit_overview.md`: 구조 개요
-- `01_custom_tutorial.ipynb`: 공격/변환기/스코어러 조합 실행 + SQLite 결과 조회
+- `01_custom_tutorial.ipynb`: 공격/변환 전략/스코어러 조합 실행 + SQLite 결과 조회
 - `02_attack_comparison.ipynb`: 공격 전략 비교
-- `03_converter_comparison.ipynb`: 변환기 비교
+- `03_converter_comparison.ipynb`: 변환 전략 비교
 - `04_scorer_comparison.ipynb`: 스코어러 비교
-- `05_scenario_walkthrough.ipynb`: 시나리오 기반 종합 실행
+- `05_scenario.ipynb`: 시나리오 기반 종합 실행
 
 ---
 
@@ -126,7 +125,7 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 ### 4.1 파이프라인
 
 ```text
-Objective
+Seed
   -> Attack
     -> Converter (선택)
       -> Target LLM
@@ -153,7 +152,7 @@ cp .env_local_example ~/.pyrit/.env.local
 
 ### 4.3 실행 방법
 
-1) 튜토리얼 실행 (권장)
+1) 튜토리얼 실행
 
 VSCode에서 `tests/01_custom_tutorial.ipynb` 열고 커널을 `pyrit_ko`로 선택하여 실행
 
@@ -163,11 +162,25 @@ VSCode에서 `tests/01_custom_tutorial.ipynb` 열고 커널을 `pyrit_ko`로 선
 python main.py
 ```
 
-3) CLI 엔트리포인트
+3) CLI 실행 (시나리오 기반만 가능, custom attack은 cli로 불가)
 
 ```bash
-pyrit_scan --help
-pyrit_shell --help
+# pyrit_scan --help
+# pyrit_shell --help
+
+OPENAI_CHAT_MODEL=gpt-4o-mini \
+pyrit_scan garak.encoding \
+  --database SQLite \
+  --target-lang ko \
+  --initializers openai_objective_target \
+  --strategies rot13 \
+  --max-dataset-size 1
+```
+
+4) Streamlit Demo 실행
+
+```bash
+streamlit run streamlit/app.py
 ```
 
 ### 4.4 SQLite 결과 저장/조회
@@ -296,7 +309,7 @@ PyJWT>=2.0.0
 ```text
 PyRIT_ko/
 ├── src/pyrit/                    # PyRIT 코어 라이브러리
-│   ├── prompt_converter/         # 변환기 구현
+│   ├── prompt_converter/         # 변환 전략 구현
 │   ├── executor/                 # 공격/실행 로직
 │   ├── scenario/                 # 시나리오 실행 로직
 │   ├── memory/                   # SQLite/AzureSQL 메모리

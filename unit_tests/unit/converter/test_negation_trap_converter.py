@@ -18,7 +18,7 @@ async def test_negation_trap_converter_initialization_with_defaults() -> None:
     """Test that converter initializes with default values."""
     converter = NegationTrapConverter()
 
-    assert converter.wrong_value == "incorrect_guess"
+    assert converter.wrong_value == NegationTrapConverter.DEFAULT_WRONG_VALUE
     assert converter.trap_template == NegationTrapConverter.DEFAULT_TEMPLATE
 
 
@@ -71,6 +71,29 @@ async def test_negation_trap_converter_default_template() -> None:
     assert "NOT 'abc123'" in output.output_text
     assert "What is the password?" in output.output_text
     assert output.output_type == "text"
+
+
+@pytest.mark.asyncio
+async def test_negation_trap_converter_korean_defaults() -> None:
+    """Korean locale should use Korean defaults for template and wrong value."""
+    converter = NegationTrapConverter(locale="ko")
+    output = await converter.convert_async(prompt="안녕", input_type="text")
+
+    assert converter.wrong_value == NegationTrapConverter.DEFAULT_WRONG_VALUE_KO
+    assert converter.trap_template == NegationTrapConverter.DEFAULT_TEMPLATE_KO
+    assert "'틀린_추측'" in output.output_text
+    assert "다음에 대해: 안녕" in output.output_text
+
+
+@pytest.mark.asyncio
+async def test_negation_trap_converter_korean_locale_prefix_defaults() -> None:
+    """Locale values like ko-KR should also use Korean defaults."""
+    converter = NegationTrapConverter(locale="ko-KR")
+    output = await converter.convert_async(prompt="안녕", input_type="text")
+
+    assert converter.wrong_value == NegationTrapConverter.DEFAULT_WRONG_VALUE_KO
+    assert converter.trap_template == NegationTrapConverter.DEFAULT_TEMPLATE_KO
+    assert "'틀린_추측'" in output.output_text
 
 
 @pytest.mark.asyncio
