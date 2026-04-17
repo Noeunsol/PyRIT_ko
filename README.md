@@ -1,4 +1,4 @@
-<p align="center"><img src="./doc/roakey.png" width="150"></p>
+<p align="center"><img src="./doc_ko/roakey.png" width="150"></p>
 
 # PyRIT_ko
 
@@ -124,7 +124,7 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 
 ### 4.1 파이프라인
 
-![image.png](/Users/selectstar/PyRIT_ko/pyrit_pipeline.png)
+<p align="center"><img src="./pyrit_pipeline.png" width="600" alt="PyRIT Pipeline"></p>
 
 ```text
 Seed
