@@ -124,6 +124,8 @@ PyRIT_ko는 PyRIT 기반의 한국어 중심 LLM 레드팀/안전성 평가 실�
 
 ### 4.1 파이프라인
 
+![image.png](/Users/selectstar/PyRIT_ko/pyrit_pipeline.png)
+
 ```text
 Seed
   -> Attack
