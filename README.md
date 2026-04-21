@@ -191,7 +191,7 @@ streamlit run streamlit/app.py
 MEMORY_DB_TYPE = SQLITE
 ```
 
-- `pyrit.db`에 결과가 저장되고
+- `dbdata/pyrit.db`에 결과가 저장되고
 - 최신 실행 결과/테이블 row count를 표 형식으로 확인할 수 있습니다.
 
 ---
@@ -320,12 +320,12 @@ PyRIT_ko/
 │   └── datasets/                 # 시드/평가/렉시콘 데이터셋
 ├── prompts/                      # 프롬프트 템플릿
 ├── tests/                        # 튜토리얼 데모(00~05)
-├── tutorials/                    # 영어/한국어 비교 테스트
-├── unit_tests/                   # 단위/통합 테스트
-├── assets/                       # doc 튜토리얼용 이미지/미디어/스코어러 yaml
-├── doc/                          # 기본 문서
+├── assets/                       # 이미지/미디어/스코어러 yaml
 ├── doc_ko/                       # 한국어 문서
 ├── frontend/                     # 웹 UI (React + TypeScript)
+├── streamlit/                    # Streamlit 데모 앱
+├── build_scripts/                # 빌드/유틸리티 스크립트
+├── dbdata/                       # SQLite DB 및 로그 저장 (`pyrit.db`, `logs.txt`)
 ├── main.py                       # 대화형 실행 엔트리포인트
 └── pyproject.toml                # 패키지/의존성 정의
 ```
