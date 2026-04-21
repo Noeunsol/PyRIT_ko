@@ -1739,7 +1739,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    logo_path = Path(__file__).parent.parent / "doc" / "roakey.png"
+    logo_path = Path(__file__).parent.parent / "doc_ko" / "roakey.png"
     with st.sidebar:
         if logo_path.exists():
             col_logo, col_title = st.columns([1, 5])
