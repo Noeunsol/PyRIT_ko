@@ -11,7 +11,10 @@ from pyrit.score.float_scale.float_scale_score_aggregator import (
     FloatScaleScoreAggregator,
 )
 from pyrit.score.float_scale.float_scale_scorer import FloatScaleScorer
-from pyrit.score.score_utils import ORIGINAL_FLOAT_VALUE_KEY
+from pyrit.score.score_utils import (
+    ORIGINAL_FLOAT_VALUE_KEY,
+    localize_true_false_text_from_labels,
+)
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_scorer import TrueFalseScorer
 
@@ -111,16 +114,32 @@ class FloatScaleThresholdScorer(TrueFalseScorer):
             comparison_symbol = "="
 
         scorer_type = self._scorer.get_identifier().class_name
+        labels = message.message_pieces[0].labels if message.message_pieces else None
+        rationale_template = localize_true_false_text_from_labels(
+            labels=labels,
+            en=(
+                "based on {scorer_type}\n"
+                "Normalized scale score: {aggregate_value} {comparison_symbol} threshold {threshold}\n"
+                "Rationale for scale score: {scale_rationale}"
+            ),
+            ko=(
+                "{scorer_type} 기반 판정\n"
+                "정규화된 점수: {aggregate_value} {comparison_symbol} 임계값 {threshold}\n"
+                "스케일 점수 근거: {scale_rationale}"
+            ),
+        )
 
         # If we have scores, modify the first one; otherwise create a new score
         if scores:
             score = scores[0]
             score.score_type = "true_false"
             score.score_value = str(threshold_result)
-            score.score_rationale = (
-                f"based on {scorer_type}\n"
-                f"Normalized scale score: {aggregate_value} {comparison_symbol} threshold {self._threshold}\n"
-                f"Rationale for scale score: {score.score_rationale}"
+            score.score_rationale = rationale_template.format(
+                scorer_type=scorer_type,
+                aggregate_value=aggregate_value,
+                comparison_symbol=comparison_symbol,
+                threshold=self._threshold,
+                scale_rationale=score.score_rationale,
             )
             score.score_value_description = aggregate_score.description
             score.id = uuid.uuid4()
@@ -142,10 +161,12 @@ class FloatScaleThresholdScorer(TrueFalseScorer):
                 score_type="true_false",
                 score_value=str(threshold_result),
                 score_value_description=aggregate_score.description,
-                score_rationale=(
-                    f"based on {scorer_type}\n"
-                    f"Normalized scale score: {aggregate_value} {comparison_symbol} threshold {self._threshold}\n"
-                    f"{aggregate_score.rationale}"
+                score_rationale=rationale_template.format(
+                    scorer_type=scorer_type,
+                    aggregate_value=aggregate_value,
+                    comparison_symbol=comparison_symbol,
+                    threshold=self._threshold,
+                    scale_rationale=aggregate_score.rationale,
                 ),
                 score_category=aggregate_score.category,
                 # Include original float value in metadata for granular comparison

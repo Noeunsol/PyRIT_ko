@@ -222,9 +222,10 @@ SCORERS = [
     ("markdown_injection",
      "응답 내 Markdown 이미지/링크 주입 탐지 (LLM 호출 없음)",
      "Detects Markdown image/link injection in response (no LLM call)"),
-    ("content_filter",
-     "Azure AI Content Safety가 자동 감지 (Azure 자격증명 필요, LLM 호출 없음)",
-     "Azure AI Content Safety auto-detects (requires Azure creds, no LLM call)"),
+    # Disabled globally: Azure Content Safety scorer
+    # ("content_filter",
+    #  "Azure AI Content Safety가 자동 감지 (Azure 자격증명 필요, LLM 호출 없음)",
+    #  "Azure AI Content Safety auto-detects (requires Azure creds, no LLM call)"),
 ]
 
 # Attack → recommended scorer keys (first = objective scorer, rest = auxiliary)
@@ -243,7 +244,8 @@ _RECOMMENDED_SCORERS: dict[str, list[str]] = {
 }
 
 # Azure-only scorers that need extra credentials to actually run.
-_AZURE_SCORERS = {"content_filter"}
+# `content_filter` is disabled globally for now.
+_AZURE_SCORERS: set[str] = set()
 
 # Attack-specific notes shown after selection
 _ATTACK_NOTES: dict[str, list[tuple[str, str]]] = {
@@ -935,8 +937,8 @@ def _create_scorer(key: str, locale: str, *, allow_back: bool = False):
             content_classifier_path=ContentClassifierPaths.HARMFUL_CONTENT_CLASSIFIER.value,
         )
     elif key == "content_filter":
-        from pyrit.score import AzureContentFilterScorer
-        return FloatScaleThresholdScorer(scorer=AzureContentFilterScorer(), threshold=0.5)
+        # Disabled globally: Azure Content Safety scorer
+        return None
     elif key == "substring":
         from pyrit.score import SubStringScorer
         sub = ask_input(_L("검색할 문자열", "Substring to search", locale), allow_back=allow_back, locale=locale)

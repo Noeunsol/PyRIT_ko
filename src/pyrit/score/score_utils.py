@@ -55,6 +55,139 @@ def resolve_scorer_locale(
     )
 
 
+def localize_scorer_text(*, locale: str, en: str, ko: str) -> str:
+    """
+    Select a localized text for scorer messages.
+
+    Args:
+        locale: Candidate locale (supports aliases such as ``ko-KR``).
+        en: English fallback text.
+        ko: Korean text.
+
+    Returns:
+        Localized text, defaulting to English when locale is unsupported.
+    """
+    normalized = normalize_locale_value(locale)
+    return {"ko": ko, "en": en}.get(normalized, en)
+
+
+def localize_scorer_text_from_labels(
+    *,
+    labels: Optional[Mapping[str, Any]],
+    en: str,
+    ko: str,
+    supported_locales: Collection[str] = SUPPORTED_SCORER_LOCALES,
+    default_locale: str = DEFAULT_SCORER_LOCALE,
+) -> str:
+    """
+    Resolve locale from labels and return localized scorer text.
+
+    Args:
+        labels: Labels attached to a message/message piece.
+        en: English fallback text.
+        ko: Korean text.
+        supported_locales: Allowed locales for resolution.
+        default_locale: Fallback locale.
+
+    Returns:
+        Localized text selected from ``en`` / ``ko``.
+    """
+    locale = resolve_scorer_locale(
+        labels=labels,
+        supported_locales=supported_locales,
+        default_locale=default_locale,
+    )
+    return localize_scorer_text(locale=locale, en=en, ko=ko)
+
+
+def localize_true_false_text(*, locale: str, en: str, ko: str) -> str:
+    """
+    Select localized text for true_false scorer messages.
+
+    Args:
+        locale: Candidate locale (supports aliases such as ``ko-KR``).
+        en: English fallback text.
+        ko: Korean text.
+
+    Returns:
+        Localized text, defaulting to English when locale is unsupported.
+    """
+    return localize_scorer_text(locale=locale, en=en, ko=ko)
+
+
+def localize_true_false_text_from_labels(
+    *,
+    labels: Optional[Mapping[str, Any]],
+    en: str,
+    ko: str,
+    supported_locales: Collection[str] = SUPPORTED_SCORER_LOCALES,
+    default_locale: str = DEFAULT_SCORER_LOCALE,
+) -> str:
+    """
+    Resolve locale from labels and return localized text for true_false scorers.
+
+    Args:
+        labels: Labels attached to a message/message piece.
+        en: English fallback text.
+        ko: Korean text.
+        supported_locales: Allowed locales for resolution.
+        default_locale: Fallback locale.
+
+    Returns:
+        Localized text selected from ``en`` / ``ko``.
+    """
+    locale = resolve_scorer_locale(
+        labels=labels,
+        supported_locales=supported_locales,
+        default_locale=default_locale,
+    )
+    return localize_true_false_text(locale=locale, en=en, ko=ko)
+
+
+def localize_float_scale_text(*, locale: str, en: str, ko: str) -> str:
+    """
+    Select localized text for float_scale scorer messages.
+
+    Args:
+        locale: Candidate locale (supports aliases such as ``ko-KR``).
+        en: English fallback text.
+        ko: Korean text.
+
+    Returns:
+        Localized text, defaulting to English when locale is unsupported.
+    """
+    return localize_scorer_text(locale=locale, en=en, ko=ko)
+
+
+def localize_float_scale_text_from_labels(
+    *,
+    labels: Optional[Mapping[str, Any]],
+    en: str,
+    ko: str,
+    supported_locales: Collection[str] = SUPPORTED_SCORER_LOCALES,
+    default_locale: str = DEFAULT_SCORER_LOCALE,
+) -> str:
+    """
+    Resolve locale from labels and return localized text for float_scale scorers.
+
+    Args:
+        labels: Labels attached to a message/message piece.
+        en: English fallback text.
+        ko: Korean text.
+        supported_locales: Allowed locales for resolution.
+        default_locale: Fallback locale.
+
+    Returns:
+        Localized text selected from ``en`` / ``ko``.
+    """
+    locale = resolve_scorer_locale(
+        labels=labels,
+        supported_locales=supported_locales,
+        default_locale=default_locale,
+    )
+    return localize_float_scale_text(locale=locale, en=en, ko=ko)
+
+
 def infer_localized_path_pair(*, path: Path) -> tuple[Path, Path]:
     """Backward-compatible wrapper for localized path pairing."""
     return _infer_localized_path_pair(path=path)

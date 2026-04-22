@@ -10,6 +10,7 @@ import numpy as np
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score
 from pyrit.score.float_scale.float_scale_scorer import FloatScaleScorer
+from pyrit.score.score_utils import localize_float_scale_text_from_labels
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 
 
@@ -182,14 +183,24 @@ class PlagiarismScorer(FloatScaleScorer):
         """
         response_to_evaluate = message_piece.converted_value
         score_value = self._plagiarism_score(response_to_evaluate, self.reference_text, metric=self.metric, n=self.n)
+        score_value_description = localize_float_scale_text_from_labels(
+            labels=message_piece.labels,
+            en=f"Plagiarism score using '{self.metric.value}' metric",
+            ko=f"'{self.metric.value}' 메트릭 기반 표절 점수",
+        )
+        score_rationale = localize_float_scale_text_from_labels(
+            labels=message_piece.labels,
+            en="Score is deterministic.",
+            ko="점수는 결정론적으로 계산됩니다.",
+        )
 
         return [
             Score(
                 score_value=str(score_value),
-                score_value_description=f"Plagiarism score using '{self.metric.value}' metric",
+                score_value_description=score_value_description,
                 score_metadata=None,
                 score_type="float_scale",
-                score_rationale="Score is deterministic.",
+                score_rationale=score_rationale,
                 message_piece_id=message_piece.id,
                 scorer_class_identifier=self.get_identifier(),
             )

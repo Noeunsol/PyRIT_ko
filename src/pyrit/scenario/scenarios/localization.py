@@ -1,11 +1,18 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
+"""Shared locale helpers for all scenarios (airt, foundry, garak).
+
+Centralizes the locale/dataset/YAML path resolution logic so every scenario
+resolves ``memory_labels["locale"]`` the same way and picks ``_ko`` variants
+consistently.
+"""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from pyrit.common.locale_utils import resolve_locale_from_labels
+from pyrit.common.locale_utils import get_localized_file_paths, resolve_locale_from_labels
 
 DEFAULT_LOCALE = "en"
 SUPPORTED_LOCALES = {"en", "ko"}
@@ -18,6 +25,28 @@ def resolve_locale(*, labels: Optional[dict[str, str]]) -> str:
         supported_locales=SUPPORTED_LOCALES,
         default_locale=DEFAULT_LOCALE,
     )
+
+
+def get_localized_yaml_path(
+    *,
+    base_path: Path,
+    labels: Optional[dict[str, str]],
+) -> Path:
+    """Resolve a YAML asset path to its locale-aware variant with automatic fallback.
+
+    Given an English base path (e.g. ``.../malware.yaml``), this returns the
+    Korean sibling (``.../malware_ko.yaml``) when the resolved locale is ``"ko"``
+    and the sibling exists. Otherwise falls back to the English base_path.
+
+    Used for scorer question YAMLs, executor system prompts, and any other
+    localizable YAML resource inside a Scenario.
+    """
+    locale = resolve_locale(labels=labels)
+    localized = get_localized_file_paths(
+        resolved_path=base_path.resolve(),
+        supported_locales=SUPPORTED_LOCALES,
+    )
+    return localized.get(locale, localized[DEFAULT_LOCALE])
 
 
 def get_localized_dataset_names(

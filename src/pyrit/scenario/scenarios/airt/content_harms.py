@@ -23,7 +23,7 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
-from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
+from pyrit.scenario.scenarios.localization import get_localized_dataset_names
 from pyrit.score import SelfAskRefusalScorer, TrueFalseInverterScorer, TrueFalseScorer
 
 AttackStrategyT = TypeVar("AttackStrategyT", bound="AttackStrategy[Any, Any]")

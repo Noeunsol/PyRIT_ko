@@ -24,7 +24,10 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
-from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
+from pyrit.scenario.scenarios.localization import (
+    get_localized_dataset_names,
+    get_localized_yaml_path,
+)
 from pyrit.score import (
     SelfAskRefusalScorer,
     SelfAskTrueFalseScorer,
@@ -171,7 +174,10 @@ class Cyber(Scenario):
                 api_key=os.environ.get("AZURE_OPENAI_GPT4O_UNSAFE_CHAT_KEY"),
                 model_name=os.environ.get("AZURE_OPENAI_GPT4O_UNSAFE_CHAT_MODEL"),
             ),
-            true_false_question_path=SCORER_SEED_PROMPT_PATH / "true_false_question" / "malware.yaml",
+            true_false_question_path=get_localized_yaml_path(
+                base_path=SCORER_SEED_PROMPT_PATH / "true_false_question" / "malware.yaml",
+                labels=getattr(self, "_memory_labels", None),
+            ),
         )
 
         backstop = TrueFalseInverterScorer(

@@ -4,6 +4,7 @@
 from typing import TYPE_CHECKING, Optional
 
 from pyrit.models import Message, Score
+from pyrit.score.score_utils import localize_true_false_text_from_labels
 from pyrit.score.scorer import Scorer
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_score_aggregator import (
@@ -125,15 +126,40 @@ class TrueFalseScorer(Scorer):
 
             # Determine specific rationale based on message piece status
             if first_piece.is_blocked():
-                rationale = "The request was blocked by the target; returning false."
-                description = "Blocked response; returning false."
+                rationale = localize_true_false_text_from_labels(
+                    labels=first_piece.labels,
+                    en="The request was blocked by the target; returning false.",
+                    ko="요청이 타깃에서 차단되어 false를 반환합니다.",
+                )
+                description = localize_true_false_text_from_labels(
+                    labels=first_piece.labels,
+                    en="Blocked response; returning false.",
+                    ko="차단된 응답이므로 false를 반환합니다.",
+                )
             elif first_piece.has_error():
-                rationale = f"Response had an error: {first_piece.response_error}; returning false."
-                description = "Error response; returning false."
+                rationale_template = localize_true_false_text_from_labels(
+                    labels=first_piece.labels,
+                    en="Response had an error: {error}; returning false.",
+                    ko="응답에 오류가 발생했습니다: {error}; false를 반환합니다.",
+                )
+                rationale = rationale_template.format(error=first_piece.response_error)
+                description = localize_true_false_text_from_labels(
+                    labels=first_piece.labels,
+                    en="Error response; returning false.",
+                    ko="오류 응답이므로 false를 반환합니다.",
+                )
             else:
                 # this can happen with multi-modal responses if no supported pieces are present
-                rationale = "No supported pieces to score after filtering; returning false."
-                description = "No pieces to score after filtering; returning false."
+                rationale = localize_true_false_text_from_labels(
+                    labels=first_piece.labels,
+                    en="No supported pieces to score after filtering; returning false.",
+                    ko="필터링 후 채점 가능한 조각이 없어 false를 반환합니다.",
+                )
+                description = localize_true_false_text_from_labels(
+                    labels=first_piece.labels,
+                    en="No pieces to score after filtering; returning false.",
+                    ko="필터링 후 채점할 조각이 없어 false를 반환합니다.",
+                )
 
             return_score = Score(
                 score_value=str(False).lower(),

@@ -6,6 +6,7 @@ from typing import Optional
 from pyrit.analytics.text_matching import ExactTextMatching, TextMatching
 from pyrit.identifiers import ScorerIdentifier
 from pyrit.models import MessagePiece, Score
+from pyrit.score.score_utils import localize_true_false_text_from_labels
 from pyrit.score.scorer_prompt_validator import ScorerPromptValidator
 from pyrit.score.true_false.true_false_score_aggregator import (
     TrueFalseAggregatorFunc,
@@ -81,14 +82,33 @@ class SubStringScorer(TrueFalseScorer):
         """
         substring_present = self._text_matcher.is_match(target=self._substring, text=message_piece.converted_value)
 
+        if substring_present:
+            rationale = localize_true_false_text_from_labels(
+                labels=message_piece.labels,
+                en=f"Substring '{self._substring}' found in response.",
+                ko=f"응답에서 문자열 '{self._substring}' 발견됨.",
+            )
+        else:
+            rationale = localize_true_false_text_from_labels(
+                labels=message_piece.labels,
+                en=f"Substring '{self._substring}' not found in response.",
+                ko=f"응답에서 문자열 '{self._substring}' 미발견.",
+            )
+
+        description = localize_true_false_text_from_labels(
+            labels=message_piece.labels,
+            en=f"Substring match for '{self._substring}'.",
+            ko=f"'{self._substring}' 문자열 포함 검사.",
+        )
+
         score = [
             Score(
                 score_value=str(substring_present),
-                score_value_description="",
+                score_value_description=description,
                 score_metadata=None,
                 score_type="true_false",
                 score_category=self._score_categories,
-                score_rationale="",
+                score_rationale=rationale,
                 scorer_class_identifier=self.get_identifier(),
                 message_piece_id=message_piece.id,
                 objective=objective,

@@ -31,7 +31,10 @@ from pyrit.scenario.core.scenario_strategy import (
     ScenarioCompositeStrategy,
     ScenarioStrategy,
 )
-from pyrit.scenario.scenarios.airt.localization import get_localized_dataset_names
+from pyrit.scenario.scenarios.localization import (
+    get_localized_dataset_names,
+    get_localized_yaml_path,
+)
 from pyrit.score import (
     SelfAskRefusalScorer,
     SelfAskTrueFalseScorer,
@@ -198,7 +201,10 @@ class Scam(Scenario):
                 model_name=os.environ.get("AZURE_OPENAI_GPT4O_UNSAFE_CHAT_MODEL"),
                 temperature=0.9,
             ),
-            true_false_question_path=SCORER_SEED_PROMPT_PATH / "true_false_question" / "scams.yaml",
+            true_false_question_path=get_localized_yaml_path(
+                base_path=SCORER_SEED_PROMPT_PATH / "true_false_question" / "scams.yaml",
+                labels=getattr(self, "_memory_labels", None),
+            ),
         )
 
         backstop = TrueFalseInverterScorer(
@@ -303,10 +309,11 @@ class Scam(Scenario):
         attack_strategy: Optional[AttackStrategy[Any, Any]] = None
 
         if strategy == "persuasive_rta":
-            # Set system prompt to generic persuasion persona
-            self._adversarial_config.system_prompt_path = Path(
-                PERSUASION_DECEPTION_PATH, "persuasion_persona_generic.yaml"
-            ).resolve()
+            # Set system prompt to generic persuasion persona (locale-aware)
+            self._adversarial_config.system_prompt_path = get_localized_yaml_path(
+                base_path=Path(PERSUASION_DECEPTION_PATH, "persuasion_persona_generic.yaml"),
+                labels=getattr(self, "_memory_labels", None),
+            )
 
             attack_strategy = RedTeamingAttack(
                 objective_target=self._objective_target,
