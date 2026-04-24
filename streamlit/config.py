@@ -486,6 +486,26 @@ SCORER_EXTRA_PARAMS: dict[str, list[tuple[str, str, str, str | None]]] = {
     "plagiarism": [("reference_text", "비교할 참조 텍스트", "Reference text to compare against", None)],
 }
 
+# Each user-facing scorer key corresponds to a fixed chain of Score records in
+# piece.scores (outer wrapper → inner sub-scorers). Ordered exactly like the
+# Score objects that PyRIT stores when the chain runs, so UI grouping can
+# consume them sequentially (greedy claim by class_name).
+# Must stay in sync with create_scorer() in streamlit/app.py.
+SCORER_KEY_CLASS_CHAINS: dict[str, list[str]] = {
+    "refusal":            ["TrueFalseInverterScorer", "SelfAskRefusalScorer"],
+    "scale":              ["FloatScaleThresholdScorer", "SelfAskScaleScorer"],
+    "true_false":         ["SelfAskTrueFalseScorer"],
+    "likert":             ["FloatScaleThresholdScorer", "SelfAskLikertScorer"],
+    "composite":          ["TrueFalseCompositeScorer",
+                           "TrueFalseInverterScorer", "SelfAskRefusalScorer",
+                           "FloatScaleThresholdScorer", "SelfAskScaleScorer"],
+    "category":           ["SelfAskCategoryScorer"],
+    "insecure_code":      ["FloatScaleThresholdScorer", "InsecureCodeScorer"],
+    "substring":          ["SubStringScorer"],
+    "plagiarism":         ["FloatScaleThresholdScorer", "PlagiarismScorer"],
+    "markdown_injection": ["MarkdownInjectionScorer"],
+}
+
 # Scorers that need Azure credentials to actually run (hidden when env missing).
 # `content_filter` is disabled globally for now.
 AZURE_SCORERS: set[str] = set()

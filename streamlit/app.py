@@ -41,6 +41,7 @@ from config import (
     SCENARIO_BLUEPRINTS,
     SCORERS,
     SCORER_EXTRA_PARAMS,
+    SCORER_KEY_CLASS_CHAINS,
     TARGET_MODELS,
     TARGET_PRESETS,
 )
@@ -543,37 +544,41 @@ def _format_time(ms: int) -> str:
 
 
 # Canonical safe/unsafe mapping per PyRIT scorer class.
-# Applied to true_false scorers. Convention follows PyRIT's attack scenarios:
-# objective scorers return True when the attack goal is met (model produced
-# unsafe output), so True -> "unsafe" for most scorer classes.
-# The single documented exception is SelfAskRefusalScorer, where True means
-# "refusal detected" = model resisted, so True -> "safe".
+# Applied to true_false scorers. Only included when PyRIT has an UNAMBIGUOUS
+# direction for True (not dependent on user-supplied questions, substrings,
+# or human judgement). Ambiguous scorers are intentionally absent — for
+# those, the UI omits the safe/unsafe badge instead of inventing one.
 _SCORER_SAFETY_MAP: dict[str, tuple[str, str]] = {
-    # Raw refusal: True = refusal detected -> safe (model refused)
+    # SelfAskRefusalScorer is the single documented exception where True=safe.
+    # score_value_description hardcodes "Refusal detected" for True.
     "SelfAskRefusalScorer": ("safe", "unsafe"),
-    # Inverter: by PyRIT convention wraps refusal for backstop use -> True = non-refusal
+    # Inverter: by PyRIT convention wraps refusal for backstop use -> True = non-refusal.
+    # Streamlit's create_scorer() only wraps SelfAskRefusalScorer with this.
     "TrueFalseInverterScorer": ("unsafe", "safe"),
-    # True when underlying float score exceeds the configured harm threshold
+    # True when underlying float score exceeds the configured harm threshold.
     "FloatScaleThresholdScorer": ("unsafe", "safe"),
-    # Composite AND/OR of objective-style scorers
+    # Composite AND/OR of objective-style scorers (used with attack-success semantics).
     "TrueFalseCompositeScorer": ("unsafe", "safe"),
-    # Direct harm / attack-success detectors (True = attack objective met)
+    # Direct harm / attack-success detectors whose True is canonically "detected".
     "MarkdownInjectionScorer": ("unsafe", "safe"),
     "DecodingScorer": ("unsafe", "safe"),
     "PromptShieldScorer": ("unsafe", "safe"),
     "GandalfScorer": ("unsafe", "safe"),
-    # Configurable true/false scorers. In PyRIT's AIRT scenarios these are
-    # always used with True = "unsafe condition detected" (e.g. malware.yaml,
-    # scams.yaml, leakage.yaml), so the attack-convention label applies.
-    # If a user configures a question whose True means "safe", the label will
-    # be inverted — add an explicit override here if that use-case appears.
+    # SelfAskTrueFalseScorer defaults to TrueFalseQuestionPaths.TASK_ACHIEVED
+    # (True = model performed the task = unsafe in attack context). In streamlit
+    # we do not expose custom question paths, so this default direction holds.
     "SelfAskTrueFalseScorer": ("unsafe", "safe"),
-    "SelfAskGeneralTrueFalseScorer": ("unsafe", "safe"),
-    "SelfAskQuestionAnswerScorer": ("unsafe", "safe"),
-    "QuestionAnswerScorer": ("unsafe", "safe"),
+    # Category classifier against HARMFUL_CONTENT_CLASSIFIER: True = matched harm.
     "SelfAskCategoryScorer": ("unsafe", "safe"),
-    "SubStringScorer": ("unsafe", "safe"),
-    "HumanInTheLoopScorerGradio": ("unsafe", "safe"),
+    # -------------------------------------------------------------------
+    # DELIBERATELY OMITTED (no canonical True direction):
+    # - SubStringScorer:            direction depends on user-supplied substring
+    #                               (e.g. "I cannot" -> True=safe, "password" -> True=unsafe)
+    # - QuestionAnswerScorer:       QA benchmark, True=correct answer
+    # - SelfAskQuestionAnswerScorer: same
+    # - SelfAskGeneralTrueFalseScorer: user-supplied true/false description
+    # - HumanInTheLoopScorerGradio: human defines True direction
+    # -------------------------------------------------------------------
 }
 
 # Operational thresholds for raw float_scale scorers.
@@ -628,6 +633,143 @@ def _score_safety_label(score) -> Optional[str]:
     return None
 
 
+# Raw scale display for Likert/Scale float scorers.
+# Likert: score_metadata["likert_value"] stores the LLM's raw 1-5.
+# Scale:  no metadata, derive from normalized score: round(value * 9 + 1).
+_RAW_SCALE_MAX = {"SelfAskLikertScorer": 5, "SelfAskScaleScorer": 10}
+
+
+def _raw_scale_display(score) -> str:
+    """Return 'N/M' (e.g. '5/5' for Likert level 5) or '' if not applicable."""
+    scorer_id = getattr(score, "scorer_class_identifier", None)
+    name = getattr(scorer_id, "class_name", "") if scorer_id else ""
+    score_type = getattr(score, "score_type", "")
+    if score_type != "float_scale":
+        return ""
+    max_val = _RAW_SCALE_MAX.get(name)
+    if not max_val:
+        return ""
+    metadata = getattr(score, "score_metadata", None) or {}
+    if name == "SelfAskLikertScorer":
+        raw = metadata.get("likert_value")
+        if raw is None:
+            try:
+                raw = round(float(score.score_value) * (max_val - 1) + 1)
+            except (TypeError, ValueError):
+                return ""
+        return f"{raw}/{max_val}"
+    # SelfAskScaleScorer: always derive from normalized value
+    try:
+        raw = round(float(score.score_value) * (max_val - 1) + 1)
+    except (TypeError, ValueError):
+        return ""
+    return f"{raw}/{max_val}"
+
+
+def _group_scores_by_user_key(
+    piece_scores: list,
+    scorer_keys: list[str],
+) -> dict[str, list]:
+    """Distribute piece_scores into buckets keyed by the user's scorer selection.
+
+    For each user key in order, look up the expected class_name chain in
+    SCORER_KEY_CLASS_CHAINS and pull matching scores out of the pool by
+    **scanning** (not head-only). This tolerates reordering introduced by
+    PyRIT's parallel ``asyncio.gather`` of auxiliary scorers.
+
+    Conflict rule (composite vs standalone): composite shares sub-scorer
+    classes (TrueFalseInverterScorer, SelfAskRefusalScorer,
+    FloatScaleThresholdScorer, SelfAskScaleScorer) with refusal/scale. We
+    consume in scorer_keys order, so whichever key is listed first claims
+    the matching score instance first. Keys later in the list get whatever
+    remains. This matches the assumption that objective (index 0) wins
+    over duplicates and composite is usually placed before the standalone
+    keys it subsumes (or vice versa — either way the first-listed wins).
+
+    Returns dict: {scorer_key: [Score, ...]}. Leftover scores go to
+    ``'_unclaimed'``; its presence signals SCORER_KEY_CLASS_CHAINS drift.
+    """
+    remaining = list(piece_scores)
+    grouped: dict[str, list] = {}
+
+    def _class_name(s) -> str:
+        sid = getattr(s, "scorer_class_identifier", None)
+        return getattr(sid, "class_name", "") if sid else ""
+
+    for key in scorer_keys:
+        chain = SCORER_KEY_CLASS_CHAINS.get(key, [])
+        bucket: list = []
+        for expected in chain:
+            # Find first remaining score matching this expected class.
+            match_idx = next(
+                (i for i, sc in enumerate(remaining) if _class_name(sc) == expected),
+                None,
+            )
+            if match_idx is not None:
+                bucket.append(remaining.pop(match_idx))
+        grouped[key] = bucket
+
+    if remaining:
+        grouped["_unclaimed"] = remaining
+    return grouped
+
+
+def _safety_badge(safety: Optional[str]) -> str:
+    """Return an inline colored text label ('', ':green[safe]', ':red[unsafe]').
+
+    No emoji circles; color-only styling per user preference.
+    """
+    if safety == "safe":
+        return ":green[**safe**]"
+    if safety == "unsafe":
+        return ":red[**unsafe**]"
+    return ""
+
+
+def _render_single_score_line(s) -> None:
+    """Render one Score as: '📊 **ClassName** — value [raw] — :safe/:unsafe' + rationale."""
+    cname = getattr(getattr(s, "scorer_class_identifier", None), "class_name", "-")
+    value = str(getattr(s, "score_value", "-"))
+    safety = _score_safety_label(s)
+    badge = _safety_badge(safety)
+    raw = _raw_scale_display(s)
+    display_value = f"**{value}**" + (f" · {raw}" if raw else "")
+    parts = [f"📊 **{cname}** — {display_value}"]
+    if badge:
+        parts.append(f"— {badge}")
+    st.markdown(" ".join(parts))
+    rationale = getattr(s, "score_rationale", "")
+    if rationale:
+        st.code(rationale, language=None)
+
+
+def _render_scorer_group_box(user_key: str, scores: list, *, is_objective: bool) -> None:
+    """Render one bordered group box for a user-selected scorer key.
+
+    The first score is treated as the outer wrapper (shown with 📊 prefix);
+    remaining scores are sub-scorers shown with ↳ and indentation.
+    Each score's rationale is shown directly under its line so the user can
+    see reasoning per scorer in context.
+    """
+    tag = "🎯" if is_objective else "📎"
+    st.markdown(f"{tag} **`{user_key}`**")
+    for idx, sc in enumerate(scores):
+        cname = getattr(getattr(sc, "scorer_class_identifier", None), "class_name", "-")
+        value = str(getattr(sc, "score_value", "-"))
+        safety = _score_safety_label(sc)
+        badge = _safety_badge(safety)
+        raw = _raw_scale_display(sc)
+        display_value = f"**{value}**" + (f" · {raw}" if raw else "")
+        prefix = "📊" if idx == 0 else "&nbsp;&nbsp;&nbsp;&nbsp;↳"
+        parts = [f"{prefix} **{cname}** — {display_value}"]
+        if badge:
+            parts.append(f"— {badge}")
+        st.markdown(" ".join(parts), unsafe_allow_html=True)
+        rationale = getattr(sc, "score_rationale", "")
+        if rationale:
+            st.code(rationale, language=None)
+
+
 def display_result(result):
     """Display a single AttackResult with clean layout."""
     from pyrit.memory import CentralMemory
@@ -637,6 +779,11 @@ def display_result(result):
     icon = {"success": "✅", "failure": "❌", "undetermined": "❓"}.get(outcome.value, "❓")
     attack_type = (result.attack_identifier or {}).get("__type__", "-")
     exec_time_str = _format_time(result.execution_time_ms) if result.execution_time_ms else "-"
+
+    # User's original scorer selection (objective is index 0; rest are auxiliary).
+    scorer_keys: list[str] = list(st.session_state.get("last_scorer_keys", []))
+    objective_key = scorer_keys[0] if scorer_keys else None
+    auxiliary_keys = scorer_keys[1:] if len(scorer_keys) > 1 else []
 
     # ── 1. Outcome + Metrics (한 줄로) ──
     if outcome == AttackOutcome.SUCCESS:
@@ -651,20 +798,6 @@ def display_result(result):
         "failure": f"{LD('공격 실패', 'Attack Failure')}",
         "undetermined": f"{LD('공격 미정', 'Attack Undetermined')}",
     }.get(outcome.value, f"{LD('공격 미정', 'Attack Undetermined')}")
-
-    def _friendly_scorer_name(raw_name: str) -> str:
-        mapping = {
-            "FloatScaleThresholdScorer": LD("유해도 임계치 판정", "Scale-threshold judge"),
-            "SelfAskScaleScorer": LD("유해도 스케일 평가", "Scale evaluator"),
-            "SelfAskRefusalScorer": LD("거절 감지", "Refusal detector"),
-            "TrueFalseInverterScorer": LD("거절 반전 판정", "Refusal inversion"),
-            "TrueFalseCompositeScorer": LD("복합 판정", "Composite judge"),
-            "SelfAskTrueFalseScorer": LD("질문 기반 참/거짓 판정", "Question-based true/false"),
-        }
-        friendly = mapping.get(raw_name)
-        if not friendly:
-            return raw_name or "-"
-        return f"{friendly} ({raw_name})"
 
     def _friendly_score_value(score: Any) -> str:
         raw = str(getattr(score, "score_value", "-"))
@@ -708,18 +841,67 @@ def display_result(result):
         _summary_row(LD("대화 추적 ID", "Conversation ID"), result.conversation_id or "-")
 
     if result.last_score:
-        s = result.last_score
-        scorer_name = getattr(getattr(s, "scorer_class_identifier", None), "class_name", "-")
+        # Build the objective chain view. Pull sibling scores from the same piece
+        # where the objective wrapper was recorded, so inner sub-scorers
+        # (e.g. SelfAskScaleScorer under FloatScaleThresholdScorer) can be shown
+        # alongside the outer wrapper in the summary block.
+        objective_piece_scores: list = []
+        obj_piece_id = str(getattr(result.last_score, "message_piece_id", "") or "")
+        try:
+            memory = CentralMemory.get_memory_instance()
+            msgs = list(memory.get_conversation(conversation_id=result.conversation_id))
+            for m in msgs:
+                for p in m.message_pieces:
+                    if str(p.id) == obj_piece_id:
+                        objective_piece_scores = list(getattr(p, "scores", []))
+                        break
+                if objective_piece_scores:
+                    break
+        except Exception:
+            pass
+
+        objective_chain: list = []
+        if objective_key and objective_piece_scores:
+            grouped_obj = _group_scores_by_user_key(
+                objective_piece_scores, [objective_key]
+            )
+            objective_chain = grouped_obj.get(objective_key, [])
+        if not objective_chain:
+            objective_chain = [result.last_score]
+
+        st.markdown(f"**{LD('🎯 주 스코어러', '🎯 Objective Scorer')}**")
+        with st.container(border=True):
+            if objective_key:
+                st.markdown(f"📌 **`{objective_key}`**")
+            for idx, sc in enumerate(objective_chain):
+                cname = getattr(
+                    getattr(sc, "scorer_class_identifier", None), "class_name", "-"
+                )
+                value = str(getattr(sc, "score_value", "-"))
+                safety = _score_safety_label(sc)
+                badge = _safety_badge(safety)
+                raw = _raw_scale_display(sc)
+                display_value = f"**{value}**" + (f" · {raw}" if raw else "")
+                prefix = "📊" if idx == 0 else "&nbsp;&nbsp;&nbsp;&nbsp;↳"
+                parts = [f"{prefix} **{cname}** — {display_value}"]
+                if badge:
+                    parts.append(f"— {badge}")
+                st.markdown(" ".join(parts), unsafe_allow_html=True)
+                rationale = getattr(sc, "score_rationale", "")
+                if rationale:
+                    st.code(rationale, language=None)
+
+        # Summary row: 최종 점수 / 최종 판정
         sc1, sc2 = st.columns(2)
         with sc1:
-            _summary_row(LD("주 스코어러", "Objective Scorer"), _friendly_scorer_name(scorer_name))
+            _summary_row(LD("최종 점수", "Final Score"), _friendly_score_value(result.last_score))
         with sc2:
-            _summary_row(LD("최종 점수", "Final Score"), _friendly_score_value(s))
-        st.caption(LD("최종 성공/실패는 주 스코어러 기준으로 결정됩니다.", "Final success/failure is determined by the objective scorer."))
-        rationale = getattr(s, "score_rationale", "")
-        if rationale:
-            st.markdown(f"**{LD('판정 이유 (스코어러)', 'Scorer Rationale')}**")
-            st.code(rationale, language=None)
+            _summary_row(LD("판정 근거", "Judgment Source"),
+                         f"{objective_key}" if objective_key else "-")
+        st.caption(LD(
+            "최종 성공/실패는 주 스코어러 기준으로 결정됩니다.",
+            "Final success/failure is determined by the objective scorer.",
+        ))
 
     # ── 3. Conversation ──
     st.divider()
@@ -841,21 +1023,46 @@ def display_result(result):
                                 if decoded_text.startswith(("http://", "https://")):
                                     st.markdown(f"[{decoded_text}]({decoded_text})")
 
-                for s in getattr(piece, "scores", []):
-                    scorer_id = getattr(s, "scorer_class_identifier", None)
-                    scorer_name = getattr(scorer_id, "class_name", "") if scorer_id else ""
-                    score_type = getattr(s, "score_type", "")
-                    score_rationale = getattr(s, "score_rationale", "")
-                    safety = _score_safety_label(s)
-                    badge = (
-                        " — :green[**safe**]" if safety == "safe"
-                        else " — :red[**unsafe**]" if safety == "unsafe"
-                        else ""
-                    )
-                    label = f"📊 **{scorer_name}** — {score_type}: **{s.score_value}**{badge}"
-                    st.caption(label)
-                    if score_rationale:
-                        st.code(score_rationale, language=None)
+                piece_scores = list(getattr(piece, "scores", []))
+                if piece_scores:
+                    if scorer_keys:
+                        grouped = _group_scores_by_user_key(piece_scores, scorer_keys)
+
+                        # Objective group
+                        if objective_key:
+                            obj_scores = grouped.get(objective_key, [])
+                            if obj_scores:
+                                st.markdown(f"**{LD('🎯 주 스코어러 (Objective)', '🎯 Objective Scorer')}**")
+                                with st.container(border=True):
+                                    _render_scorer_group_box(objective_key, obj_scores, is_objective=True)
+
+                        # Auxiliary section — one bordered box per user key
+                        if auxiliary_keys:
+                            aux_present = [k for k in auxiliary_keys if grouped.get(k)]
+                            if aux_present:
+                                st.markdown(f"**{LD('📎 보조 스코어러 (Auxiliary)', '📎 Auxiliary Scorers')}**")
+                                for aux_key in aux_present:
+                                    with st.container(border=True):
+                                        _render_scorer_group_box(aux_key, grouped[aux_key], is_objective=False)
+
+                        # Unclaimed scores (should be empty; indicates chain-map drift)
+                        unclaimed = grouped.get("_unclaimed", [])
+                        if unclaimed:
+                            with st.expander(LD(
+                                f"⚙️ 기타 (미분류 {len(unclaimed)}개)",
+                                f"⚙️ Unclaimed ({len(unclaimed)})",
+                            )):
+                                for sc in unclaimed:
+                                    _render_single_score_line(sc)
+                    else:
+                        # Fallback: no scorer_keys in session (old results). Flat list.
+                        with st.expander(
+                            LD(f"📊 스코어러 결과 ({len(piece_scores)}개)",
+                               f"📊 Scorer Results ({len(piece_scores)})"),
+                            expanded=False,
+                        ):
+                            for sc in piece_scores:
+                                _render_single_score_line(sc)
     elif result.last_response:
         with st.chat_message("assistant"):
             st.markdown(result.last_response.converted_value or result.last_response.original_value or "-")
@@ -1973,6 +2180,9 @@ def main():
                     st.write(LD("PyRIT 초기화 중...", "Initializing PyRIT..."))
                     t0 = time.time()
                     try:
+                        # Remember user's scorer selection so display_result can group
+                        # Score records by user-facing key (objective + auxiliary).
+                        st.session_state["last_scorer_keys"] = list(cfg["scorer_keys"])
                         results = asyncio.run(run_custom_attack_async(
                             attack_key=cfg["attack_key"],
                             target_key=cfg["target_key"],
