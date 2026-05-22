@@ -985,15 +985,17 @@ class _TreeOfAttacksNode:
         """
         Check if this is the first turn of the conversation.
 
-        This method determines whether the node is executing its initial attack turn by
-        examining the objective target conversation history.
+        A turn is considered "first" when no real user/assistant exchange has happened
+        yet. A prepended system-only conversation (e.g., a locale system prompt) does
+        not count as a prior turn, since the subsequent-turn path requires an assistant
+        response to build on.
 
         Returns:
-            bool: True if no messages exist in the objective target conversation (first turn),
-                False if the conversation already contains messages (subsequent turns).
+            bool: True if no assistant responses exist yet (first turn),
+                False if at least one assistant response is in the conversation history.
         """
         target_messages = self._memory.get_conversation(conversation_id=self.objective_target_conversation_id)
-        return not target_messages
+        return not any(m.get_piece().api_role == "assistant" for m in target_messages)
 
     async def _generate_first_turn_prompt_async(self, objective: str) -> str:
         """
